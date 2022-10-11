@@ -4,9 +4,7 @@ import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
 import com.amazonaws.services.simpleemail.model.*;
 import com.msas.ses.dto.EmailDto;
 import com.msas.ses.exception.AwsSesClientException;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -23,11 +21,10 @@ public class SESMailService {
 
     /**
      * AWS SES 의 SendEmail API 를 이용하여 기본 메일 전송 메서드
-     * @param EmailDto
      */
     public String sendEmail(EmailDto emailDto) {
 
-        SendEmailResult sendEmailResult = null;
+        SendEmailResult sendEmailResult;
 
         try {
             // The time for request/response round trip to aws in milliseconds
@@ -49,8 +46,8 @@ public class SESMailService {
 
             sendEmailResult = emailService.sendEmail(request);
 
-        } catch (RuntimeException e) {
-            throw new AwsSesClientException("Failed to send email ", e);
+        } catch (AmazonSimpleEmailServiceException ex) {
+            throw new AwsSesClientException("이메일 전송 실패", ex);
         }
 
         return sendEmailResult.toString();

@@ -1,12 +1,12 @@
 package com.msas;
 
-import com.msas.ses.properties.EMailDefaultProperties;
+import com.msas.ses.properties.SESDefaultProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 @SpringBootApplication
-@ConfigurationPropertiesScan(EMailDefaultProperties.PREFIX)
+@ConfigurationPropertiesScan(SESDefaultProperties.PREFIX)
 public class MessageSendingApiServerApplication {
 
     public static void main(String[] args) {
