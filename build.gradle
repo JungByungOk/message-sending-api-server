@@ -19,7 +19,8 @@ repositories {
 }
 
 dependencies {
-    implementation group: 'io.awspring.cloud', name: 'spring-cloud-starter-aws-ses', version: '2.4.2'
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-validation', version: '2.5.14'
+    implementation group: 'io.awspring.cloud', name: 'spring-cloud-starter-aws-ses', version: '2.3.5'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-quartz'
     implementation 'org.springframework.boot:spring-boot-starter-web'
