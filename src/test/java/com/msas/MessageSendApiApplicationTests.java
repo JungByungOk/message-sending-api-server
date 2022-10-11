@@ -1,4 +1,4 @@
-package com.example.message_sending_api;
+package com.msas;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
