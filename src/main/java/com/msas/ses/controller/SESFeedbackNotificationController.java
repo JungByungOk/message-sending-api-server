@@ -1,6 +1,7 @@
 package com.msas.ses.controller;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,29 +18,32 @@ import javax.servlet.http.HttpServletRequest;
 @RestController
 @RequestMapping("/ses/feedback")
 @RequiredArgsConstructor
+@Slf4j
 public class SESFeedbackNotificationController {
 
-    @PostMapping("/bounce")
+    // TODO: SES 통지 데이터를 데이타베이스에 저장하도록 구현해야 한다. -> 통지 데이터를 통해 집계를 해야한다.
+
+    @PostMapping("/bounces")
     public void bounce(@RequestBody String body, HttpServletRequest request) {
-        System.out.println("->" + request.getRequestURI());
-        System.out.println(body);
+        log.debug("->" + request.getRequestURI());
+        log.debug(body);
     }
 
     @PostMapping("/complaints")
     public void complaints(@RequestBody String body, HttpServletRequest request) {
-        System.out.println("->" + request.getRequestURI());
-        System.out.println(body);
+        log.debug("->" + request.getRequestURI());
+        log.debug(body);
     }
 
-    @PostMapping("/delivery")
+    @PostMapping("/deliveries")
     public void delivery(@RequestBody String body, HttpServletRequest request) {
-        System.out.println("->" + request.getRequestURI());
-        System.out.println(body);
+        log.debug("->" + request.getRequestURI());
+        log.debug(body);
     }
 
-    @PostMapping("/event")
+    @PostMapping("/events")
     public void event(@RequestBody String body, HttpServletRequest request) {
-        System.out.println("->" + request.getRequestURI());
-        System.out.println(body);
+        log.debug("->" + request.getRequestURI());
+        log.debug(body);
     }
 }

@@ -1,6 +1,7 @@
 package com.msas.common;
 
 import com.amazonaws.services.simpleemail.model.AmazonSimpleEmailServiceException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,6 +15,7 @@ import java.util.Map;
  * 콘트롤러 전역에서 예외를 처리하고 사용자에게 에러 응답
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalControllerAdvice {
 
     /**
@@ -24,6 +26,7 @@ public class GlobalControllerAdvice {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors()
                 .forEach(c -> errors.put(((FieldError) c).getField(), c.getDefaultMessage()));
+
         return ResponseEntity.badRequest().body(errors);
     }
 

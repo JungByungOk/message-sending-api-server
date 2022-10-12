@@ -1,10 +1,14 @@
 package com.msas.ses.controller;
 
-import com.google.gson.Gson;
 import com.msas.ses.dto.EmailDto;
+import com.msas.ses.dto.EmailResultDTO;
 import com.msas.ses.service.SESMailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
 
 /**
  * AWS SES 를 이용하여 이메일 전송 요청을 처리
@@ -12,13 +16,21 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/ses")
 @RequiredArgsConstructor
-public class MailController {
+public class EmailController {
 
     private final SESMailService SESMailService;
 
     @PostMapping("/send-email")
-    public String sendEmail(@RequestBody EmailDto emailDTO) {
-        return new Gson().toJson(SESMailService.sendEmail(emailDTO));
+    public ResponseEntity<EmailResultDTO> sendEmail(@Valid @RequestBody EmailDto emailDTO) {
+
+        String messageId = SESMailService.sendEmail(emailDTO);
+
+        EmailResultDTO emailResultDTO = new EmailResultDTO();
+        {
+            emailResultDTO.setMessageId(messageId);
+        }
+
+        return new ResponseEntity<EmailResultDTO>(emailResultDTO, HttpStatus.OK);
     }
 
     /**

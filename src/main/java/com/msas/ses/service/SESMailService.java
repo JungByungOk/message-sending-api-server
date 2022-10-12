@@ -4,10 +4,12 @@ import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
 import com.amazonaws.services.simpleemail.model.*;
 import com.msas.ses.dto.EmailDto;
 import com.msas.ses.exception.AwsSesClientException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
+@Slf4j
 //@RequiredArgsConstructor
 public class SESMailService {
     private static final String CHAR_SET = "UTF-8";
@@ -36,7 +38,7 @@ public class SESMailService {
                             new Destination().withToAddresses(emailDto.getToEmail()))
                     .withMessage(new Message()
                             .withBody(new Body()
-                                    .withHtml(new Content()
+                                    .withText(new Content()
                                             .withCharset(CHAR_SET)
                                             .withData(emailDto.getBody())))
                             .withSubject(new Content()
@@ -47,11 +49,14 @@ public class SESMailService {
             sendEmailResult = emailService.sendEmail(request);
 
         } catch (AmazonSimpleEmailServiceException ex) {
-            throw new AwsSesClientException("이메일 전송 실패", ex);
+            log.warn("이메일 전송 실패", ex);
+            throw new AwsSesClientException("이메일 전송 실패", ex); // to GlobalControllerAdvice
         }
 
-        System.out.printf("%s\n", sendEmailResult.toString());
-        return sendEmailResult.toString();
+        String emailMessageId = sendEmailResult.getMessageId();
+        log.info(String.format("이메일 전송 완료 (messageId: %s)", emailMessageId));
+
+        return emailMessageId;
     }
 
 }
