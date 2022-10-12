@@ -50,6 +50,7 @@ public class SESMailService {
             throw new AwsSesClientException("이메일 전송 실패", ex);
         }
 
+        System.out.printf("%s\n", sendEmailResult.toString());
         return sendEmailResult.toString();
     }
 
