@@ -1,4 +1,4 @@
-package com.msas.common;
+package com.msas.common.exceptionhandler;
 
 import com.amazonaws.services.simpleemail.model.AmazonSimpleEmailServiceException;
 import lombok.extern.slf4j.Slf4j;

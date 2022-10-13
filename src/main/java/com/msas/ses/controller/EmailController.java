@@ -1,7 +1,7 @@
 package com.msas.ses.controller;
 
-import com.msas.ses.dto.EmailDto;
-import com.msas.ses.dto.EmailResultDTO;
+import com.amazonaws.services.simpleemail.model.TemplateMetadata;
+import com.msas.ses.dto.*;
 import com.msas.ses.service.SESMailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 
 /**
  * AWS SES 를 이용하여 이메일 전송 요청을 처리
@@ -20,49 +21,100 @@ public class EmailController {
 
     private final SESMailService SESMailService;
 
-    @PostMapping("/send-email")
-    public ResponseEntity<EmailResultDTO> sendEmail(@Valid @RequestBody EmailDto emailDTO) {
-
-        String messageId = SESMailService.sendEmail(emailDTO);
-
-        EmailResultDTO emailResultDTO = new EmailResultDTO();
-        {
-            emailResultDTO.setMessageId(messageId);
-        }
-
-        return new ResponseEntity<EmailResultDTO>(emailResultDTO, HttpStatus.OK);
-    }
-
     /**
-     * SendTemplatedEmailResult sendTemplatedEmail(SendTemplatedEmailRequest sendTemplatedEmailRequest);
+     * ------------------------------------------
+     * 텍스트 이메일 전송
+     * ------------------------------------------
      */
-    @PostMapping("/send-templated-email")
-    public String sendTemplatedEmail() {
-        return "";
+    @PostMapping("/text-mail")
+    public ResponseEntity<ResponseBasicEmailDTO> sendEmail(@Valid @RequestBody RequestBasicEmailDto requestBasicEmailDTO) {
+
+        String messageId = SESMailService.sendEmail(requestBasicEmailDTO);
+
+        ResponseBasicEmailDTO responseBasicEmailDTO = new ResponseBasicEmailDTO();
+        responseBasicEmailDTO.setMessageId(messageId);
+
+        return new ResponseEntity<>(responseBasicEmailDTO, HttpStatus.OK);
     }
 
     /**
+     * ------------------------------------------
+     * 탬플릿 이메일 전송
+     * SendTemplatedEmailResult sendTemplatedEmail(SendTemplatedEmailRequest sendTemplatedEmailRequest);
+     * ------------------------------------------
+     */
+    @PostMapping("/templated-mail")
+    public ResponseEntity<ResponseSendTemplatedEmailDTO> sendTemplatedEmail(@Valid @RequestBody RequestSendTemplateDto requestSendTemplateDto)
+    {
+        String messageId = SESMailService.sendTemplatedEmail(requestSendTemplateDto);
+
+        ResponseSendTemplatedEmailDTO responseSendTemplatedEmailDTO = new ResponseSendTemplatedEmailDTO();
+        responseSendTemplatedEmailDTO.setMessageId(messageId);
+
+        return new ResponseEntity<>(responseSendTemplatedEmailDTO, HttpStatus.OK);
+    }
+
+    /**
+     * ------------------------------------------
+     * 탬플릿 등록
      * CreateTemplateResult createTemplate(CreateTemplateRequest createTemplateRequest);
+     * ------------------------------------------
      */
     @PostMapping("/template")
-    public String createTemplate() {
-        return "";
+    public ResponseEntity<ResponseTemplatedDTO> createTemplate(@Valid @RequestBody RequestTemplateDto requestTemplateDto)
+    {
+        String awsRequestId = SESMailService.createTemplateEmail(requestTemplateDto);
+
+        ResponseTemplatedDTO responseTemplatedDTO = new ResponseTemplatedDTO();
+        responseTemplatedDTO.setAwsRequestId(awsRequestId);
+
+        return new ResponseEntity<>(responseTemplatedDTO, HttpStatus.OK);
     }
 
     /**
+     * ------------------------------------------
+     * 탬플릿 변경
      * UpdateTemplateResult updateTemplate(UpdateTemplateRequest updateTemplateRequest);
+     * ------------------------------------------
      */
     @PatchMapping("/template")
-    public String updateTemplate() {
-        return "";
+    public ResponseEntity<ResponseTemplatedDTO>  updateTemplate(@Valid @RequestBody RequestTemplateDto requestTemplateDto)
+    {
+        String awsRequestId = SESMailService.updateTemplateEmail(requestTemplateDto);
+
+        ResponseTemplatedDTO responseTemplatedDTO = new ResponseTemplatedDTO();
+        responseTemplatedDTO.setAwsRequestId(awsRequestId);
+
+        return new ResponseEntity<>(responseTemplatedDTO, HttpStatus.OK);
     }
 
     /**
+     * ------------------------------------------
+     * 탬플릿 삭제
      * DeleteTemplateResult deleteTemplate(DeleteTemplateRequest deleteTemplateRequest);
+     * ------------------------------------------
      */
     @DeleteMapping("/template")
-    public String deleteTemplate() {
-        return "";
+    public ResponseEntity<ResponseDeleteTemplatedDTO>  deleteTemplate(@Valid @RequestBody RequestDeleteTemplateDto requestDeleteTemplateDto)
+    {
+        String awsRequestId = SESMailService.deleteTemplate(requestDeleteTemplateDto);
+
+        ResponseDeleteTemplatedDTO responseDeleteTemplatedDTO = new ResponseDeleteTemplatedDTO();
+        responseDeleteTemplatedDTO.setAwsRequestId(awsRequestId);
+
+        return new ResponseEntity<>(responseDeleteTemplatedDTO, HttpStatus.OK);
+    }
+
+    /**
+     * ------------------------------------------
+     * 탬플릿 목록 가져오기
+     * ListTemplatesResult listTemplates(ListTemplatesRequest listTemplatesRequest);
+     * ------------------------------------------
+     */
+    @GetMapping("/templates")
+    public ResponseEntity<List<TemplateMetadata>>  listTemplate()
+    {
+        return new ResponseEntity<List<TemplateMetadata>>(SESMailService.listTemplates(), HttpStatus.OK);
     }
 
 }

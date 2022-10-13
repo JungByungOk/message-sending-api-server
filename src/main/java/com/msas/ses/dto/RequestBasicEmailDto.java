@@ -7,15 +7,15 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 
 @Data
-public class EmailDto {
+public class RequestBasicEmailDto {
 
     @NotNull
     @Email(message = "Invalid Email sender address")
-    String fromEmail;
+    String from;
 
     @NotNull
     @Email(message = "Invalid Email recipient address")
-    String toEmail;
+    String to;
 
     @NotNull
     @NotEmpty(message = "Email subject cannot be Null")

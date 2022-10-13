@@ -25,25 +25,25 @@ public class SESFeedbackNotificationController {
 
     @PostMapping("/bounces")
     public void bounce(@RequestBody String body, HttpServletRequest request) {
-        log.debug("->" + request.getRequestURI());
-        log.debug(body);
+        if(body.contains("SubscriptionConfirmation"))
+            log.info("Bounces - SubscriptionConfirmation\n{}\n", body);
     }
 
     @PostMapping("/complaints")
     public void complaints(@RequestBody String body, HttpServletRequest request) {
-        log.debug("->" + request.getRequestURI());
-        log.debug(body);
+        if(body.contains("SubscriptionConfirmation"))
+            log.info("Complaints SubscriptionConfirmation\n{}\n", body);
     }
 
     @PostMapping("/deliveries")
     public void delivery(@RequestBody String body, HttpServletRequest request) {
-        log.debug("->" + request.getRequestURI());
-        log.debug(body);
+        if(body.contains("SubscriptionConfirmation"))
+            log.info("Deliveries - SubscriptionConfirmation\n{}\n", body);
     }
 
     @PostMapping("/events")
     public void event(@RequestBody String body, HttpServletRequest request) {
-        log.debug("->" + request.getRequestURI());
-        log.debug(body);
+        if(body.contains("SubscriptionConfirmation"))
+            log.info("Events - SubscriptionConfirmation\n{}\n", body);
     }
 }
