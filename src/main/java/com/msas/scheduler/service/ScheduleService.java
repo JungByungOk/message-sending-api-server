@@ -12,9 +12,14 @@ public interface ScheduleService {
 
     boolean isJobExists(JobKey jobKey);
 
-//    boolean addJob(JobRequest jobRequest, Class<? extends QuartzJobBean> jobClass);
+    //boolean addJob(JobRequest jobRequest, Class<? extends QuartzJobBean> jobClass);
 
     boolean addJob(RequestJob requestJob, Class<? extends Job> jobClass);
+
+    /**
+     * 등록된 스케쥴 작업의 예약 시간을 변경한다.
+     */
+    boolean changeTrigger(RequestJob requestJob);
 
     boolean deleteJob(JobKey jobKey);
 

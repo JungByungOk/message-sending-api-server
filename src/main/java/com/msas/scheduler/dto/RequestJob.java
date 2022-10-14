@@ -24,9 +24,11 @@ public class RequestJob {
 
     @Digits(message = "invalid repeatIntervalInSeconds.", integer = 0, fraction = 0)
     private long repeatIntervalInSeconds;
+
     @Digits(message = "invalid repeatCount", integer = 0, fraction = 0)
     private int repeatCount;
 
     private String cronExpression;
+
     private JobDataMap jobDataMap;
 }

@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+
 @Slf4j
 @RestController
 @RequestMapping("/scheduler")
@@ -27,7 +29,7 @@ public class ScheduleController {
      * ------------------------------------------
      */
     @PostMapping("/job")
-    public ResponseEntity<?> addScheduleJob(@RequestBody RequestJob requestJob) {
+    public ResponseEntity<?> addScheduleJob(@Valid @RequestBody RequestJob requestJob) {
 
         log.debug("add schedule job :: requestJob : {}", requestJob);
 
@@ -90,7 +92,7 @@ public class ScheduleController {
      * ------------------------------------------
      */
     @PutMapping("/job/pause")
-    public ResponseEntity<?> pauseJob(@ModelAttribute RequestJob jobRequest) {
+    public ResponseEntity<?> pauseJob(@RequestBody RequestJob jobRequest) {
 
         JobKey jobKey = new JobKey(jobRequest.getJobName(), jobRequest.getJobGroup());
         if (scheduleService.isJobExists(jobKey)) {
@@ -112,7 +114,7 @@ public class ScheduleController {
      * ------------------------------------------
      */
     @PutMapping("/job/resume")
-    public ResponseEntity<?> resumeJob(@ModelAttribute RequestJob jobRequest) {
+    public ResponseEntity<?> resumeJob(@RequestBody RequestJob jobRequest) {
         JobKey jobKey = new JobKey(jobRequest.getJobName(), jobRequest.getJobGroup());
         if (scheduleService.isJobExists(jobKey)) {
             String jobState = scheduleService.getJobState(jobKey);

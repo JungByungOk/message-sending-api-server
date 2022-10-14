@@ -17,8 +17,7 @@ public class SimpleJob extends QuartzJobBean {
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
         JobKey jobKey = context.getJobDetail().getKey();
         Thread currThread = Thread.currentThread();
-        log.info("============================================================================");
-        log.info("SimpleJob started :: jobKey : {} - {}", jobKey, currThread.getName());
+        log.info("⚡️SimpleJob started :: jobKey : {} - {}", jobKey, currThread.getName());
 
         IntStream.range(0, 5).forEach(
                 i -> {
@@ -30,7 +29,6 @@ public class SimpleJob extends QuartzJobBean {
                     }
                 });
 
-        log.info("SimpleJob ended :: jobKey : {} - {}", jobKey, currThread.getName());
-        log.info("============================================================================");
+        log.info("⚓️SimpleJob ended :: jobKey : {} - {}", jobKey, currThread.getName());
     }
 }

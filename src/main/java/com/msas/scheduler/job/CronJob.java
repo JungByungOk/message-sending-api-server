@@ -22,8 +22,7 @@ public class CronJob extends QuartzJobBean {
         JobKey jobKey = context.getJobDetail().getKey();
 
         Thread currThread = Thread.currentThread();
-        log.info("============================================================================");
-        log.info("CronJob started :: sleep : {} jobId : {} jobKey : {} - {}", MAX_SLEEP_IN_SECONDS, jobId, jobKey, currThread.getName());
+        log.info("⚡️CronJob started :: sleep : {} jobId : {} jobKey : {} - {}", MAX_SLEEP_IN_SECONDS, jobId, jobKey, currThread.getName());
 
         IntStream.range(0, 10).forEach(
                 i -> {
@@ -34,8 +33,7 @@ public class CronJob extends QuartzJobBean {
                         log.error(e.getMessage(), e);
                     }
                 });
-        log.info("CronJob ended :: jobKey : {} - {}", jobKey, currThread.getName());
-        log.info("============================================================================");
+        log.info("⚓️CronJob ended :: jobKey : {} - {}", jobKey, currThread.getName());
 
     }
 }

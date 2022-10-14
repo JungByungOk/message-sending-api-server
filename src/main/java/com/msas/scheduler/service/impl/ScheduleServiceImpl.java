@@ -8,13 +8,7 @@ import com.msas.scheduler.utils.DateTimeUtils;
 import com.msas.scheduler.utils.JobUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.quartz.Job;
-import org.quartz.JobDetail;
-import org.quartz.JobExecutionContext;
-import org.quartz.JobKey;
-import org.quartz.Scheduler;
-import org.quartz.SchedulerException;
-import org.quartz.Trigger;
+import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
 import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
@@ -119,9 +113,9 @@ public class ScheduleServiceImpl implements ScheduleService {
         Trigger trigger;
 
         try {
-            trigger = JobUtils.createTrigger(requestJob);
-            jobDetail = JobUtils.createJob(requestJob, jobClass, context);
             jobKey = JobKey.jobKey(requestJob.getJobName(), requestJob.getJobGroup());
+            jobDetail = JobUtils.createJob(requestJob, jobClass, context);
+            trigger = JobUtils.createTrigger(requestJob);
 
             Date dt = schedulerFactoryBean.getScheduler().scheduleJob(jobDetail, trigger);
             log.debug("Job with jobKey : {} scheduled successfully at date : {}", jobDetail.getKey(), dt);
@@ -129,6 +123,11 @@ public class ScheduleServiceImpl implements ScheduleService {
         } catch (SchedulerException e) {
             log.error("error occurred while scheduling with jobKey : {}", jobKey, e);
         }
+        return false;
+    }
+
+    @Override
+    public boolean changeTrigger(RequestJob requestJob) {
         return false;
     }
 
