@@ -1,20 +1,18 @@
-package com.msas.scheduler.service.impl;
+package com.msas.scheduler.service;
 
-import com.msas.scheduler.dto.RequestJob;
-import com.msas.scheduler.dto.ResponseJob;
-import com.msas.scheduler.dto.ResponseJobStatus;
-import com.msas.scheduler.service.ScheduleService;
+import com.msas.scheduler.dto.JobInfoDTO;
+import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
+import com.msas.scheduler.dto.ResponseAllJobStatusDTO;
 import com.msas.scheduler.utils.DateTimeUtils;
-import com.msas.scheduler.utils.JobUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
-import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 
 import javax.validation.constraints.NotNull;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -27,14 +25,11 @@ public class ScheduleServiceImpl implements ScheduleService {
     @NotNull
     private final SchedulerFactoryBean schedulerFactoryBean;
 
-    @NotNull
-    private final ApplicationContext context;
-
     @Override
-    public ResponseJobStatus getAllJobs() {
-        ResponseJob jobResponse;
-        ResponseJobStatus jobStatusResponse = new ResponseJobStatus();
-        List<ResponseJob> jobs = new ArrayList<>();
+    public ResponseAllJobStatusDTO getAllJobs() {
+        JobInfoDTO jobResponse;
+        ResponseAllJobStatusDTO jobStatusResponse = new ResponseAllJobStatusDTO();
+        List<JobInfoDTO> jobs = new ArrayList<>();
         int numOfRunningJobs = 0;
         int numOfGroups = 0;
         int numOfAllJobs = 0;
@@ -46,7 +41,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 for (JobKey jobKey : scheduler.getJobKeys(GroupMatcher.jobGroupEquals(groupName))) {
                     List<? extends Trigger> triggers = scheduler.getTriggersOfJob(jobKey);
 
-                    jobResponse = ResponseJob.builder()
+                    jobResponse = JobInfoDTO.builder()
                             .jobName(jobKey.getName())
                             .groupName(jobKey.getGroup())
                             .scheduleTime(DateTimeUtils.toString(triggers.get(0).getStartTime()))
@@ -94,7 +89,7 @@ public class ScheduleServiceImpl implements ScheduleService {
     }
 
     @Override
-    public boolean isJobExists(JobKey jobKey) {
+    public boolean isJobExists(JobKey jobKey) throws SchedulerException {
         try {
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
             if (scheduler.checkExists(jobKey)) {
@@ -102,72 +97,118 @@ public class ScheduleServiceImpl implements ScheduleService {
             }
         } catch (SchedulerException e) {
             log.error("[scheduler-debug] error occurred while checking job exists :: jobKey : {}", jobKey, e);
+            throw e;
         }
         return false;
     }
 
     @Override
-    public boolean addJob(RequestJob requestJob, Class<? extends Job> jobClass) {
-        JobKey jobKey = null;
-        JobDetail jobDetail;
-        Trigger trigger;
+    public void addJob(RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO, Class<? extends Job> jobClass) throws SchedulerException {
+        log.debug("[scheduler-debug] Add job with jobKey : {}", new JobKey(requestTemplatedEmailScheduleJobDTO.getJobGroup(), requestTemplatedEmailScheduleJobDTO.getJobName()));
+
+        JobDataMap jobDataMap = new JobDataMap();
+        if (requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList() != null)
+            jobDataMap.put("templatedMailList", requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList());
+
+        // 작업 정의
+        JobDetail jobDetail = JobBuilder.newJob(jobClass)
+                .withIdentity(requestTemplatedEmailScheduleJobDTO.getJobName(), requestTemplatedEmailScheduleJobDTO.getJobGroup())
+                .storeDurably(false)
+                .usingJobData(jobDataMap)
+                .withDescription(requestTemplatedEmailScheduleJobDTO.getDescription())
+                .build();
+
+        // 트리거 정의
+        // 반복 없이 지정한 시간에 한번만 실행하는 트리거
+        Trigger trigger = TriggerBuilder.newTrigger()
+                .withIdentity(requestTemplatedEmailScheduleJobDTO.getJobName(), requestTemplatedEmailScheduleJobDTO.getJobGroup())
+                .startAt(Timestamp.valueOf(requestTemplatedEmailScheduleJobDTO.getStartDateAt()))    // Type Casting: LocalDateTime to Date
+                // SimpleScheduleBuilder, CronScheduleBuilder, CalendarIntervalScheduleBuilder
+                .withSchedule(SimpleScheduleBuilder.simpleSchedule()
+                        .withRepeatCount(0)
+                        .withMisfireHandlingInstructionFireNow()
+                )
+                .build();
 
         try {
-            jobKey = JobKey.jobKey(requestJob.getJobName(), requestJob.getJobGroup());
-            jobDetail = JobUtils.createJob(requestJob, jobClass, context);
-            trigger = JobUtils.createTrigger(requestJob);
-
-            Date dt = schedulerFactoryBean.getScheduler().scheduleJob(jobDetail, trigger);
-            log.debug("Job with jobKey : {} scheduled successfully at date : {}", jobDetail.getKey(), dt);
-            return true;
+            // 스케쥴러에 등록
+            // return Date Format -> Fri Oct 14 23:05:32 KST 2022
+            Date registeredDate = schedulerFactoryBean.getScheduler().scheduleJob(jobDetail, trigger);
         } catch (SchedulerException e) {
-            log.error("error occurred while scheduling with jobKey : {}", jobKey, e);
+            log.error("error occurred while scheduling with jobKey : {}", jobDetail.getKey(), e);
+            throw e;
         }
+
+    }
+
+    /**
+     * 예약된 작업의 시간을 변경한다.
+     */
+    @Override
+    public boolean changeTrigger(RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO) {
         return false;
     }
 
     @Override
-    public boolean changeTrigger(RequestJob requestJob) {
-        return false;
+    public void deleteAllJob(JobKey jobKey) throws SchedulerException {
+
+    }
+
+    /**
+     * 실행중인 작업 스레드로을 인터럽트를 호출하여 작업을 중지 시킨다.
+     * 다음 예약 시간에 실행 된다.
+     */
+    @Override
+    public void stopJob(JobKey jobKey) throws SchedulerException {
+
+        if (!isJobRunning(jobKey))
+            return;
+
+        log.debug("[scheduler-debug] Stop a running job with jobKey : {}", jobKey);
+        try {
+            schedulerFactoryBean.getScheduler().interrupt(jobKey); // 작업 중지
+            //this.deleteJob(jobKey); // 스케쥴에서 작업 삭제
+        } catch (UnableToInterruptJobException e) {
+            log.error("[scheduler-debug] error occurred while stopping job with jobKey : {}", jobKey, e);
+            throw e;
+        }
     }
 
     @Override
-    public boolean deleteJob(JobKey jobKey) {
+    public void deleteJob(JobKey jobKey) throws SchedulerException {
         log.debug("[scheduler-debug] deleting job with jobKey : {}", jobKey);
         try {
-            return schedulerFactoryBean.getScheduler().deleteJob(jobKey);
+            schedulerFactoryBean.getScheduler().deleteJob(jobKey);
         } catch (SchedulerException e) {
             log.error("[scheduler-debug] error occurred while deleting job with jobKey : {}", jobKey, e);
+            throw e;
         }
-        return false;
     }
 
     @Override
-    public boolean pauseJob(JobKey jobKey) {
+    public void pauseJob(JobKey jobKey) throws SchedulerException {
         log.debug("[scheduler-debug] pausing job with jobKey : {}", jobKey);
         try {
             schedulerFactoryBean.getScheduler().pauseJob(jobKey);
-            return true;
         } catch (SchedulerException e) {
             log.error("[scheduler-debug] error occurred while deleting job with jobKey : {}", jobKey, e);
+            throw e;
         }
-        return false;
     }
 
     @Override
-    public boolean resumeJob(JobKey jobKey) {
+    public void resumeJob(JobKey jobKey) throws SchedulerException {
         log.debug("[scheduler-debug] resuming job with jobKey : {}", jobKey);
         try {
             schedulerFactoryBean.getScheduler().resumeJob(jobKey);
-            return true;
         } catch (SchedulerException e) {
             log.error("[scheduler-debug] error occurred while resuming job with jobKey : {}", jobKey, e);
+            throw e;
         }
-        return false;
     }
 
     @Override
-    public String getJobState(JobKey jobKey) {
+    public String getJobState(JobKey jobKey) throws SchedulerException {
         try {
             Scheduler scheduler = schedulerFactoryBean.getScheduler();
             JobDetail jobDetail = scheduler.getJobDetail(jobKey);
@@ -176,6 +217,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
             if (triggers != null && triggers.size() > 0) {
                 for (Trigger trigger : triggers) {
+                    // public enum TriggerState { NONE, NORMAL, PAUSED, COMPLETE, ERROR, BLOCKED }
                     Trigger.TriggerState triggerState = scheduler.getTriggerState(trigger.getKey());
                     if (Trigger.TriggerState.NORMAL.equals(triggerState)) {
                         return "SCHEDULED";
@@ -185,6 +227,7 @@ public class ScheduleServiceImpl implements ScheduleService {
             }
         } catch (SchedulerException e) {
             log.error("[scheduler-debug] Error occurred while getting job state with jobKey : {}", jobKey, e);
+            throw e;
         }
         return null;
     }

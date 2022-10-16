@@ -1,4 +1,4 @@
-package com.msas.scheduler.service;
+package com.msas.scheduler.listener;
 
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
@@ -26,7 +26,7 @@ public class JobsListener implements JobListener {
     @Override
     public void jobToBeExecuted(JobExecutionContext context) {
         JobKey jobKey = context.getJobDetail().getKey();
-        log.info("jobToBeExecuted :: jobKey : {}", jobKey);
+        log.info("jobToBeExecuted :: jobKey = {}", jobKey);
     }
 
     /**
@@ -36,7 +36,7 @@ public class JobsListener implements JobListener {
     @Override
     public void jobExecutionVetoed(JobExecutionContext context) {
         JobKey jobKey = context.getJobDetail().getKey();
-        log.info("jobExecutionVetoed :: jobKey : {}", jobKey);
+        log.info("jobExecutionVetoed :: jobKey = {}", jobKey);
     }
 
     /**
@@ -45,6 +45,6 @@ public class JobsListener implements JobListener {
     @Override
     public void jobWasExecuted(JobExecutionContext context, JobExecutionException jobException) {
         JobKey jobKey = context.getJobDetail().getKey();
-        log.info("jobWasExecuted :: jobKey : {}", jobKey);
+        log.info("jobWasExecuted :: jobKey = {}", jobKey);
     }
 }

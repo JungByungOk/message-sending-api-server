@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 @Data
-public class RequestSendTemplateDto {
+public class RequestTemplatedEmailDto {
 
     @NotNull
     @NotEmpty(message = "Email templateName cannot be Null")

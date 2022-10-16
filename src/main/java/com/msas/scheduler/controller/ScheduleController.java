@@ -1,14 +1,15 @@
 package com.msas.scheduler.controller;
 
-import com.msas.scheduler.dto.RequestJob;
-import com.msas.scheduler.dto.ResponseJobStatus;
-import com.msas.scheduler.dto.ResponseScheduler;
-import com.msas.scheduler.job.CronJob;
-import com.msas.scheduler.job.SimpleJob;
+import com.msas.scheduler.dto.RequestScheduleDTO;
+import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
+import com.msas.scheduler.dto.ResponseAllJobStatusDTO;
+import com.msas.scheduler.dto.ResponseScheduleDTO;
+import com.msas.scheduler.job.SendTemplatedEmailJob;
 import com.msas.scheduler.service.ScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobKey;
+import org.quartz.SchedulerException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,28 +30,18 @@ public class ScheduleController {
      * ------------------------------------------
      */
     @PostMapping("/job")
-    public ResponseEntity<?> addScheduleJob(@Valid @RequestBody RequestJob requestJob) {
+    public ResponseEntity<?> addScheduleJob(@Valid @RequestBody RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO) throws SchedulerException {
 
-        log.debug("add schedule job :: requestJob : {}", requestJob);
-
-        if (requestJob.getJobName() == null) {
-            return new ResponseEntity<>(
-                    new ResponseScheduler(false, "Require jobName"),
+        // 이미 등록된 작업인지 확인
+        if (scheduleService.isJobExists(new JobKey(requestTemplatedEmailScheduleJobDTO.getJobName(), requestTemplatedEmailScheduleJobDTO.getJobGroup()))) {
+            return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job already exits"),
                     HttpStatus.BAD_REQUEST);
         }
 
-        JobKey jobKey = new JobKey(requestJob.getJobName(), requestJob.getJobGroup());
-        if (!scheduleService.isJobExists(jobKey)) {
-            if (requestJob.getCronExpression() == null) {
-                scheduleService.addJob(requestJob, SimpleJob.class);
-            } else {
-                scheduleService.addJob(requestJob, CronJob.class);
-            }
-        } else {
-            return new ResponseEntity<>(new ResponseScheduler(false, "Job already exits"),
-                    HttpStatus.BAD_REQUEST);
-        }
-        return new ResponseEntity<>(new ResponseScheduler(true, "Job created successfully"), HttpStatus.CREATED);
+        // 스케쥴 등록
+        scheduleService.addJob(requestTemplatedEmailScheduleJobDTO, SendTemplatedEmailJob.class);
+
+        return new ResponseEntity<>(new ResponseScheduleDTO(true, "Job created successfully"), HttpStatus.CREATED);
 
     }
 
@@ -60,19 +51,20 @@ public class ScheduleController {
      * ------------------------------------------
      */
     @DeleteMapping("/job")
-    public ResponseEntity<?> deleteScheduleJob(@RequestBody RequestJob jobRequest) {
+    public ResponseEntity<?> deleteScheduleJob(@RequestBody RequestScheduleDTO requestScheduleDTO) throws SchedulerException {
 
-        JobKey jobKey = new JobKey(jobRequest.getJobName(), jobRequest.getJobGroup());
+        JobKey jobKey = new JobKey(requestScheduleDTO.getJobName(), requestScheduleDTO.getJobGroup());
+
         if (scheduleService.isJobExists(jobKey)) {
             if (!scheduleService.isJobRunning(jobKey)) {
                 scheduleService.deleteJob(jobKey);
             } else {
-                return new ResponseEntity<>(new ResponseScheduler(false, "Job already in running state"), HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job already in running state"), HttpStatus.BAD_REQUEST);
             }
         } else {
-            return new ResponseEntity<>(new ResponseScheduler(false, "Job does not exits"), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job does not exits"), HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(new ResponseScheduler(true, "Job deleted successfully"), HttpStatus.OK);
+        return new ResponseEntity<>(new ResponseScheduleDTO(true, "Job deleted successfully"), HttpStatus.OK);
 
     }
 
@@ -82,7 +74,7 @@ public class ScheduleController {
      * ------------------------------------------
      */
     @GetMapping("/jobs")
-    public ResponseJobStatus getAllJobs() {
+    public ResponseAllJobStatusDTO getAllJobs() {
         return scheduleService.getAllJobs();
     }
 
@@ -92,19 +84,20 @@ public class ScheduleController {
      * ------------------------------------------
      */
     @PutMapping("/job/pause")
-    public ResponseEntity<?> pauseJob(@RequestBody RequestJob jobRequest) {
+    public ResponseEntity<?> pauseJob(@RequestBody RequestScheduleDTO requestScheduleDTO) throws SchedulerException {
 
-        JobKey jobKey = new JobKey(jobRequest.getJobName(), jobRequest.getJobGroup());
+        JobKey jobKey = new JobKey(requestScheduleDTO.getJobName(), requestScheduleDTO.getJobGroup());
+
         if (scheduleService.isJobExists(jobKey)) {
             if (!scheduleService.isJobRunning(jobKey)) {
                 scheduleService.pauseJob(jobKey);
             } else {
-                return new ResponseEntity<>(new ResponseScheduler(false, "Job already in running state"), HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job already in running state"), HttpStatus.BAD_REQUEST);
             }
         } else {
-            return new ResponseEntity<>(new ResponseScheduler(false, "Job does not exits"), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job does not exits"), HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(new ResponseScheduler(true, "Job paused successfully"), HttpStatus.OK);
+        return new ResponseEntity<>(new ResponseScheduleDTO(true, "Job paused successfully"), HttpStatus.OK);
 
     }
 
@@ -114,19 +107,39 @@ public class ScheduleController {
      * ------------------------------------------
      */
     @PutMapping("/job/resume")
-    public ResponseEntity<?> resumeJob(@RequestBody RequestJob jobRequest) {
-        JobKey jobKey = new JobKey(jobRequest.getJobName(), jobRequest.getJobGroup());
+    public ResponseEntity<?> resumeJob(@RequestBody RequestScheduleDTO requestScheduleDTO) throws SchedulerException {
+        JobKey jobKey = new JobKey(requestScheduleDTO.getJobName(), requestScheduleDTO.getJobGroup());
         if (scheduleService.isJobExists(jobKey)) {
             String jobState = scheduleService.getJobState(jobKey);
 
             if (jobState.equals("PAUSED")) {
                 scheduleService.resumeJob(jobKey);
             } else {
-                return new ResponseEntity<>(new ResponseScheduler(false, "Job is not in paused state"), HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job is not in paused state"), HttpStatus.BAD_REQUEST);
             }
         } else {
-            return new ResponseEntity<>(new ResponseScheduler(false, "Job does not exits"), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job does not exits"), HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(new ResponseScheduler(true, "Job resumed successfully"), HttpStatus.OK);
+        return new ResponseEntity<>(new ResponseScheduleDTO(true, "Job resumed successfully"), HttpStatus.OK);
+    }
+
+
+    /**
+     * ------------------------------------------
+     * 실행중인 작업 중지
+     * ------------------------------------------
+     */
+    @PutMapping("/job/stop")
+    public ResponseEntity<?> stopJob(@RequestBody RequestScheduleDTO requestScheduleDTO) throws SchedulerException {
+        JobKey jobKey = new JobKey(requestScheduleDTO.getJobName(), requestScheduleDTO.getJobGroup());
+
+        if (!scheduleService.isJobExists(jobKey))
+            return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job does not exits"), HttpStatus.BAD_REQUEST);
+
+        if (!scheduleService.isJobRunning(jobKey))
+            return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job is not in running state"), HttpStatus.BAD_REQUEST);
+
+        scheduleService.stopJob(jobKey);
+        return new ResponseEntity<>(new ResponseScheduleDTO(true, "Job stop successfully"), HttpStatus.OK);
     }
 }

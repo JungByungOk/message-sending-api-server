@@ -27,7 +27,16 @@ public class HttpLogInterceptor extends HandlerInterceptorAdapter {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        final ContentCachingRequestWrapper cachingRequest = (ContentCachingRequestWrapper) request;
+        final ContentCachingRequestWrapper cachingRequest;
+        ContentCachingRequestWrapper cachingRequest1;
+
+        try {
+            cachingRequest1 = (ContentCachingRequestWrapper) request;
+        } catch (ClassCastException e) {
+            cachingRequest1 = null;
+        }
+
+        cachingRequest = cachingRequest1;
         return true;
     }
 
@@ -35,23 +44,40 @@ public class HttpLogInterceptor extends HandlerInterceptorAdapter {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex)
             throws Exception {
 
-        final ContentCachingRequestWrapper cachingRequest = (ContentCachingRequestWrapper) request;
-        final ContentCachingResponseWrapper cachingResponse = (ContentCachingResponseWrapper) response;
+        final ContentCachingRequestWrapper cachingRequest;
+        ContentCachingRequestWrapper cachingRequest1;
+        final ContentCachingResponseWrapper cachingResponse;
+        ContentCachingResponseWrapper cachingResponse1;
 
-//        log.info("URI: [{}], METHOD: [{}]", request.getRequestURI(), request.getMethod());
-//        log.info("Headers: {}", getHeaders(request));
-//        log.info("QueryString: {}", getQueryParameter(request));
-//        log.info("Request Body: {}", contentBody(cachingResponse.getContentAsByteArray()));
-//        log.info("Request Body: {}", contentBody(cachingRequest.getContentAsByteArray()));
+        try {
+            cachingRequest1 = (ContentCachingRequestWrapper) request;
+            cachingResponse1 = (ContentCachingResponseWrapper) response;
+        } catch (ClassCastException e) {
+            cachingRequest1 = null;
+            cachingResponse1 = null;
+        }
+
+        cachingResponse = cachingResponse1;
+        cachingRequest = cachingRequest1;
 
         HttpLogDTO httpLogDTO = new HttpLogDTO();
         {
+            httpLogDTO.setRemoteInfo(
+                    new HttpLogRemoteInfoDTO.HttpLogRemoteInfoDTOBuilder().RemoteHost(request.getRemoteHost())
+                            .RemoteIp(request.getRemoteAddr())
+                            .RemotePort(request.getRemotePort())
+                            .build());
+
             httpLogDTO.setUri(request.getRequestURI());
             httpLogDTO.setMethod(request.getMethod());
             httpLogDTO.setHeaders(getHeaders(request));
             httpLogDTO.setQueryParameters(getQueryParameter(request));
-            httpLogDTO.setRequest_body(contentBody(cachingRequest.getContentAsByteArray()));
-            httpLogDTO.setResponse_body(contentBody(cachingResponse.getContentAsByteArray()));
+
+            if (cachingRequest != null)
+                httpLogDTO.setRequest_body(contentBody(cachingRequest.getContentAsByteArray()));
+
+            if (cachingResponse != null)
+                httpLogDTO.setResponse_body(contentBody(cachingResponse.getContentAsByteArray()));
         }
         log.info("{} {}\n{}\n", httpLogDTO.getMethod(), httpLogDTO.getUri(), new GsonBuilder().setPrettyPrinting().create().toJson(httpLogDTO).toString());
     }

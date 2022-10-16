@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class ResponseJob {
+public class JobInfoDTO {
     private String jobName;
     private String groupName;
     private String jobStatus;

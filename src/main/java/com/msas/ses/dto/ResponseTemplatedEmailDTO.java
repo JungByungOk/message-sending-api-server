@@ -3,7 +3,7 @@ package com.msas.ses.dto;
 import lombok.Data;
 
 @Data
-public class ResponseSendTemplatedEmailDTO {
+public class ResponseTemplatedEmailDTO {
 
     private String messageId;
 

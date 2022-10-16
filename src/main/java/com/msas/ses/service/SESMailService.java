@@ -6,7 +6,7 @@ import com.google.gson.Gson;
 import com.msas.ses.dto.RequestBasicEmailDto;
 import com.msas.ses.dto.RequestDeleteTemplateDto;
 import com.msas.ses.dto.RequestTemplateDto;
-import com.msas.ses.dto.RequestSendTemplateDto;
+import com.msas.ses.dto.RequestTemplatedEmailDto;
 import com.msas.ses.exception.AwsSesClientException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -92,24 +92,24 @@ public class SESMailService {
         return awsRequestId;
     }
 
-    public String sendTemplatedEmail(RequestSendTemplateDto requestSendTemplateDto) {
+    public String sendTemplatedEmail(RequestTemplatedEmailDto requestTemplatedEmailDto) {
 
         SendTemplatedEmailResult sendTemplatedEmailResult;
 
         try {
             Destination destination = new Destination();
             {
-                destination.setToAddresses(requestSendTemplateDto.getTo());
-                destination.setCcAddresses(requestSendTemplateDto.getCc());
-                destination.setBccAddresses(requestSendTemplateDto.getBcc());
+                destination.setToAddresses(requestTemplatedEmailDto.getTo());
+                destination.setCcAddresses(requestTemplatedEmailDto.getCc());
+                destination.setBccAddresses(requestTemplatedEmailDto.getBcc());
             }
 
             SendTemplatedEmailRequest emailRequest = new SendTemplatedEmailRequest();
             {
-                emailRequest.setTemplate(requestSendTemplateDto.getTemplateName());
+                emailRequest.setTemplate(requestTemplatedEmailDto.getTemplateName());
                 emailRequest.setDestination(destination);
-                emailRequest.setSource(requestSendTemplateDto.getFrom());
-                emailRequest.setTemplateData(new Gson().toJson(requestSendTemplateDto.getTemplateData()));
+                emailRequest.setSource(requestTemplatedEmailDto.getFrom());
+                emailRequest.setTemplateData(new Gson().toJson(requestTemplatedEmailDto.getTemplateData()));
             }
 
             sendTemplatedEmailResult = amazonSimpleEmailService.sendTemplatedEmail(emailRequest);
@@ -172,7 +172,7 @@ public class SESMailService {
     public List<TemplateMetadata> listTemplates() {
 
         ListTemplatesResult listTemplatesResult;
-        List<TemplateMetadata> listTotalTemplates  = new ArrayList<>();
+        List<TemplateMetadata> listTotalTemplates = new ArrayList<>();
 
         try {
 

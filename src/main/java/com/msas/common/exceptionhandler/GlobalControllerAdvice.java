@@ -2,6 +2,7 @@ package com.msas.common.exceptionhandler;
 
 import com.amazonaws.services.simpleemail.model.AmazonSimpleEmailServiceException;
 import lombok.extern.slf4j.Slf4j;
+import org.quartz.SchedulerException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -48,6 +49,17 @@ public class GlobalControllerAdvice {
             errors.put("errorType", ex.getErrorType().name());
             errors.put("errorMessage", ex.getErrorMessage());
             errors.put("serviceName", ex.getServiceName());
+        }
+
+        return ResponseEntity.badRequest().body(errors);
+    }
+
+    @ExceptionHandler(SchedulerException.class)
+    public ResponseEntity<Map<String, String>> handleAmazonSimpleEmailServiceExceptions(SchedulerException ex) {
+
+        Map<String, String> errors = new HashMap<>();
+        {
+            errors.put("errorMessage", ex.getMessage());
         }
 
         return ResponseEntity.badRequest().body(errors);

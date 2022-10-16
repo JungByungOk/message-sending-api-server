@@ -1,4 +1,4 @@
-package com.msas.scheduler.service;
+package com.msas.scheduler.listener;
 
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobExecutionContext;
@@ -25,7 +25,7 @@ public class TriggersListener implements TriggerListener {
     @Override
     public void triggerFired(Trigger trigger, JobExecutionContext context) {
         JobKey jobKey = trigger.getJobKey();
-        log.info("triggerFired at {} :: jobKey : {}", trigger.getStartTime(), jobKey);
+        log.info("✈️triggerFired at {} :: jobKey : {}", trigger.getStartTime(), jobKey);
     }
 
     /**
@@ -46,7 +46,7 @@ public class TriggersListener implements TriggerListener {
     @Override
     public void triggerMisfired(Trigger trigger) {
         JobKey jobKey = trigger.getJobKey();
-        log.info("triggerMisfired at {} :: jobKey : {}", trigger.getStartTime(), jobKey);
+        log.info("✈️triggerMisfired at {} :: jobKey : {}", trigger.getStartTime(), jobKey);
     }
 
     /**
@@ -55,6 +55,6 @@ public class TriggersListener implements TriggerListener {
     @Override
     public void triggerComplete(Trigger trigger, JobExecutionContext context, Trigger.CompletedExecutionInstruction triggerInstructionCode) {
         JobKey jobKey = trigger.getJobKey();
-        log.info("triggerComplete at {} :: jobKey : {}", trigger.getStartTime(), jobKey);
+        log.info("✈️triggerComplete at {} :: jobKey : {}", trigger.getStartTime(), jobKey);
     }
 }

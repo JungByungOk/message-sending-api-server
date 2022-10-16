@@ -5,9 +5,9 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class ResponseJobStatus {
+public class ResponseAllJobStatusDTO {
     private int numOfAllJobs;
     private int numOfGroups;
     private int numOfRunningJobs;
-    private List<ResponseJob> jobs;
+    private List<JobInfoDTO> jobs;
 }

@@ -10,6 +10,4 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class SESDefaultProperties {
 
     public static final String PREFIX = "cloud.aws.ses";
-
-    private String sender;
 }

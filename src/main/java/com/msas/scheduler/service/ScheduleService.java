@@ -1,31 +1,64 @@
 package com.msas.scheduler.service;
 
-import com.msas.scheduler.dto.RequestJob;
-import com.msas.scheduler.dto.ResponseJobStatus;
+import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
+import com.msas.scheduler.dto.ResponseAllJobStatusDTO;
 import org.quartz.Job;
 import org.quartz.JobKey;
+import org.quartz.SchedulerException;
 
 public interface ScheduleService {
-    ResponseJobStatus getAllJobs();
 
+    /**
+     * 전체 스케쥴 작업 조회
+     */
+    ResponseAllJobStatusDTO getAllJobs();
+
+    /**
+     * 작업 상태 조회
+     */
     boolean isJobRunning(JobKey jobKey);
 
-    boolean isJobExists(JobKey jobKey);
+    /**
+     * 스케쥴 이름 중복 검사
+     */
+    boolean isJobExists(JobKey jobKey) throws SchedulerException;
 
     //boolean addJob(JobRequest jobRequest, Class<? extends QuartzJobBean> jobClass);
 
-    boolean addJob(RequestJob requestJob, Class<? extends Job> jobClass);
+    /**
+     * 신규 작업 스케쥴 등록
+     */
+    void addJob(RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO, Class<? extends Job> jobClass) throws SchedulerException;
 
     /**
-     * 등록된 스케쥴 작업의 예약 시간을 변경한다.
+     * 스케쥴 작업 삭제
      */
-    boolean changeTrigger(RequestJob requestJob);
+    void deleteJob(JobKey jobKey) throws SchedulerException;
 
-    boolean deleteJob(JobKey jobKey);
+    /**
+     * 스케쥴 작업 일시 멈춤
+     */
+    void pauseJob(JobKey jobKey) throws SchedulerException;
 
-    boolean pauseJob(JobKey jobKey);
+    /**
+     * 스케쥴 작업 재시작
+     */
+    void resumeJob(JobKey jobKey) throws SchedulerException;
 
-    boolean resumeJob(JobKey jobKey);
+    /**
+     * 스케쥴 작업 상태
+     */
+    String getJobState(JobKey jobKey) throws SchedulerException;
 
-    String getJobState(JobKey jobKey);
+    void stopJob(JobKey jobKey) throws SchedulerException;
+
+    /**
+     * 기존 등록된 스케쥴 작업의 예약 시간을 변경 (OldTrigger -> NewTrigger)
+     */
+    boolean changeTrigger(RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO);
+
+    /**
+     * 스케쥴 전체 일괄 삭제
+     */
+    void deleteAllJob(JobKey jobKey) throws SchedulerException;
 }

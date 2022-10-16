@@ -1,0 +1,98 @@
+package com.msas.scheduler.job;
+
+import com.msas.ses.dto.RequestTemplatedEmailDto;
+import com.msas.ses.service.SESMailService;
+import lombok.extern.slf4j.Slf4j;
+import org.quartz.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.quartz.QuartzJobBean;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+@Component
+@Slf4j
+@DisallowConcurrentExecution // 동시 실행 방지
+public class SendTemplatedEmailJob extends QuartzJobBean implements InterruptableJob {
+    private final int EMAIL_SEND_DELAY_SECONDS = 2;
+
+    /**
+     * 중요!
+     * AutowiringSpringBeanJobFactory 에서 서비스 주입을 받기 위해서는
+     * 반드시 @Autowired 어노테이션으로만 동작한다.
+     */
+    @Autowired
+    private SESMailService sesMailService;
+    private volatile boolean isJobInterrupted = false;
+
+    public static <T> Consumer<T> withCounter(BiConsumer<Integer, T> consumer) {
+        AtomicInteger counter = new AtomicInteger(0);
+        return item -> consumer.accept(counter.getAndIncrement(), item);
+    }
+
+    public void setSesMailService(SESMailService sesMailService) {
+        this.sesMailService = sesMailService;
+    }
+
+    @Override
+    protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
+
+        JobKey jobKey = context.getJobDetail().getKey();
+        Thread currThread = Thread.currentThread();
+
+        // 반복 스케쥴일 경우에는, 이전에 interrupt()했으므로 스케쥴에서 제거하고 실행하지 않는다.
+        if (!isJobInterrupted) {
+            try {
+                context.getScheduler().deleteJob(jobKey);
+            } catch (SchedulerException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        log.info("⚡SendTemplatedEmailJob started :: jobKey={} - threadName={}", jobKey, currThread.getName());
+
+        //-------------------------------------------------------------------------------
+        // 이메일 전송 처리
+        //-------------------------------------------------------------------------------
+        JobDataMap jobDataMap = context.getMergedJobDataMap();
+        
+        List<RequestTemplatedEmailDto> templatedEmailList
+                = (List<RequestTemplatedEmailDto>) jobDataMap.get("templatedMailList");
+
+        //---------------------------------------
+        // 이메일 목록이 14개 이상이면,
+        // 14개씩 끊어서 전송한다.
+        //---------------------------------------
+        templatedEmailList.forEach(withCounter((count, templatedEmail) -> {
+
+            String messageId = sesMailService.sendTemplatedEmail(templatedEmail);
+            log.info("\t이메일 전송 ({}/{}) : templateName = {}, messageId = {}", count + 1, templatedEmailList.size(), templatedEmail.getTemplateName(), messageId);
+
+            //14개 전송 속도 쓰로틀링
+            if (count % 14 == 0) {
+                try {
+                    TimeUnit.SECONDS.sleep(EMAIL_SEND_DELAY_SECONDS); // 14개씩 끊어서 1초 딜레이 전송
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }));
+
+        log.info("⚓SendTemplatedEmailJob ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
+    }
+
+    /**
+     * 실행중인 스레드 종료 시키기
+     */
+    @Override
+    public void interrupt() throws UnableToInterruptJobException {
+        Thread currThread = Thread.currentThread();
+        isJobInterrupted = true;
+        log.info("interrupting - {}", currThread.getName());
+        currThread.interrupt(); //쓰레드가 일시 정지 상태이면 바로 깨워서 실행시킨다
+    }
+}
