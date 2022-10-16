@@ -53,6 +53,8 @@ public class SESMailService {
                                     .withData(requestBasicEmailDto.getSubject())))
                     .withSdkRequestTimeout(requestTimeout);
 
+            request.setTags(requestBasicEmailDto.getTags());
+
             sendEmailResult = amazonSimpleEmailService.sendEmail(request);
 
         } catch (AmazonSimpleEmailServiceException ex) {
@@ -110,6 +112,7 @@ public class SESMailService {
                 emailRequest.setDestination(destination);
                 emailRequest.setSource(requestTemplatedEmailDto.getFrom());
                 emailRequest.setTemplateData(new Gson().toJson(requestTemplatedEmailDto.getTemplateData()));
+                emailRequest.setTags(requestTemplatedEmailDto.getTags());
             }
 
             sendTemplatedEmailResult = amazonSimpleEmailService.sendTemplatedEmail(emailRequest);
