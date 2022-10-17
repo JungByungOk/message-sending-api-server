@@ -55,3 +55,11 @@ logging:
     root: INFO
     org.springframework.web: INFO
     com.msas.ses: DEBUG
+
+#------------------------------------------------
+# bot
+#------------------------------------------------
+bot:
+  telegram:
+    token-id: 5710353844:AAEqVlaqAa7-Ixv-hnximDy8xa_BkkepRV8
+    channel-names: NFTReally.Notification, NFTReally.BackEnd

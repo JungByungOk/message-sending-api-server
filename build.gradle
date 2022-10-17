@@ -19,6 +19,8 @@ repositories {
 }
 
 dependencies {
+    implementation 'com.github.pengrad:java-telegram-bot-api:6.2.0'
+
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-ses
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-ses', version: '1.12.315'
 
