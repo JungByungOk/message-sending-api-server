@@ -14,7 +14,7 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(httpLogInterceptor)
-                .excludePathPatterns("/ses/feedback/*") //AWS SNS or Webhook 호출은 제외 한다.
+                //.excludePathPatterns("/ses/feedback/*") //AWS SNS or Webhook 호출은 제외 한다.
                 .addPathPatterns("/**");
     }
 }

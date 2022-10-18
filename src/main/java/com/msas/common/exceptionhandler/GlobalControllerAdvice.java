@@ -1,8 +1,12 @@
 package com.msas.common.exceptionhandler;
 
+import com.amazonaws.Response;
 import com.amazonaws.services.simpleemail.model.AmazonSimpleEmailServiceException;
+import com.msas.telegram.service.TelegramBotService;
+import com.pengrad.telegrambot.TelegramException;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.SchedulerException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -41,28 +45,40 @@ public class GlobalControllerAdvice {
      * }
      */
     @ExceptionHandler(AmazonSimpleEmailServiceException.class)
-    public ResponseEntity<Map<String, String>> handleAmazonSimpleEmailServiceExceptions(AmazonSimpleEmailServiceException ex) {
+    public ResponseEntity<ResponseErrorDTO> handleAmazonSimpleEmailServiceExceptions(AmazonSimpleEmailServiceException ex) {
 
-        Map<String, String> errors = new HashMap<>();
-        {
-            errors.put("errorCode", ex.getErrorCode());
-            errors.put("errorType", ex.getErrorType().name());
-            errors.put("errorMessage", ex.getErrorMessage());
-            errors.put("serviceName", ex.getServiceName());
-        }
+        ResponseErrorDTO responseErrorDTO = ResponseErrorDTO.builder()
+                .serviceName(ex.getServiceName())
+                .errorCode(ex.getErrorCode())
+                .errorType(ex.getErrorType().name())
+                .errorMessage(ex.getErrorMessage())
+                .build();
 
-        return ResponseEntity.badRequest().body(errors);
+        return new ResponseEntity<>(responseErrorDTO, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(SchedulerException.class)
-    public ResponseEntity<Map<String, String>> handleAmazonSimpleEmailServiceExceptions(SchedulerException ex) {
+    public ResponseEntity<ResponseErrorDTO> handleScheduleExceptions(SchedulerException ex) {
 
-        Map<String, String> errors = new HashMap<>();
-        {
-            errors.put("errorMessage", ex.getMessage());
-        }
+        ResponseErrorDTO responseErrorDTO = ResponseErrorDTO.builder()
+                .serviceName("Scheduler(Quartz)")
+                .errorType(ex.getClass().getTypeName())
+                .errorMessage(ex.getMessage())
+                .build();
 
-        return ResponseEntity.badRequest().body(errors);
+        return new ResponseEntity<>(responseErrorDTO, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(TelegramException.class)
+    public ResponseEntity<ResponseErrorDTO> handleTelegramServiceExceptions(TelegramException ex) {
+
+        ResponseErrorDTO responseErrorDTO = ResponseErrorDTO.builder()
+                .serviceName("TelegramBot")
+                .errorType(ex.getClass().getTypeName())
+                .errorMessage(ex.getMessage())
+                .build();
+
+        return new ResponseEntity<>(responseErrorDTO, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
 }

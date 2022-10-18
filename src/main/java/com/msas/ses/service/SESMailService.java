@@ -17,7 +17,6 @@ import java.util.List;
 
 @Service
 @Slf4j
-//@RequiredArgsConstructor
 public class SESMailService {
     private static final String CHAR_SET = "UTF-8";
 

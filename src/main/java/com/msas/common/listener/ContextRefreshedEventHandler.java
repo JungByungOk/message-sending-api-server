@@ -25,11 +25,10 @@ public class ContextRefreshedEventHandler implements ApplicationListener<org.spr
                 "⚠️ 어플리케이션 시작\n" +
                 "    ✔ AWS SES APIs\n" +
                 "    ✔ Email Scheduling APIs\n" +
-                "    ✔ Telegram Bot Backend APIs\n" +
-                "    ✔ Slack Bot Backend APIs\n" +
+                "    ✔ Telegram Bot Backend APIs (다중 채널 선택 전송)\n" +
                 "    \n" +
+                "    🚫 Slack Bot Backend APIs\n" +
                 "    🚫 RAM Store -> Database (Job, Trigger, History)\n" +
-                "    🚫 예약 스케쥴 처리 결과 지정된 이메일로 회신\n" +
                 "=======================================";
         log.info(str);
 
