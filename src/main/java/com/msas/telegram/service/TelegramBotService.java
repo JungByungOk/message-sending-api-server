@@ -1,16 +1,14 @@
 package com.msas.telegram.service;
 
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.pengrad.telegrambot.Callback;
+import com.pengrad.telegrambot.ExceptionHandler;
 import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.TelegramException;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Message;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.User;
-import com.pengrad.telegrambot.model.request.ForceReply;
 import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
-import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.GetMe;
 import com.pengrad.telegrambot.request.GetUpdates;
 import com.pengrad.telegrambot.request.SendMessage;
@@ -23,7 +21,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -31,17 +31,14 @@ import java.util.*;
 public class TelegramBotService {
 
     private final TelegramBot telegramBot;
-
+    // channelName : channelId mapping data ...
+    private final HashMap<String, Long> channelMap = new HashMap<>();
     @Value("${bot.telegram.channel-names}")
     private List<String> channelNames = new ArrayList<>();
 
-    // channelName : channelId mapping data ...
-    private final HashMap<String, Long> channelMap = new HashMap<>();
-
     @PostConstruct
-    public void init(){
-
-        /*
+    public void init() {
+                /*
          {
           "update_id": 175775917,
           "channel_post": {
@@ -69,45 +66,49 @@ public class TelegramBotService {
          */
 
         //+++++++++++++++++++++++++++++++++++++++
-        // /getUpdates 리스너
+        // /getUpdates 리스너 등록
         // bot_command = /start 확인하고, 채널 채팅방 이름 확인하여 채널 아이디 저장
         //+++++++++++++++++++++++++++++++++++++++
-        telegramBot.setUpdatesListener(updates -> {
+        telegramBot.setUpdatesListener(new UpdatesListener() {
+            @Override
+            public int process(List<Update> updates) {
+                log.info("[UpdatesListener] Receive Message\n{}", new GsonBuilder().setPrettyPrinting().create().toJson(updates.get(0)));
 
-            log.info("[UpdatesListener] Receive Message\n{}", new GsonBuilder().setPrettyPrinting().create().toJson(updates.get(0)));
-
-            try
-            {
-                // channelPost & /start & title=channelName 이면, chatId 저장
-                if(updates.get(0).channelPost() != null)
-                    if(updates.get(0).channelPost().text().toLowerCase().compareTo("/start") == 0)
-                    {
-                        for(String channelName : channelNames)
-                        {
-                            if(updates.get(0).channelPost().chat().title().compareTo(channelName) == 0)
-                                channelMap.put(channelName, updates.get(0).channelPost().chat().id());
+                try {
+                    // channelPost & /start & title=channelName 이면, chatId 저장
+                    if (updates.get(0).channelPost() != null)
+                        if (updates.get(0).channelPost().text().toLowerCase().compareTo("/start") == 0) {
+                            for (String channelName : channelNames) {
+                                if (updates.get(0).channelPost().chat().title().compareTo(channelName) == 0)
+                                    channelMap.put(channelName, updates.get(0).channelPost().chat().id());
+                            }
                         }
-                    }
-            }
-            catch(NullPointerException e)
-            {
-                log.error("chat().id() update skip...");
-            }
-            finally
-            {
-                log.info("[UpdatesListener] channelInfo = {}", channelMap);
-            }
+                } catch (NullPointerException e) {
+                    log.error("chat().id() update skip...");
+                } finally {
+                    log.info("[UpdatesListener] channelInfo = {}", channelMap);
+                }
 
-            return UpdatesListener.CONFIRMED_UPDATES_ALL;
+                return UpdatesListener.CONFIRMED_UPDATES_ALL;
+            }
+        }, new ExceptionHandler() {
+            @Override
+            public void onException(TelegramException e) {
+                log.error(e.toString());
+                /*
+                https://github.com/yagop/node-telegram-bot-api/issues/488
+                com.pengrad.telegrambot.TelegramException: GetUpdates failed with error_code 409 Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
+                이 오류는 동일한 봇 토큰을 사용하는 봇의 인스턴스가 1개 이상일 때 발생하며, 이는 Telegram API에서 오류를 유발합니다.
+                이것이 봇 토큰을 변경하거나 다른 작업을 닫으면 이 오류가 해결되는 이유입니다.
+                */
+            }
         });
-
     }
 
     /**
      * Bot 정보 가져오기
      */
-    public User GetMe()
-    {
+    public User GetMe() {
         GetMe request = new GetMe();
         GetMeResponse getMeResponse = telegramBot.execute(request);
 
@@ -117,16 +118,13 @@ public class TelegramBotService {
     /**
      * 지정한 채널로 Message 보내기
      */
-    public Message SendMessage(String channelName, String text)
-    {
-        if(channelMap.isEmpty())
-        {
+    public Message SendMessage(String channelName, String text) {
+        if (channelMap.isEmpty()) {
             // /start 시작한 채널이 없습니다.
             return new Message();
         }
 
-        if(!channelMap.containsKey(channelName))
-        {
+        if (!channelMap.containsKey(channelName)) {
             // 일치하는 채널이 없습니다.
             return new Message();
         }
@@ -134,8 +132,7 @@ public class TelegramBotService {
         return SendMessage(channelMap.get(channelName), text);
     }
 
-    protected Message SendMessage(long id, String text)
-    {
+    protected Message SendMessage(long id, String text) {
         // method.1
         //SendResponse sendResponse = telegramBot.execute(new SendMessage(chatId, "Hello!"));
 
@@ -156,9 +153,8 @@ public class TelegramBotService {
     /**
      * Message 가져오기
      */
-    public List<Update> GetUpdates()
-    {
-        GetUpdates getUpdates = new GetUpdates().limit(100).offset(0).timeout(3);
+    public List<Update> GetUpdates() {
+        GetUpdates getUpdates = new GetUpdates().limit(100).offset(0).timeout(0);
         GetUpdatesResponse updatesResponse = telegramBot.execute(getUpdates);
 
         return updatesResponse.updates();

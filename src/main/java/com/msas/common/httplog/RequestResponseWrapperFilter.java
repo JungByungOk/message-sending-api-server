@@ -1,4 +1,4 @@
-package com.msas.common.httplogfilter;
+package com.msas.common.httplog;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;

@@ -1,4 +1,4 @@
-package com.msas.common.httplogfilter;
+package com.msas.common.httplog;
 
 import lombok.Builder;
 import lombok.Data;

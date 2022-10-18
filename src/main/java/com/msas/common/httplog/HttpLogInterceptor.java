@@ -1,4 +1,4 @@
-package com.msas.common.httplogfilter;
+package com.msas.common.httplog;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.GsonBuilder;
