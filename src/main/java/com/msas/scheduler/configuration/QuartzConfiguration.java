@@ -60,7 +60,6 @@ public class QuartzConfiguration {
         AutowiringSpringBeanJobFactory jobFactory = new AutowiringSpringBeanJobFactory();
         jobFactory.setApplicationContext(applicationContext);
         schedulerFactoryBean.setJobFactory(jobFactory);
-
         schedulerFactoryBean.setApplicationContext(applicationContext);
 
         Properties properties = new Properties();
@@ -71,6 +70,7 @@ public class QuartzConfiguration {
         schedulerFactoryBean.setOverwriteExistingJobs(true);
         schedulerFactoryBean.setQuartzProperties(properties);
         schedulerFactoryBean.setWaitForJobsToCompleteOnShutdown(true);
+
         return schedulerFactoryBean;
     }
 

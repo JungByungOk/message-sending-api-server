@@ -18,11 +18,35 @@ spring:
   #----------------------------------------------
   quartz:
     scheduler-name: email-sending-scheduler
-    job-store-type: memory
     overwrite-existing-jobs: false
-    startup-delay: 5
+    startup-delay: 10
     wait-for-jobs-to-complete-on-shutdown: true
     auto-startup: true
+
+    #############################################
+    # 쿼츠 프로퍼티로 직접 주입해야 설정이 된다.
+    # 레퍼런스나 참조 문서가 없는 상태에서 어렵게 찾아낸 방법이므로 두번 고생하지 말자.
+    # spring.quartz.* 는 실제 쿼츠에 설정이 안먹는다.
+    #############################################
+    properties:
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
+      org.quartz.threadPool.threadCount: 30
+
+      # Quartz Configuration: https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/
+      org.quartz.dataSource.quartzDataSource.provider: hikaricp
+      org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+      org.quartz.jobStore.dataSource: quartzDataSource
+      org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
+      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://localhost:3306/quartz
+      org.quartz.dataSource.quartzDataSource.user: quartz
+      org.quartz.dataSource.quartzDataSource.password: quartz
+
+#----------------------------------------------
+# spring-quartz
+#----------------------------------------------
+
 
 #------------------------------------------------
 # aws ses

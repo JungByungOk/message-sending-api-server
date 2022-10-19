@@ -1,5 +1,6 @@
 package com.msas.scheduler.job;
 
+import com.google.gson.Gson;
 import com.msas.ses.dto.RequestTemplatedEmailDto;
 import com.msas.ses.service.SESMailService;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -34,9 +36,9 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
         return item -> consumer.accept(counter.getAndIncrement(), item);
     }
 
-    public void setSesMailService(SESMailService sesMailService) {
-        this.sesMailService = sesMailService;
-    }
+//    public void setSesMailService(SESMailService sesMailService) {
+//        this.sesMailService = sesMailService;
+//    }
 
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
@@ -59,9 +61,12 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
         // 이메일 전송 처리
         //-------------------------------------------------------------------------------
         JobDataMap jobDataMap = context.getMergedJobDataMap();
-        
-        List<RequestTemplatedEmailDto> templatedEmailList
-                = (List<RequestTemplatedEmailDto>) jobDataMap.get("templatedMailList");
+
+//        List<RequestTemplatedEmailDto> templatedEmailList
+//                = (List<RequestTemplatedEmailDto>) jobDataMap.get("templatedMailList");
+
+        List<RequestTemplatedEmailDto> templatedEmailList =
+                new Gson().fromJson((String) jobDataMap.get("templatedMailList"), ArrayList.class);
 
         //---------------------------------------
         // 이메일 목록이 14개 이상이면,

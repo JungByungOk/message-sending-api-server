@@ -1,5 +1,6 @@
 package com.msas.scheduler.service;
 
+import com.google.gson.Gson;
 import com.msas.scheduler.dto.JobInfoDTO;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
 import com.msas.scheduler.dto.ResponseAllJobStatusDTO;
@@ -106,9 +107,19 @@ public class ScheduleServiceImpl implements ScheduleService {
     public void addJob(RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO, Class<? extends Job> jobClass) throws SchedulerException {
         log.debug("[scheduler-debug] Add job with jobKey : {}", new JobKey(requestTemplatedEmailScheduleJobDTO.getJobGroup(), requestTemplatedEmailScheduleJobDTO.getJobName()));
 
+        /**
+         * jobDataMap에는 primitive type만 사용하도록 권장한다.
+         * 객체를 Serialize/Deserialize 하는데 문제가 발생할 가능성이 있다고 한다.
+         * JobDataMap에 객체를 넣을때는 JSON으로 직렬화/역직렬화하여 사용하도록 한다.
+         */
         JobDataMap jobDataMap = new JobDataMap();
-        if (requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList() != null)
-            jobDataMap.put("templatedMailList", requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList());
+        if (requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList() != null) {
+            //jobDataMap.put("templatedMailList", requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList());
+            String jsonSerialized = new Gson().toJson(requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList());
+            jobDataMap.put("templatedMailList", jsonSerialized);
+        }
+
+        requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList();
 
         // 작업 정의
         JobDetail jobDetail = JobBuilder.newJob(jobClass)
