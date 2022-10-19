@@ -26,3 +26,7 @@ telegram
    (1) https://github.com/pengrad/java-telegram-bot-api/#updating-messages
 
    (2) https://github.com/rubenlagus/TelegramBots
+
+logback appender
+- https://github.com/paolodenti/telegram-logback
+- https://github.com/maricn/logback-slack-appender

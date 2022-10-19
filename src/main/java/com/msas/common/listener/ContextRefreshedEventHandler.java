@@ -3,6 +3,7 @@ package com.msas.common.listener;
 import com.msas.scheduler.service.ScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.context.ApplicationListener;
 import org.springframework.stereotype.Component;
 
@@ -18,19 +19,9 @@ public class ContextRefreshedEventHandler implements ApplicationListener<org.spr
     private final ScheduleService scheduleService;
 
     @Override
-    public void onApplicationEvent(org.springframework.context.event.ContextRefreshedEvent contextRefreshedEvent) {
-
-        String str = "\n" +
-                "=======================================\n" +
-                "⚠️ 어플리케이션 시작\n" +
-                "    ✔ AWS SES APIs\n" +
-                "    ✔ Email Scheduling APIs\n" +
-                "    ✔ Telegram Bot Backend APIs (다중 채널 선택 전송)\n" +
-                "    \n" +
-                "    🚫 Slack Bot Backend APIs\n" +
-                "    🚫 RAM Store -> Database (Job, Trigger, History)\n" +
-                "=======================================";
-        log.info(str);
-
+    public void onApplicationEvent(@NotNull org.springframework.context.event.ContextRefreshedEvent contextRefreshedEvent) {
+        {
+            // TODO 어플맄케이션 시작하면서 즉시 실행할 스케쥴러 등록
+        }
     }
 }
