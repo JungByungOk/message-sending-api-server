@@ -65,6 +65,7 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
 //        List<RequestTemplatedEmailDto> templatedEmailList
 //                = (List<RequestTemplatedEmailDto>) jobDataMap.get("templatedMailList");
 
+
         List<RequestTemplatedEmailDto> templatedEmailList =
                 new Gson().fromJson((String) jobDataMap.get("templatedMailList"), ArrayList.class);
 

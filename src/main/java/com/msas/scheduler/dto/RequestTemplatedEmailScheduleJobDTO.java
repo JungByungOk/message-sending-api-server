@@ -1,5 +1,6 @@
 package com.msas.scheduler.dto;
 
+import com.amazonaws.services.simpleemail.model.MessageTag;
 import com.msas.ses.dto.RequestTemplatedEmailDto;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -13,9 +14,6 @@ import java.util.List;
 @Data
 public class RequestTemplatedEmailScheduleJobDTO {
 
-    @NotNull(message = "TemplatedEmailList can't not be null.")
-    private List<RequestTemplatedEmailDto> templatedEmailList;
-    
     private String jobGroup = "DEFAULT";
 
     @NotNull
@@ -24,8 +22,23 @@ public class RequestTemplatedEmailScheduleJobDTO {
 
     private String description;
 
+    @NotNull
+    @NotEmpty(message = "Email (from) sender cannot be Null")
+    String from;
+
     @Future(message = "Invalid scheduling datetime. The past time cannot be set.")
     @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime startDateAt;
+
+    @NotNull
+    @NotEmpty(message = "Email templateName cannot be Null")
+    String templateName;
+
+    @NotNull(message = "TemplatedEmailList can't not be null.")
+    private List<TemplatedEmailDto> templatedEmailList;
+
+    @NotNull
+    @NotEmpty(message = "Email tags (campaign name or event name) cannot be Null")
+    List<MessageTag> tags;
 
 }

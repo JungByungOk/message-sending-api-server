@@ -39,7 +39,8 @@ spring:
       org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
       org.quartz.jobStore.dataSource: quartzDataSource
       org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
-      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://localhost:3306/quartz
+
+      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://58.232.131.21:3306/quartz #test: jdbc:mariadb://58.232.131.21:3306/quartz
       org.quartz.dataSource.quartzDataSource.user: quartz
       org.quartz.dataSource.quartzDataSource.password: quartz
 

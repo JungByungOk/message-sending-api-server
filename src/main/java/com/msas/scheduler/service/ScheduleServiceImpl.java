@@ -1,10 +1,12 @@
 package com.msas.scheduler.service;
 
-import com.google.gson.Gson;
+import com.google.gson.*;
 import com.msas.scheduler.dto.JobInfoDTO;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
 import com.msas.scheduler.dto.ResponseAllJobStatusDTO;
+import com.msas.scheduler.dto.TemplatedEmailDto;
 import com.msas.scheduler.utils.DateTimeUtils;
+import com.msas.ses.dto.RequestTemplatedEmailDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
@@ -13,6 +15,7 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 
 import javax.validation.constraints.NotNull;
+import java.lang.reflect.Type;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
@@ -118,8 +121,6 @@ public class ScheduleServiceImpl implements ScheduleService {
             String jsonSerialized = new Gson().toJson(requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList());
             jobDataMap.put("templatedMailList", jsonSerialized);
         }
-
-        requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList();
 
         // 작업 정의
         JobDetail jobDetail = JobBuilder.newJob(jobClass)
