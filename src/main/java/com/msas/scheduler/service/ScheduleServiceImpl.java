@@ -1,12 +1,13 @@
 package com.msas.scheduler.service;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.msas.scheduler.dto.JobInfoDTO;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
 import com.msas.scheduler.dto.ResponseAllJobStatusDTO;
-import com.msas.scheduler.dto.TemplatedEmailDto;
 import com.msas.scheduler.utils.DateTimeUtils;
-import com.msas.ses.dto.RequestTemplatedEmailDto;
+import com.msas.scheduler.utils.LocalDateTimeDeserializer;
+import com.msas.scheduler.utils.LocalDateTimeSerializer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
@@ -15,8 +16,8 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 
 import javax.validation.constraints.NotNull;
-import java.lang.reflect.Type;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -110,16 +111,27 @@ public class ScheduleServiceImpl implements ScheduleService {
     public void addJob(RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO, Class<? extends Job> jobClass) throws SchedulerException {
         log.debug("[scheduler-debug] Add job with jobKey : {}", new JobKey(requestTemplatedEmailScheduleJobDTO.getJobGroup(), requestTemplatedEmailScheduleJobDTO.getJobName()));
 
-        /**
-         * jobDataMap에는 primitive type만 사용하도록 권장한다.
+        /*
+         * jobDataMap 에는 primitive type 만 사용하도록 권장한다.
          * 객체를 Serialize/Deserialize 하는데 문제가 발생할 가능성이 있다고 한다.
-         * JobDataMap에 객체를 넣을때는 JSON으로 직렬화/역직렬화하여 사용하도록 한다.
+         * JobDataMap 에 객체를 넣을때는 JSON 으로 직렬화/역직렬화하여 사용하도록 한다.
          */
         JobDataMap jobDataMap = new JobDataMap();
         if (requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList() != null) {
-            //jobDataMap.put("templatedMailList", requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList());
-            String jsonSerialized = new Gson().toJson(requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList());
-            jobDataMap.put("templatedMailList", jsonSerialized);
+
+            // 커스텀 시리얼라이즈 설정
+            GsonBuilder gsonBuilder = new GsonBuilder();
+            gsonBuilder.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeSerializer());
+            gsonBuilder.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeDeserializer());
+            Gson gson = gsonBuilder.setPrettyPrinting().create();
+
+            String jsonSerialized = gson.toJson(requestTemplatedEmailScheduleJobDTO);
+            jobDataMap.put("TemplatedEmailScheduleJob", jsonSerialized);
+
+            // 커스텀 역직렬화 설정
+            RequestTemplatedEmailScheduleJobDTO des
+                    = gson.fromJson(jsonSerialized, RequestTemplatedEmailScheduleJobDTO.class);
+
         }
 
         // 작업 정의
@@ -135,8 +147,7 @@ public class ScheduleServiceImpl implements ScheduleService {
         Trigger trigger = TriggerBuilder.newTrigger()
                 .withIdentity(requestTemplatedEmailScheduleJobDTO.getJobName(), requestTemplatedEmailScheduleJobDTO.getJobGroup())
                 .startAt(Timestamp.valueOf(requestTemplatedEmailScheduleJobDTO.getStartDateAt()))    // Type Casting: LocalDateTime to Date
-                // SimpleScheduleBuilder, CronScheduleBuilder, CalendarIntervalScheduleBuilder
-                .withSchedule(SimpleScheduleBuilder.simpleSchedule()
+                .withSchedule(SimpleScheduleBuilder.simpleSchedule() // {SimpleScheduleBuilder, CronScheduleBuilder, CalendarIntervalScheduleBuilder}
                         .withRepeatCount(0)
                         .withMisfireHandlingInstructionFireNow()
                 )

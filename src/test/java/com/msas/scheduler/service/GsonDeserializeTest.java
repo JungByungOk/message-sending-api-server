@@ -1,14 +1,5 @@
 package com.msas.scheduler.service;
 
-import com.amazonaws.services.simpleemail.model.MessageTag;
-import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
-import com.msas.scheduler.dto.TemplatedEmailDto;
-import org.junit.jupiter.api.Test;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 class GsonDeserializeTest {
 
     /*
@@ -47,23 +38,23 @@ class GsonDeserializeTest {
         }
      */
 
-    @Test
-    void deserialize() {
-
-        String strJson = "{\\n    \"jobName\": \"test-job15\",\\n    \"jobGroup\": \"test-group1\",\\n    \"description\": \"\\uc2a4\\ucf00\\uc974 \\uc791\\uc5c5 \\ub4f1\\ub85d \\ud14c\\uc2a4\\ud2b8\",\\n    \"startDateAt\": \"2022-10-21T11:02:00\",\\n    \"templateName\": \"TEST-Template-Welcome\",\\n    \"from\": \"no-reply@nftreally.io\",\\n    \"templatedEmailList\": [\\n        {\\n            \"to\": [\\n                \"jbo2541@gmail.com\"\\n            ],\\n            \"cc\": [\\n                \"jbo2541@outlook.com\"\\n            ],\\n            \"bcc\": [\\n                \"bojung@digicaps.com\"\\n            ],\\n            \"templateData\": {\\n                \"user_name\": \"Jung Byung Ok\",\\n                \"nicname\": \"Leo\",\\n                \"membership\": \"Standard\"\\n            }\\n        }\\n    ],\\n    \"tags\": [\\n        {\\n            \"name\": \"promotion\",\\n            \"value\": \"welcome promotion-#1\"\\n        }\\n    ]\\n}";
-
-        List<TemplatedEmailDto> templatedEmailDtoList = new ArrayList<>();
-
-        RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO = new RequestTemplatedEmailScheduleJobDTO();
-        requestTemplatedEmailScheduleJobDTO.setJobName("job1");
-        requestTemplatedEmailScheduleJobDTO.setJobGroup("group1");
-        requestTemplatedEmailScheduleJobDTO.setDescription("jobdatamap deserialize");
-        requestTemplatedEmailScheduleJobDTO.setStartDateAt(LocalDateTime.now());
-        {
-            TemplatedEmailDto templatedEmailDto = new TemplatedEmailDto();
-            templatedEmailDto.setTemplateName("template1");
-            templatedEmailDto.setTags());
-        }
-        requestTemplatedEmailScheduleJobDTO.setTemplatedEmailList();
-    }
+//    @Test
+//    void deserialize() {
+//
+//        String strJson = "{\\n    \"jobName\": \"test-job15\",\\n    \"jobGroup\": \"test-group1\",\\n    \"description\": \"\\uc2a4\\ucf00\\uc974 \\uc791\\uc5c5 \\ub4f1\\ub85d \\ud14c\\uc2a4\\ud2b8\",\\n    \"startDateAt\": \"2022-10-21T11:02:00\",\\n    \"templateName\": \"TEST-Template-Welcome\",\\n    \"from\": \"no-reply@nftreally.io\",\\n    \"templatedEmailList\": [\\n        {\\n            \"to\": [\\n                \"jbo2541@gmail.com\"\\n            ],\\n            \"cc\": [\\n                \"jbo2541@outlook.com\"\\n            ],\\n            \"bcc\": [\\n                \"bojung@digicaps.com\"\\n            ],\\n            \"templateData\": {\\n                \"user_name\": \"Jung Byung Ok\",\\n                \"nicname\": \"Leo\",\\n                \"membership\": \"Standard\"\\n            }\\n        }\\n    ],\\n    \"tags\": [\\n        {\\n            \"name\": \"promotion\",\\n            \"value\": \"welcome promotion-#1\"\\n        }\\n    ]\\n}";
+//
+//        List<XTemplatedEmailDto> templatedEmailDtoList = new ArrayList<>();
+//
+//        RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO = new RequestTemplatedEmailScheduleJobDTO();
+//        requestTemplatedEmailScheduleJobDTO.setJobName("job1");
+//        requestTemplatedEmailScheduleJobDTO.setJobGroup("group1");
+//        requestTemplatedEmailScheduleJobDTO.setDescription("jobdatamap deserialize");
+//        requestTemplatedEmailScheduleJobDTO.setStartDateAt(LocalDateTime.now());
+//        {
+//            XTemplatedEmailDto templatedEmailDto = new XTemplatedEmailDto();
+//            templatedEmailDto.setTemplateName("template1");
+//            templatedEmailDto.setTags());
+//        }
+//        requestTemplatedEmailScheduleJobDTO.setTemplatedEmailList();
+//    }
 }
