@@ -58,10 +58,4 @@ public class RequestTemplatedEmailScheduleJobDTO {
 
     }
 
-
-    public static class MessageTag extends com.amazonaws.services.simpleemail.model.MessageTag {
-        private String name;
-        private String value;
-    }
-
 }

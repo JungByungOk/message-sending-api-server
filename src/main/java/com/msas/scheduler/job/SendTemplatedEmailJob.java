@@ -77,10 +77,13 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
         //---------------------------------------
         requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().forEach(withCounter((count, templatedEmail) -> {
 
+            // 이메일 발송
+            String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(requestTemplatedEmailScheduleJobDTO, count));
 
-            String messageId = sesMailService.sendTemplatedEmail();
-
-            log.info("\t이메일 전송 ({}/{}) : templateName = {}, messageId = {}", count + 1, templatedEmailList.size(), templatedEmail.getTemplateName(), messageId);
+            log.info("\t이메일 전송 ({}/{}) : templateName = {}, messageId = {}",
+                    count + 1,
+                    requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().size(),
+                    requestTemplatedEmailScheduleJobDTO.getTemplateName(), messageId);
 
             //14개 전송 속도 쓰로틀링
             if (count % 14 == 0) {

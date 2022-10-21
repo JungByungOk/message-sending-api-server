@@ -128,10 +128,6 @@ public class ScheduleServiceImpl implements ScheduleService {
             String jsonSerialized = gson.toJson(requestTemplatedEmailScheduleJobDTO);
             jobDataMap.put("TemplatedEmailScheduleJob", jsonSerialized);
 
-            // 커스텀 역직렬화 설정
-            RequestTemplatedEmailScheduleJobDTO des
-                    = gson.fromJson(jsonSerialized, RequestTemplatedEmailScheduleJobDTO.class);
-
         }
 
         // 작업 정의
