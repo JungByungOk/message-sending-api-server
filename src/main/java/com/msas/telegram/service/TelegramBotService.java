@@ -84,7 +84,7 @@ public class TelegramBotService {
                                     channelMap.put(channelName, updates.get(0).channelPost().chat().id());
                             }
                         }
-                } catch (NullPointerException e) {
+                } catch (Exception e) {
                     log.error("chat().id() update skip...");
                 } finally {
                     log.info("[UpdatesListener] channelInfo = {}", channelMap);

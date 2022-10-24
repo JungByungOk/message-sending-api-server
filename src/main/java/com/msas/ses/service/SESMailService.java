@@ -111,7 +111,7 @@ public class SESMailService {
                 emailRequest.setDestination(destination);
                 emailRequest.setSource(requestTemplatedEmailDto.getFrom());
                 emailRequest.setTemplateData(new Gson().toJson(requestTemplatedEmailDto.getTemplateData()));
-                emailRequest.setTags(requestTemplatedEmailDto.getTags());
+                emailRequest.setTags(requestTemplatedEmailDto.getTags());   // custom tag: 발송 단위 별로 이벤트 로그 추적 정보
             }
 
             sendTemplatedEmailResult = amazonSimpleEmailService.sendTemplatedEmail(emailRequest);

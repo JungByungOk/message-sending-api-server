@@ -32,8 +32,9 @@ dependencies {
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.12.322'
 
     // JPA for DynamoDB
+    // https://boostchicken.github.io/spring-data-dynamodb/
     // https://mvnrepository.com/artifact/io.github.boostchicken/spring-data-dynamodb
-    implementation group: 'io.github.boostchicken', name: 'spring-data-dynamodb', version: '5.2.5'
+    // implementation group: 'io.github.boostchicken', name: 'spring-data-dynamodb', version: '5.2.5'
 
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
     implementation group: 'com.google.code.gson', name: 'gson', version: '2.9.1'

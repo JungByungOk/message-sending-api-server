@@ -52,8 +52,8 @@ cloud:
     region:
       static: ap-northeast-2
     credentials:
-      access-key: AKIA2F6HCY2MG5U5QYHM
-      secret-key: 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
+      access-key: AKIA2F6HCY2MNDRHU6BX
+      secret-key: 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
 
 #------------------------------------------------
 # actuator
