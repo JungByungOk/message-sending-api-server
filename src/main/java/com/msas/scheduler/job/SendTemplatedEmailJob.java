@@ -30,8 +30,12 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
      * AutowiringSpringBeanJobFactory 에서 서비스 주입을 받기 위해서는
      * 반드시 @Autowired 어노테이션으로만 동작한다.
      */
-    @Autowired
     private SESMailService sesMailService;
+    @Autowired
+    public void setSESMailService(SESMailService sesMailService) {
+        this.sesMailService = sesMailService;
+    }
+
     private volatile boolean isJobInterrupted = false;
 
     public static <T> Consumer<T> withCounter(BiConsumer<Integer, T> consumer) {
