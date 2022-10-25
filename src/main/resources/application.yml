@@ -40,9 +40,16 @@ spring:
       org.quartz.jobStore.dataSource: quartzDataSource
       org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
 
+      # Database Store
       org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://58.232.131.21:3306/quartz #test: jdbc:mariadb://58.232.131.21:3306/quartz
       org.quartz.dataSource.quartzDataSource.user: quartz
       org.quartz.dataSource.quartzDataSource.password: quartz
+
+      # Logging Trigger History
+      # https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/ConfigPlugins.html
+      org.quartz.plugin.triggHistory.class: org.quartz.plugins.history.LoggingTriggerHistoryPlugin
+      org.quartz.plugin.triggHistory.triggerFiredMessage: '🔥Trigger {1}.{0} fired job {6}.{5} at: {4, date, HH:mm:ss MM/dd/yyyy}'
+      org.quartz.plugin.triggHistory.triggerCompleteMessage: '🔥Trigger {1}.{0} completed firing job {6}.{5} at {4, date, HH:mm:ss MM/dd/yyyy\}.'
 
 #------------------------------------------------
 # aws ses
@@ -72,9 +79,10 @@ management:
 #------------------------------------------------
 logging:
   level:
-    root: INFO
+    root: ERROR
     org.springframework.web: INFO
-    com.msas.ses: DEBUG
+    org.quartz: DEBUG
+    com.msas: DEBUG
 
 #------------------------------------------------
 # bot

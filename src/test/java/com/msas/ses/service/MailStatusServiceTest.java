@@ -1,0 +1,40 @@
+package com.msas.ses.service;
+
+import com.google.gson.GsonBuilder;
+import com.msas.ses.model.SESEventsEntity;
+import com.msas.ses.repository.SESEventsDynamoDBRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.*;
+
+@SpringBootTest
+class MailStatusServiceTest {
+
+    @Autowired
+    private SESEventsDynamoDBRepository sesEventsDynamoDBRepository;
+
+    @Test
+    @DisplayName("DynamoDB PartiQL Select 쿼리 테스트")
+    public void ChangeEmailStatusFromDynamoDB()
+    {
+        //given
+        String CustomTag = "20221025154600";
+
+        //when
+        List<SESEventsEntity> resultList = sesEventsDynamoDBRepository.getItemsByCumstomTag(CustomTag);
+
+        //then
+        assertThat(resultList)
+                .isNotNull()
+                .isNotEmpty();
+
+        System.out.printf("[Size=%s]\nResultList=\n%s%n", resultList.size(),
+                new GsonBuilder().setPrettyPrinting().create().toJson(resultList));
+
+    }
+
+}
