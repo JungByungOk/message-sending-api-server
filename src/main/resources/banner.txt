@@ -1,6 +1,7 @@
-=======================================
-Multi Message Sending API Server
-=======================================
+  / _ \__________________________/`/\+-/\'\'\
+\_\(_)/_/ Message Sending Server -+-    -+-+-
+ _//o\\_                         \'\/+-\/`/`/
+  /   \                           \/-+--\/`/
 
 [AWS SES]
 ---templated-----------------
@@ -26,3 +27,5 @@ Multi Message Sending API Server
 [Slack]
     ㄴ Multi-channel name setting
     ㄴ Send message by channel name
+
+»»» ¯\_(ツ)_/¯
