@@ -1,9 +1,0 @@
-spring.application.name=message sending api server
-server.port=8080
-
-cloud.aws.credentials.access-key=AKIA2F6HCY2MDAVJX5SS
-cloud.aws.credentials.secret-key=BETpCSzpZvTG20rugd099ppp+y7LCeOEybufmJN0bg1p
-
-cloud.aws.region.static=ap-northeast-2
-spring.cloud.aws.ses.enabled=true
-spring.cloud.aws.ses.region=ap-northeast-2

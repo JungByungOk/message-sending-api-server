@@ -66,7 +66,15 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
         JobDataMap jobDataMap = context.getMergedJobDataMap();
         String strJson = (String) jobDataMap.get("TemplatedEmailScheduleJob");
 
-        // 커스텀 역직렬화
+        /*
+         * TODO. RequestTemplatedEmailScheduleJobDTO 역직렬화 개선 필요
+         * 커스텀 역직렬화 처리
+         * WARNING: An illegal reflective access operation has occurred
+         * WARNING: Illegal reflective access by com.google.gson.internal.reflect.ReflectionHelper (file:/Users/bojung/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.9.1/2cc2131b98ebfb04e2b2c7dfb84431f4045096b/gson-2.9.1.jar) to field java.nio.ByteBuffer.hb
+         * WARNING: Please consider reporting this to the maintainers of com.google.gson.internal.reflect.ReflectionHelper
+         * WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+         * WARNING: All illegal access operations will be denied in a future release
+         */
         GsonBuilder gsonBuilder = new GsonBuilder();
         gsonBuilder.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeSerializer());
         gsonBuilder.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeDeserializer());
@@ -115,7 +123,7 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
     }
 
     /**
-     * 실행중인 스레드 종료 시키기
+     * 실행중인 작업 스레드 종료 시키기
      */
     @Override
     public void interrupt() throws UnableToInterruptJobException {

@@ -95,13 +95,14 @@ public class TelegramBotService {
         }, new ExceptionHandler() {
             @Override
             public void onException(TelegramException e) {
-                log.error(e.toString());
                 /*
                 https://github.com/yagop/node-telegram-bot-api/issues/488
                 com.pengrad.telegrambot.TelegramException: GetUpdates failed with error_code 409 Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
                 이 오류는 동일한 봇 토큰을 사용하는 봇의 인스턴스가 1개 이상일 때 발생하며, 이는 Telegram API에서 오류를 유발합니다.
                 이것이 봇 토큰을 변경하거나 다른 작업을 닫으면 이 오류가 해결되는 이유입니다.
                 */
+
+                log.error(e.toString());
             }
         });
     }

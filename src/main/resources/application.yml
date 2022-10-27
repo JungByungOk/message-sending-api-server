@@ -31,28 +31,37 @@ spring:
     properties:
       org.quartz.scheduler.instanceId: AUTO
       org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
-      org.quartz.threadPool.threadCount: 30
+      org.quartz.threadPool.threadCount: 10
 
-      # Quartz Configuration: https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/
-      org.quartz.dataSource.quartzDataSource.provider: hikaricp
-      org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
-      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
-      org.quartz.jobStore.dataSource: quartzDataSource
-      org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
-
-      # Database Store
-      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://58.232.131.21:3306/quartz #test: jdbc:mariadb://58.232.131.21:3306/quartz
-      org.quartz.dataSource.quartzDataSource.user: quartz
-      org.quartz.dataSource.quartzDataSource.password: quartz
+#      # Quartz Configuration: https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/
+#      org.quartz.dataSource.quartzDataSource.provider: hikaricp
+#      org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
+#      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+#      org.quartz.jobStore.dataSource: quartzDataSource
+#      org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
+#
+#      # Database Store
+#      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://58.232.131.21:3306/quartz #test: jdbc:mariadb://10.1.199.254:3306/nft
+#      org.quartz.dataSource.quartzDataSource.user: quartz
+#      org.quartz.dataSource.quartzDataSource.password: quartz
 
       # Logging Trigger History
       # https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/ConfigPlugins.html
       org.quartz.plugin.triggHistory.class: org.quartz.plugins.history.LoggingTriggerHistoryPlugin
       org.quartz.plugin.triggHistory.triggerFiredMessage: '🔥Trigger {1}.{0} fired job {6}.{5} at: {4, date, HH:mm:ss MM/dd/yyyy}'
       org.quartz.plugin.triggHistory.triggerCompleteMessage: '🔥Trigger {1}.{0} completed firing job {6}.{5} at {4, date, HH:mm:ss MM/dd/yyyy\}.'
+  #------------------------------------------------
+  # database
+  #------------------------------------------------
+  datasource:
+    name: NFTReally
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://10.1.199.254:3306/nft
+    username: nft
+    password: Digi@cap!
 
 #------------------------------------------------
-# aws ses
+# AWS {SES, DynamoDB}
 #------------------------------------------------
 cloud:
   aws:
@@ -91,3 +100,11 @@ bot:
   telegram:
     token-id: 5710353844:AAEqVlaqAa7-Ixv-hnximDy8xa_BkkepRV8
     channel-names: NFTReally.Notification, NFTReally.BackEnd
+
+#------------------------------------------------
+# polling checker
+#------------------------------------------------
+polling:
+  schedule:
+      send-email-check-time: 10000
+      send-email-event-check-time: 12000
