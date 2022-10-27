@@ -37,4 +37,11 @@ class MailStatusServiceTest {
 
     }
 
+    @Test
+    @DisplayName("DynamoDB SESEvents table 에서 MessageId로 아이템 삭제")
+    public void DeleteEventItem()
+    {
+
+    }
+
 }
