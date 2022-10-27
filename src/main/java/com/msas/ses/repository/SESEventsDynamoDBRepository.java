@@ -4,6 +4,8 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.msas.ses.model.SESEventsEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -21,11 +24,30 @@ public class SESEventsDynamoDBRepository {
 
     private final AmazonDynamoDB amazonDynamoDB;
 
+    public List<SESEventsEntity> getItems()
+    {
+        List<SESEventsEntity> sesEventsEntityList = null;
+
+        try {
+            // Create ExecuteStatementRequest
+            ExecuteStatementRequest executeStatementRequest = new ExecuteStatementRequest();
+            executeStatementRequest.setStatement("select * from SESEvents;");
+            ExecuteStatementResult executeStatementResult = amazonDynamoDB.executeStatement(executeStatementRequest);
+
+            sesEventsEntityList = toList(executeStatementResult);
+
+        } catch (Exception e) {
+            handleExecuteStatementErrors(e);
+        }
+
+        return sesEventsEntityList;
+    }
+
     public List<SESEventsEntity> getItemsByCumstomTag(String CustomTag) {
 
         // TODO. 이메일 발송 결과를 가져와서 rdbms 이메일 이력 테이블에 상태 업데이트 처리 필요
 
-        List<SESEventsEntity> sesEventsEntityList = new ArrayList<>();
+        List<SESEventsEntity> sesEventsEntityList = null;
 
         try {
             // Create ExecuteStatementRequest
@@ -34,20 +56,7 @@ public class SESEventsDynamoDBRepository {
 
             ExecuteStatementResult executeStatementResult = amazonDynamoDB.executeStatement(executeStatementRequest);
 
-            // Handle executeStatementResult
-            executeStatementResult.getItems().forEach(new Consumer<Map<String, AttributeValue>>() {
-                @Override
-                public void accept(Map<String, AttributeValue> stringAttributeValueMap) {
-                    sesEventsEntityList.add(SESEventsEntity.builder()
-                                    .sesMessageId(stringAttributeValueMap.get("SESMessageId").getS())       // partition-key
-                                    .snsPublishTime(stringAttributeValueMap.get("SnsPublishTime").getS())   // sort-key
-                                    .destinationEmail(stringAttributeValueMap.get("DestinationEmail").getS())
-                                    .eventType(stringAttributeValueMap.get("EventType").getS())
-                                    .message(stringAttributeValueMap.get("Message").getS())
-                                    .customTag(stringAttributeValueMap.get("CustomTag").getS())
-                            .build());
-                }
-            });
+            sesEventsEntityList = toList(executeStatementResult);
 
         } catch (Exception e) {
             handleExecuteStatementErrors(e);
@@ -59,6 +68,34 @@ public class SESEventsDynamoDBRepository {
     public void deleteItemBySESMessageId(String SESMessageId)
     {
         // TODO. DaynamoDB 에서 이벤트 아이템을 삭제 구현
+    }
+
+    private List<SESEventsEntity> toList(ExecuteStatementResult executeStatementResult)
+    {
+        List<SESEventsEntity> sesEventsEntityList = new ArrayList<>();
+
+        //
+        // Handle executeStatementResult
+        executeStatementResult.getItems().forEach(new Consumer<Map<String, AttributeValue>>() {
+            @Override
+            public void accept(Map<String, AttributeValue> stringAttributeValueMap) {
+
+                sesEventsEntityList.add(SESEventsEntity.builder()
+                        // partition-key
+                        .sesMessageId(Optional.ofNullable(stringAttributeValueMap.get("SESMessageId")).map(AttributeValue::getS).orElse(""))
+                        // sort-key
+                        .snsPublishTime(Optional.ofNullable(stringAttributeValueMap.get("SnsPublishTime")).map(AttributeValue::getS).orElse(""))
+                        .destinationEmail(Optional.ofNullable(stringAttributeValueMap.get("DestinationEmail")).map(AttributeValue::getS).orElse(""))
+                        .eventType(Optional.ofNullable(stringAttributeValueMap.get("EventType")).map(AttributeValue::getS).orElse(""))
+                        // Optional -> Map -> toJson -> String 변환
+                        .message(Optional.ofNullable(stringAttributeValueMap.get("Message")).map(AttributeValue::getM).map(p->new Gson().toJson(p)).orElse(""))
+                        // customTag value null 인 경우가 있음
+                        .customTag(Optional.ofNullable(stringAttributeValueMap.get("CustomTag")).map(AttributeValue::getS).orElse(""))
+                        .build());
+            }
+        });
+
+        return sesEventsEntityList;
     }
 
     // Handles errors during ExecuteStatement execution. Use recommendations in error messages below to add error handling specific to

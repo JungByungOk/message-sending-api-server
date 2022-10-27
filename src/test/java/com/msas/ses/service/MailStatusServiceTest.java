@@ -18,14 +18,31 @@ class MailStatusServiceTest {
     private SESEventsDynamoDBRepository sesEventsDynamoDBRepository;
 
     @Test
-    @DisplayName("DynamoDB PartiQL Select 쿼리 테스트")
-    public void ChangeEmailStatusFromDynamoDB()
+    @DisplayName("DynamoDB PartiQL Select 쿼리 - 커스텀 태그로 조회 테스트")
+    public void getItemByCustomTagFromDynamoDB()
     {
         //given
         String CustomTag = "20221025154600";
 
         //when
         List<SESEventsEntity> resultList = sesEventsDynamoDBRepository.getItemsByCumstomTag(CustomTag);
+
+        //then
+        assertThat(resultList)
+                .isNotNull()
+                .isNotEmpty();
+
+        System.out.printf("[Size=%s]\nResultList=\n%s%n", resultList.size(),
+                new GsonBuilder().setPrettyPrinting().create().toJson(resultList));
+
+    }
+
+    @Test
+    @DisplayName("DynamoDB PartiQL Select 쿼리 - 전체 조회 테스트")
+    public void getItemFromDynamoDB()
+    {
+        //when
+        List<SESEventsEntity> resultList = sesEventsDynamoDBRepository.getItems();
 
         //then
         assertThat(resultList)

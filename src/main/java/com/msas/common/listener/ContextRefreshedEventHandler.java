@@ -20,7 +20,7 @@ import java.util.List;
 @Slf4j
 public class ContextRefreshedEventHandler implements ApplicationListener<org.springframework.context.event.ContextRefreshedEvent> {
 
-    private final ScheduleService scheduleService;
+    //private final ScheduleService scheduleService;
 
     @Override
     public void onApplicationEvent(@NotNull org.springframework.context.event.ContextRefreshedEvent contextRefreshedEvent) {
