@@ -10,7 +10,7 @@ server:
 spring:
   config:
     activate:
-      on-profile: dev
+      on-profile: dev58
   application:
     #__________________________________________________________________
     # application name for NFTReally : ntc:7091, nte:7092, nts:7093
@@ -51,9 +51,9 @@ spring:
       org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
       org.quartz.jobStore.dataSource: quartzDataSource
       org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
-      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://10.1.199.254:3306/nft
-      org.quartz.dataSource.quartzDataSource.user: nft
-      org.quartz.dataSource.quartzDataSource.password: Digi@cap!
+      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://58.232.131.21:3306/quartz #test: jdbc:mariadb://10.1.199.254:3306/nft
+      org.quartz.dataSource.quartzDataSource.user: quartz
+      org.quartz.dataSource.quartzDataSource.password: quartz
 
       # Logging Trigger History
       # https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/ConfigPlugins.html
@@ -66,9 +66,9 @@ spring:
   datasource:
     name: NFTReally
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://10.1.199.254:3306/nft
-    username: nft
-    password: Digi@cap!
+    url: jdbc:mariadb://58.232.131.21:3306/quartz
+    username: quartz
+    password: quartz
 
 #################################################
 # AWS {SES, DynamoDB}

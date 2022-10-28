@@ -35,7 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 @Slf4j
 public class SESFeedbackNotificationController {
 
-    // TODO: SES 통지 데이터를 데이타베이스에 저장하도록 구현해야 한다. -> 통지 데이터를 통해 집계를 해야한다.
+    // TODO. SES 통지 데이터를 데이타베이스에 저장하도록 구현해야 한다. -> 통지 데이터를 통해 집계를 해야한다.
 
     @PostMapping("/bounces")
     public void bounce(@RequestBody String body, HttpServletRequest request) {

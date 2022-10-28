@@ -4,17 +4,16 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.model.*;
-import com.google.gson.Gson;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.GsonBuilder;
 import com.msas.ses.model.SESEventsEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -74,28 +73,53 @@ public class SESEventsDynamoDBRepository {
     {
         List<SESEventsEntity> sesEventsEntityList = new ArrayList<>();
 
-        //
         // Handle executeStatementResult
         executeStatementResult.getItems().forEach(new Consumer<Map<String, AttributeValue>>() {
             @Override
             public void accept(Map<String, AttributeValue> stringAttributeValueMap) {
 
-                sesEventsEntityList.add(SESEventsEntity.builder()
+                SESEventsEntity sesEventsEntity = SESEventsEntity.builder()
                         // partition-key
                         .sesMessageId(Optional.ofNullable(stringAttributeValueMap.get("SESMessageId")).map(AttributeValue::getS).orElse(""))
                         // sort-key
                         .snsPublishTime(Optional.ofNullable(stringAttributeValueMap.get("SnsPublishTime")).map(AttributeValue::getS).orElse(""))
                         .destinationEmail(Optional.ofNullable(stringAttributeValueMap.get("DestinationEmail")).map(AttributeValue::getS).orElse(""))
                         .eventType(Optional.ofNullable(stringAttributeValueMap.get("EventType")).map(AttributeValue::getS).orElse(""))
-                        // Optional -> Map -> toJson -> String 변환
-                        .message(Optional.ofNullable(stringAttributeValueMap.get("Message")).map(AttributeValue::getM).map(p->new Gson().toJson(p)).orElse(""))
-                        // customTag value null 인 경우가 있음
+                        //.message(Optional.ofNullable(stringAttributeValueMap.get("Message")).map(AttributeValue::getM).map(p->new GsonBuilder().create().toJson(p)).orElse(""))   //gson->warning
+                        .message(Optional.ofNullable(stringAttributeValueMap.get("Message")).map(AttributeValue::getM).map(p->convertAttributeValueMap2JsonString(p)).orElse(""))     //jackson->ok
                         .customTag(Optional.ofNullable(stringAttributeValueMap.get("CustomTag")).map(AttributeValue::getS).orElse(""))
-                        .build());
+                        .build();
+
+                Map<String, AttributeValue> attributeValueMap = Optional.ofNullable(stringAttributeValueMap.get("Message")).map(AttributeValue::getM).orElse(new HashMap<>());
+
+                sesEventsEntityList.add(sesEventsEntity);
             }
         });
 
         return sesEventsEntityList;
+    }
+
+    /**
+     * DynamoDB AttributeValue 를 Json Serialize
+     * Gson -> error 발생
+     *      WARNING: An illegal reflective access operation has occurred
+     *      WARNING: Illegal reflective access by com.google.gson.internal.reflect.ReflectionHelper (file:/C:/Users/jbo25/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.10/dd9b193aef96e973d5a11ab13cd17430c2e4306b/gson-2.10.jar) to field java.nio.ByteBuffer.hb
+     *      WARNING: Please consider reporting this to the maintainers of com.google.gson.internal.reflect.ReflectionHelper
+     *      WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+     *      WARNING: All illegal access operations will be denied in a future release
+     * Jackson -> 정상
+     */
+    private String convertAttributeValueMap2JsonString(Map<String, AttributeValue> attributeValueMap)
+    {
+        String strJson = "";
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        try {
+            strJson = mapper.writeValueAsString(attributeValueMap);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        return strJson;
     }
 
     // Handles errors during ExecuteStatement execution. Use recommendations in error messages below to add error handling specific to

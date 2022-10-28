@@ -20,11 +20,11 @@ public class PollingNewEmailResultFromDynamoDB {
     @Scheduled(fixedRateString = "${polling.schedule.send-email-event-check-time:10000}", initialDelay = 60000)
     public void checkNewEmailResulltTask()
     {
-        log.info("📩 이메일 전송 결과 이벤트 정보 확인 폴링 <-> DynamoDB ");
+        log.info("⏱️이메일 전송 결과 이벤트 정보 확인 폴링 <-> DynamoDB ");
 
         List<SESEventsEntity> sesEventsEntityList = sesEventsDynamoDBRepository.getItems();
 
-        log.info("☘️ 신귝 이벤트 개수 = {}", sesEventsEntityList.size());
+        log.info("⚠️신규 이벤트 확인 됨 = {}", sesEventsEntityList.size());
     }
 
 }

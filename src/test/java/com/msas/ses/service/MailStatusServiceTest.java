@@ -7,10 +7,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
 
+@ActiveProfiles("dev58")
 @SpringBootTest
 class MailStatusServiceTest {
 
@@ -55,7 +58,7 @@ class MailStatusServiceTest {
     }
 
     @Test
-    @DisplayName("DynamoDB SESEvents table 에서 MessageId로 아이템 삭제")
+    @DisplayName("DynamoDB PartiQL Select 쿼리 - MessageId로 아이템 삭제")
     public void DeleteEventItem()
     {
 

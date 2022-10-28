@@ -11,7 +11,7 @@ public class PollingNewEmailFromNFTDB {
     @Scheduled(fixedRateString = "${polling.schedule.send-email-check-time:10000}", initialDelay = 60000)
     public void checkNewEmailTask()
     {
-        log.info("📤 신규 이메일 전송 대기 정보 확인 폴링 <-> MariaDB ");
+        log.info("⏱️신규 이메일 전송 대기 정보 확인 폴링 <-> MariaDB ");
 
 
 

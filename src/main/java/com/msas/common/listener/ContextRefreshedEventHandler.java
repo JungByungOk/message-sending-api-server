@@ -25,7 +25,7 @@ public class ContextRefreshedEventHandler implements ApplicationListener<org.spr
     @Override
     public void onApplicationEvent(@NotNull org.springframework.context.event.ContextRefreshedEvent contextRefreshedEvent) {
         {
-            // TODO 어플맄케이션 시작하면서 즉시 실행할 스케쥴러 등록
+            // TODO. 어플맄케이션 시작하면서 즉시 실행할 스케쥴러 등록
         }
     }
 }
