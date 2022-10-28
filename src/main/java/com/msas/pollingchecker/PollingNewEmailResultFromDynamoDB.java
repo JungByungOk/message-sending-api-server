@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -22,9 +23,9 @@ public class PollingNewEmailResultFromDynamoDB {
     {
         log.info("⏱️이메일 전송 결과 이벤트 정보 확인 폴링 <-> DynamoDB ");
 
-        List<SESEventsEntity> sesEventsEntityList = sesEventsDynamoDBRepository.getItems();
+        Optional<List<SESEventsEntity>> sesEventsEntityList = sesEventsDynamoDBRepository.getItems();
 
-        log.info("⚠️신규 이벤트 확인 됨 = {}", sesEventsEntityList.size());
+        log.info("⚠️신규 이벤트 확인 됨 = {}", sesEventsEntityList.map(List::size).orElse(0));
     }
 
 }

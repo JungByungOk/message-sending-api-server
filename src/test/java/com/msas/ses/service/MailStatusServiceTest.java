@@ -10,10 +10,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 
-@ActiveProfiles("dev58")
+@ActiveProfiles("dev")
 @SpringBootTest
 class MailStatusServiceTest {
 
@@ -28,14 +29,14 @@ class MailStatusServiceTest {
         String CustomTag = "20221025154600";
 
         //when
-        List<SESEventsEntity> resultList = sesEventsDynamoDBRepository.getItemsByCumstomTag(CustomTag);
+        Optional<List<SESEventsEntity>> resultList = sesEventsDynamoDBRepository.getItemsByCumstomTag(CustomTag);
 
         //then
         assertThat(resultList)
                 .isNotNull()
                 .isNotEmpty();
 
-        System.out.printf("[Size=%s]\nResultList=\n%s%n", resultList.size(),
+        System.out.printf("[Size=%s]\nResultList=\n%s%n", resultList.map(List::size).orElse(0),
                 new GsonBuilder().setPrettyPrinting().create().toJson(resultList));
 
     }
@@ -45,14 +46,14 @@ class MailStatusServiceTest {
     public void getItemFromDynamoDB()
     {
         //when
-        List<SESEventsEntity> resultList = sesEventsDynamoDBRepository.getItems();
+        Optional<List<SESEventsEntity>> resultList = sesEventsDynamoDBRepository.getItems();
 
         //then
         assertThat(resultList)
                 .isNotNull()
                 .isNotEmpty();
 
-        System.out.printf("[Size=%s]\nResultList=\n%s%n", resultList.size(),
+        System.out.printf("[Size=%s]\nResultList=\n%s%n", resultList.map(List::size).orElse(0),
                 new GsonBuilder().setPrettyPrinting().create().toJson(resultList));
 
     }

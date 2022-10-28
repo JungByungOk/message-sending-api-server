@@ -7,7 +7,6 @@ import com.amazonaws.services.dynamodbv2.model.*;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.GsonBuilder;
 import com.msas.ses.model.SESEventsEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +22,7 @@ public class SESEventsDynamoDBRepository {
 
     private final AmazonDynamoDB amazonDynamoDB;
 
-    public List<SESEventsEntity> getItems()
+    public Optional<List<SESEventsEntity>> getItems()
     {
         List<SESEventsEntity> sesEventsEntityList = null;
 
@@ -39,10 +38,10 @@ public class SESEventsDynamoDBRepository {
             handleExecuteStatementErrors(e);
         }
 
-        return sesEventsEntityList;
+        return Optional.ofNullable(sesEventsEntityList);
     }
 
-    public List<SESEventsEntity> getItemsByCumstomTag(String CustomTag) {
+    public Optional<List<SESEventsEntity>> getItemsByCumstomTag(String CustomTag) {
 
         // TODO. 이메일 발송 결과를 가져와서 rdbms 이메일 이력 테이블에 상태 업데이트 처리 필요
 
@@ -61,7 +60,7 @@ public class SESEventsDynamoDBRepository {
             handleExecuteStatementErrors(e);
         }
 
-        return sesEventsEntityList;
+        return Optional.ofNullable(sesEventsEntityList);
     }
 
     public void deleteItemBySESMessageId(String SESMessageId)
