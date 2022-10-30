@@ -2,7 +2,7 @@ package com.msas.ses.service;
 
 import com.google.gson.GsonBuilder;
 import com.msas.pollingchecker.model.SESEventsEntity;
-import com.msas.pollingchecker.repository.SESEventsDynamoDBRepository;
+import com.msas.pollingchecker.repository.SESDynamoDBRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,12 +14,12 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 
-@ActiveProfiles("dev")
+@ActiveProfiles("dev58")
 @SpringBootTest
-class MailStatusServiceTest {
+class DynamoDBTest {
 
     @Autowired
-    private SESEventsDynamoDBRepository sesEventsDynamoDBRepository;
+    private SESDynamoDBRepository sesEventsDynamoDBRepository;
 
     @Test
     @DisplayName("DynamoDB PartiQL Select 쿼리 - 커스텀 태그로 조회 테스트")
@@ -38,7 +38,6 @@ class MailStatusServiceTest {
 
         System.out.printf("[Size=%s]\nResultList=\n%s%n", resultList.map(List::size).orElse(0),
                 new GsonBuilder().setPrettyPrinting().create().toJson(resultList));
-
     }
 
     @Test

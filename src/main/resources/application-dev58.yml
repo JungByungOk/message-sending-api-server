@@ -51,7 +51,7 @@ spring:
       org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
       org.quartz.jobStore.dataSource: quartzDataSource
       org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
-      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://58.232.131.21:3306/quartz #test: jdbc:mariadb://10.1.199.254:3306/nft
+      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://58.232.131.21:3306/quartz
       org.quartz.dataSource.quartzDataSource.user: quartz
       org.quartz.dataSource.quartzDataSource.password: quartz
 
@@ -66,7 +66,7 @@ spring:
   datasource:
     name: NFTReally
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://58.232.131.21:3306/quartz
+    url: jdbc:mariadb://58.232.131.21:3306/nft
     username: quartz
     password: quartz
 
@@ -103,6 +103,7 @@ logging:
     org.quartz: DEBUG
     com.msas: DEBUG
 
+
 #################################################
 # bot
 #################################################
@@ -118,3 +119,4 @@ polling:
   schedule:
       send-email-check-time: 60000
       send-email-event-check-time: 60000
+

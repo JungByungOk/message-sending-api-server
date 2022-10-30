@@ -2,7 +2,8 @@ package com.msas.pollingchecker.service;
 
 import com.msas.common.utils.ForeachUtils;
 import com.msas.pollingchecker.model.SESEventsEntity;
-import com.msas.pollingchecker.repository.SESEventsDynamoDBRepository;
+import com.msas.pollingchecker.repository.SESDynamoDBRepository;
+import com.msas.pollingchecker.repository.SESMariaDBRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,7 +17,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PollingNewEmailResultFromDynamoDB {
 
-    private final SESEventsDynamoDBRepository sesEventsDynamoDBRepository;
+    private final SESDynamoDBRepository sesEventsDynamoDBRepository;
+    private final SESMariaDBRepository sesMariaDBRepository;
 
     @Scheduled(fixedRateString = "${polling.schedule.send-email-event-check-time:10000}", initialDelay = 10000)
     public void checkNewEmailResultTask()

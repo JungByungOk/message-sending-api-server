@@ -18,7 +18,7 @@ import java.util.function.Consumer;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class SESEventsDynamoDBRepository {
+public class SESDynamoDBRepository {
 
     private final AmazonDynamoDB amazonDynamoDB;
 

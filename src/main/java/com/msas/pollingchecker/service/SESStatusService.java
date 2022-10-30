@@ -1,6 +1,6 @@
 package com.msas.pollingchecker.service;
 
-import com.msas.pollingchecker.repository.SESEventsDynamoDBRepository;
+import com.msas.pollingchecker.repository.SESDynamoDBRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class SESStatusService {
 
-    private final SESEventsDynamoDBRepository sesEventsDynamoDBRepository;
+    private final SESDynamoDBRepository sesEventsDynamoDBRepository;
 
     public void UpdateEmailResult(String sesMessageId)
     {
