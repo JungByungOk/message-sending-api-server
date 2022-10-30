@@ -1,4 +1,4 @@
-package com.msas.ses.configuration;
+package com.msas.pollingchecker.configuration;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;

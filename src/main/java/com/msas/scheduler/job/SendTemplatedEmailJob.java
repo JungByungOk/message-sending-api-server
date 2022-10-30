@@ -2,9 +2,10 @@ package com.msas.scheduler.job;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.msas.common.utils.LocalDateTimeDeserializer;
+import com.msas.common.utils.LocalDateTimeSerializer;
+import com.msas.common.utils.ForeachUtils;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
-import com.msas.scheduler.utils.LocalDateTimeDeserializer;
-import com.msas.scheduler.utils.LocalDateTimeSerializer;
 import com.msas.ses.dto.RequestTemplatedEmailDto;
 import com.msas.ses.service.SESMailService;
 import lombok.extern.slf4j.Slf4j;
@@ -15,9 +16,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 @Component
 @Slf4j
@@ -37,11 +35,6 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
     }
 
     private volatile boolean isJobInterrupted = false;
-
-    public static <T> Consumer<T> withCounter(BiConsumer<Integer, T> consumer) {
-        AtomicInteger counter = new AtomicInteger(0);
-        return item -> consumer.accept(counter.getAndIncrement(), item);
-    }
 
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
@@ -80,7 +73,7 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
         // 이메일 목록이 14개 이상이면,
         // 14개씩 끊어서 전송한다.
         //---------------------------------------
-        requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().forEach(withCounter((count, templatedEmail) -> {
+        requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().forEach(ForeachUtils.withCounter((count, templatedEmail) -> {
 
             // 이메일 발송
             String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(requestTemplatedEmailScheduleJobDTO, count));

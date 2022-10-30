@@ -1,4 +1,4 @@
-package com.msas.ses.repository;
+package com.msas.pollingchecker.repository;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
@@ -7,7 +7,7 @@ import com.amazonaws.services.dynamodbv2.model.*;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.msas.ses.model.SESEventsEntity;
+import com.msas.pollingchecker.model.SESEventsEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -43,8 +43,6 @@ public class SESEventsDynamoDBRepository {
 
     public Optional<List<SESEventsEntity>> getItemsByCumstomTag(String CustomTag) {
 
-        // TODO. 이메일 발송 결과를 가져와서 rdbms 이메일 이력 테이블에 상태 업데이트 처리 필요
-
         List<SESEventsEntity> sesEventsEntityList = null;
 
         try {
@@ -65,7 +63,9 @@ public class SESEventsDynamoDBRepository {
 
     public void deleteItemBySESMessageId(String SESMessageId)
     {
-        // TODO. DaynamoDB 에서 이벤트 아이템을 삭제 구현
+        // TODO. DynamoDB 에서 이벤트 아이템을 삭제 구현
+
+
     }
 
     private List<SESEventsEntity> toList(ExecuteStatementResult executeStatementResult)

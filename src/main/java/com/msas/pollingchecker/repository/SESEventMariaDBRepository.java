@@ -1,4 +1,4 @@
-package com.msas.ses.repository;
+package com.msas.pollingchecker.repository;
 
 public class SESEventMariaDBRepository {
 

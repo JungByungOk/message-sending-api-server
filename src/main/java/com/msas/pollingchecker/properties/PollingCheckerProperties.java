@@ -1,4 +1,4 @@
-package com.msas.pollingchecker;
+package com.msas.pollingchecker.properties;
 
 import lombok.Getter;
 import lombok.Setter;

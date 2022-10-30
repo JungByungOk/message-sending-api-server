@@ -1,8 +1,9 @@
-package com.msas.ses.model;
+package com.msas.pollingchecker.model;
 
 import lombok.*;
 
 @Data
+@NoArgsConstructor
 public class SESEventsEntity {
 
     private String SesMessageId;        //partition-key: hash

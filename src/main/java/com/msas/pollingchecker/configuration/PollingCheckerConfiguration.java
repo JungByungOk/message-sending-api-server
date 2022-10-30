@@ -1,4 +1,4 @@
-package com.msas.pollingchecker;
+package com.msas.pollingchecker.configuration;
 
 import lombok.Value;
 import org.springframework.context.annotation.Configuration;

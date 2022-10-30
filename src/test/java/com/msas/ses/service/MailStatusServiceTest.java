@@ -1,8 +1,8 @@
 package com.msas.ses.service;
 
 import com.google.gson.GsonBuilder;
-import com.msas.ses.model.SESEventsEntity;
-import com.msas.ses.repository.SESEventsDynamoDBRepository;
+import com.msas.pollingchecker.model.SESEventsEntity;
+import com.msas.pollingchecker.repository.SESEventsDynamoDBRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

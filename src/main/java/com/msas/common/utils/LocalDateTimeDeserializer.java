@@ -1,4 +1,4 @@
-package com.msas.scheduler.utils;
+package com.msas.common.utils;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
