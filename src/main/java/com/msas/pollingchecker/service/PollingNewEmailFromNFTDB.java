@@ -1,19 +1,106 @@
 package com.msas.pollingchecker.service;
 
+import com.amazonaws.services.simpleemail.model.MessageTag;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.msas.pollingchecker.model.NewEmailEntity;
+import com.msas.pollingchecker.repository.SESMariaDBRepository;
+import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
+import com.msas.scheduler.service.ScheduleServiceImpl;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
 @Component
+@RequiredArgsConstructor
 @Slf4j
 public class PollingNewEmailFromNFTDB {
 
-    @Scheduled(fixedRateString = "${polling.schedule.send-email-check-time:10000}", initialDelay = 10000)
+    private final SESMariaDBRepository sesMariaDBRepository;
+
+    private final ScheduleServiceImpl scheduleService;
+
+    @Scheduled(fixedRateString = "${polling.schedule.send-email-check-time:10000}", initialDelay = 15000)
     public void checkNewEmailTask()
     {
         log.info("⏱️신규 이메일 전송 대기 정보 확인 폴링 <-> MariaDB ");
 
+        List<NewEmailEntity> newEmailEntities = sesMariaDBRepository.findNewEmail();
 
+        if(newEmailEntities.isEmpty())
+            return;
+
+        // 발송 요청 건수 합계
+        //----------------
+        AtomicInteger nSendingEmails = new AtomicInteger();
+        newEmailEntities.forEach(newEmailEntity -> {
+            nSendingEmails.addAndGet(newEmailEntity.getNewEmailDetailEntities().size());
+        });
+        log.info("⚠️신규 이메일 발송 요청 [ {} 개 ] 확인", nSendingEmails);
+
+        // 개별 이메일 발송 처리 -> 이메일 발송 스케쥴러에 등록
+        //------------------------------------------
+        newEmailEntities.forEach(newEmailEntity -> {
+
+            String jobName = String.valueOf(newEmailEntity.getEmail_send_seq());
+
+            String jobGroup = "Default";
+
+            String description = newEmailEntity.getEmail_cls_cd();
+
+            // List<Tag> from Database
+            List<MessageTag> tags = new ArrayList<>();
+            MessageTag messageTag = new MessageTag();
+            {
+                messageTag.setName("customTag");
+                messageTag.setValue(String.valueOf(newEmailEntity.getEmail_send_seq()));
+            }
+            tags.add(messageTag);
+
+            // for
+            newEmailEntity.getNewEmailDetailEntities().forEach(newEmailDetailEntity -> {
+
+                // TemplateData
+                Map<String, String> templateData = new Gson().fromJson(newEmailDetailEntity.getEmail_cts(), HashMap.class);
+
+                // TemplatedEmailList
+                List<RequestTemplatedEmailScheduleJobDTO.TemplatedEmailDto> TemplatedEmailList = new ArrayList<>();
+                RequestTemplatedEmailScheduleJobDTO.TemplatedEmailDto templatedEmailDto = new RequestTemplatedEmailScheduleJobDTO.TemplatedEmailDto();
+                {
+                    templatedEmailDto.setTo(Collections.singletonList(newEmailDetailEntity.getRcv_email_addr()));
+                    templatedEmailDto.setTemplateData(templateData);
+                }
+                TemplatedEmailList.add(templatedEmailDto);
+
+                // 이메일 발송 요청 빌드
+                RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailDto = new RequestTemplatedEmailScheduleJobDTO();
+                {
+                    requestTemplatedEmailDto.setJobName(jobName);
+                    requestTemplatedEmailDto.setJobGroup(jobGroup);
+                    requestTemplatedEmailDto.setDescription(description);
+                    requestTemplatedEmailDto.setTemplateName(newEmailDetailEntity.getEmail_tmplet_id());
+                    requestTemplatedEmailDto.setFrom(newEmailDetailEntity.getSend_email_addr());
+                    requestTemplatedEmailDto.setTemplatedEmailList(TemplatedEmailList);
+                    requestTemplatedEmailDto.setTags(tags);
+                }
+
+
+
+
+
+
+            });
+
+
+
+            //scheduleService.addJob(requestTemplatedEmailDto, SendTemplatedEmailJob.class);
+
+        });
 
     }
 

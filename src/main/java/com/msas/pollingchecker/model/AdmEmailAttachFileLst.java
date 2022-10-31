@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
+@Deprecated
 public class AdmEmailAttachFileLst {
 
     private long email_attach_file_seq;

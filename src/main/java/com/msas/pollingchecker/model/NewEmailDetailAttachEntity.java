@@ -7,16 +7,15 @@ import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
-@Deprecated
-public class AdmEmailSendMst {
+public class NewEmailDetailAttachEntity {
 
-    private int email_send_seq;
+    private long email_attach_file_seq;
+    private int email_send_dtl_seq;
 
-    private String email_typ_cd;
-    private String email_cls_cd;
-    private String send_div_cd;
-    private LocalDateTime rsv_send_dt;
-    private String auto_send_yn;
+    private String file_path;
+    private String file_nm;
+    private String orgn_file_nm;
+    private long file_sz;
 
     private LocalDateTime stm_fir_reg_dt;
     private String stm_fir_reg_user_id;

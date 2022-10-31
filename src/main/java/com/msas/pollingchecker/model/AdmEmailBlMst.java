@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
+@Deprecated
 public class AdmEmailBlMst {
 
     private String email_addr;

@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Component
@@ -138,16 +139,33 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .withDescription(requestTemplatedEmailScheduleJobDTO.getDescription())
                 .build();
 
-        // 트리거 정의
-        // 반복 없이 지정한 시간에 한번만 실행하는 트리거
-        Trigger trigger = TriggerBuilder.newTrigger()
-                .withIdentity(requestTemplatedEmailScheduleJobDTO.getJobName(), requestTemplatedEmailScheduleJobDTO.getJobGroup())
-                .startAt(Timestamp.valueOf(requestTemplatedEmailScheduleJobDTO.getStartDateAt()))    // Type Casting: LocalDateTime to Date
-                .withSchedule(SimpleScheduleBuilder.simpleSchedule() // {SimpleScheduleBuilder, CronScheduleBuilder, CalendarIntervalScheduleBuilder}
-                        .withRepeatCount(0)
-                        .withMisfireHandlingInstructionFireNow()
-                )
-                .build();
+        Trigger trigger = null;
+        if(requestTemplatedEmailScheduleJobDTO.getStartDateAt() == null) {
+            // 트리거 정의
+            // 반복 없이 즉시 실행하는 트리거
+            trigger = TriggerBuilder.newTrigger()
+                    .withIdentity(requestTemplatedEmailScheduleJobDTO.getJobName(), requestTemplatedEmailScheduleJobDTO.getJobGroup())
+                    //.startAt(Timestamp.valueOf(requestTemplatedEmailScheduleJobDTO.getStartDateAt()))    // Type Casting: LocalDateTime to Date
+                    .startNow()
+                    .withSchedule(SimpleScheduleBuilder.simpleSchedule() // {SimpleScheduleBuilder, CronScheduleBuilder, CalendarIntervalScheduleBuilder}
+                            .withRepeatCount(0)
+                            .withMisfireHandlingInstructionFireNow()
+                    )
+                    .build();
+        }
+        else
+        {
+            // 트리거 정의
+            // 반복 없이 지정한 시간에 한번만 실행하는 트리거
+            trigger = TriggerBuilder.newTrigger()
+                    .withIdentity(requestTemplatedEmailScheduleJobDTO.getJobName(), requestTemplatedEmailScheduleJobDTO.getJobGroup())
+                    .startAt(Timestamp.valueOf(requestTemplatedEmailScheduleJobDTO.getStartDateAt()))    // Type Casting: LocalDateTime to Date
+                    .withSchedule(SimpleScheduleBuilder.simpleSchedule() // {SimpleScheduleBuilder, CronScheduleBuilder, CalendarIntervalScheduleBuilder}
+                            .withRepeatCount(0)
+                            .withMisfireHandlingInstructionFireNow()
+                    )
+                    .build();
+        }
 
         try {
             // 스케쥴러에 등록

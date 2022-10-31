@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.msas.pollingchecker.repository.SESMariaDBRepository">
+
+    <update id="UpdateSendEmailStatus">
+
+        UPDATE adm_email_send_dtl a
+        SET send_sts_cd          = 'SX',
+            ses_real_send_dt     = now(),
+            ses_msg_id           = #{ses_msg_id},
+            stm_last_upd_dt      = now(),
+            stm_last_upd_user_id = #{stm_last_upd_user_id}
+        WHERE email_send_dtl_seq = ${email_send_dtl_seq}
+
+    </update>
+
+    <update id="UpdateFinalEmailStatus">
+
+        UPDATE adm_email_send_dtl a
+        SET send_sts_cd          = #{send_sts_cd},
+            send_rslt_typ_cd     = #{send_rslt_typ_cd},
+            stm_last_upd_dt      = now(),
+            stm_last_upd_user_id = #{stm_last_upd_user_id}
+        WHERE ses_msg_id = #{ses_msg_id}
+
+    </update>
+
+
+    <resultMap id="NewEmailEntityResultMap" type="com.msas.pollingchecker.model.NewEmailEntity">
+        <id property="email_send_seq" column="email_send_seq"/>
+        <result property="email_typ_cd" column="email_typ_cd"/>
+        <result property="email_cls_cd" column="email_cls_cd"/>
+        <result property="send_div_cd" column="send_div_cd"/>
+        <result property="rsv_send_dt" column="rsv_send_dt"/>
+        <collection property="newEmailDetailEntities" resultMap="NewEmailDetailEntityResultMap"/>
+    </resultMap>
+
+    <resultMap id="NewEmailDetailEntityResultMap" type="com.msas.pollingchecker.model.NewEmailDetailEntity">
+        <id property="email_send_seq" column="email_send_seq"/>
+        <result property="email_send_dtl_seq" column="email_send_dtl_seq"/>
+        <result property="send_sts_cd" column="send_sts_cd"/>
+        <result property="rcv_email_addr" column="rcv_email_addr"/>
+        <result property="send_email_addr" column="send_email_addr"/>
+        <result property="email_title" column="email_title"/>
+        <result property="email_cts" column="email_cts"/>
+        <result property="email_tmplet_id" column="email_tmplet_id"/>
+        <collection property="newEmailDetailAttachEntities" resultMap="NewEmailDetailAttachEntityResultMap"/>
+    </resultMap>
+
+    <resultMap id="NewEmailDetailAttachEntityResultMap" type="com.msas.pollingchecker.model.NewEmailDetailAttachEntity">
+        <id property="email_send_dtl_seq" column="email_send_dtl_seq"/>
+        <result property="email_attach_file_seq" column="email_attach_file_seq"/>
+        <result property="file_path" column="file_path"/>
+        <result property="file_nm" column="file_nm"/>
+        <result property="orgn_file_nm" column="orgn_file_nm"/>
+        <result property="file_sz" column="file_sz"/>
+    </resultMap>
+
+    <select id="findNewEmail" resultType="map" resultMap="NewEmailEntityResultMap">
+        SELECT *
+        FROM adm_email_send_mst a
+                 LEFT JOIN
+             adm_email_send_dtl b
+             on a.EMAIL_SEND_SEQ = b.EMAIL_SEND_SEQ
+                 LEFT JOIN
+             adm_email_attch_file_lst c
+             on b.EMAIL_SEND_DTL_SEQ = c.EMAIL_SEND_DTL_SEQ
+        WHERE b.SEND_STS_CD = 'SR'
+          and a.STM_FIR_REG_DT > date_add(now(), interval -1 week)
+    </select>
+
+    <select id="getNewEmail" resultType="map" resultMap="NewEmailEntityResultMap">
+        SELECT *
+        FROM adm_email_send_mst a
+                 LEFT JOIN
+             adm_email_send_dtl b
+             on a.EMAIL_SEND_SEQ = b.EMAIL_SEND_SEQ
+                 LEFT JOIN
+             adm_email_attch_file_lst c
+             on b.EMAIL_SEND_DTL_SEQ = c.EMAIL_SEND_DTL_SEQ
+        WHERE b.SEND_STS_CD = 'SR'
+          and a.STM_FIR_REG_DT > date_add(now(), interval -1 week)
+    </select>
+
+</mapper>

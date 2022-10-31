@@ -14,7 +14,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 
-@ActiveProfiles("dev58")
+@ActiveProfiles("dev")
 @SpringBootTest
 class DynamoDBTest {
 
@@ -61,7 +61,17 @@ class DynamoDBTest {
     @DisplayName("DynamoDB PartiQL Select 쿼리 - MessageId로 아이템 삭제")
     public void DeleteEventItem()
     {
+        // given
+        int result;
 
+        // when
+        result = sesEventsDynamoDBRepository.deleteItemBySESMessageIdAndSnsPublishTime(
+                "010c01840de996c1-1ca9fd94-a363-4df5-92f3-2b6871ee4017-000000",
+                "2022-10-25T06:52:05.154Z"
+        );
+
+        // then
+        assertThat(result).isEqualTo(1);
     }
 
 }

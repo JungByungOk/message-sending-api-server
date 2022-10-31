@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum EmailSendStatusCode {
+public enum EnumEmailSendStatusCode {
 
     SR("준비중"),
     SQ("대기중"),

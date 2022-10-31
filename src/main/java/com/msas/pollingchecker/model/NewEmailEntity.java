@@ -4,11 +4,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
-@Deprecated
-public class AdmEmailSendMst {
+public class NewEmailEntity {
 
     private int email_send_seq;
 
@@ -22,5 +22,7 @@ public class AdmEmailSendMst {
     private String stm_fir_reg_user_id;
     private LocalDateTime stm_last_upd_dt;
     private String stm_last_upd_user_id;
+
+    private List<NewEmailDetailEntity> newEmailDetailEntities;
 
 }

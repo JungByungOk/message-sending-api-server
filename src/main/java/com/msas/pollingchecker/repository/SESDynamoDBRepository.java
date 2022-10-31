@@ -61,11 +61,25 @@ public class SESDynamoDBRepository {
         return Optional.ofNullable(sesEventsEntityList);
     }
 
-    public void deleteItemBySESMessageId(String SESMessageId)
+    public int deleteItemBySESMessageIdAndSnsPublishTime(String SESMessageId, String SnsPublishTime)
     {
-        // TODO. DynamoDB 에서 이벤트 아이템을 삭제 구현
+        int result = 0;
 
+        try {
+            // Create ExecuteStatementRequest
+            ExecuteStatementRequest executeStatementRequest = new ExecuteStatementRequest();
+            executeStatementRequest.setStatement(
+                    String.format("delete from SESEvents where SESMessageId='%s' and SnsPublishTime='%s' RETURNING ALL OLD *;", SESMessageId, SnsPublishTime)
+            );
 
+            ExecuteStatementResult executeStatementResult = amazonDynamoDB.executeStatement(executeStatementRequest);
+            result = executeStatementResult.getItems().size();
+
+        } catch (Exception e) {
+            handleExecuteStatementErrors(e);
+        }
+
+        return result;
     }
 
     private List<SESEventsEntity> toList(ExecuteStatementResult executeStatementResult)
