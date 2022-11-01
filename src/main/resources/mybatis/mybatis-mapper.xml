@@ -5,7 +5,7 @@
 
     <update id="UpdateSendEmailStatus">
 
-        UPDATE adm_email_send_dtl a
+        UPDATE ADM_EMAIL_SEND_DTL a
         SET send_sts_cd          = 'SX',
             ses_real_send_dt     = now(),
             ses_msg_id           = #{ses_msg_id},
@@ -17,7 +17,7 @@
 
     <update id="UpdateFinalEmailStatus">
 
-        UPDATE adm_email_send_dtl a
+        UPDATE ADM_EMAIL_SEND_DTL a
         SET send_sts_cd          = #{send_sts_cd},
             send_rslt_typ_cd     = #{send_rslt_typ_cd},
             stm_last_upd_dt      = now(),
@@ -59,12 +59,12 @@
 
     <select id="findNewEmail" resultType="map" resultMap="NewEmailEntityResultMap">
         SELECT *
-        FROM adm_email_send_mst a
+        FROM ADM_EMAIL_SEND_MST a
                  LEFT JOIN
-             adm_email_send_dtl b
+             ADM_EMAIL_SEND_DTL b
              on a.EMAIL_SEND_SEQ = b.EMAIL_SEND_SEQ
                  LEFT JOIN
-             adm_email_attch_file_lst c
+             ADM_EMAIL_ATTCH_FILE_LST c
              on b.EMAIL_SEND_DTL_SEQ = c.EMAIL_SEND_DTL_SEQ
         WHERE b.SEND_STS_CD = 'SR'
           and a.STM_FIR_REG_DT > date_add(now(), interval -1 week)
@@ -72,12 +72,12 @@
 
     <select id="getNewEmail" resultType="map" resultMap="NewEmailEntityResultMap">
         SELECT *
-        FROM adm_email_send_mst a
+        FROM ADM_EMAIL_SEND_MST a
                  LEFT JOIN
-             adm_email_send_dtl b
+             ADM_EMAIL_SEND_DTL b
              on a.EMAIL_SEND_SEQ = b.EMAIL_SEND_SEQ
                  LEFT JOIN
-             adm_email_attch_file_lst c
+             ADM_EMAIL_ATTCH_FILE_LST c
              on b.EMAIL_SEND_DTL_SEQ = c.EMAIL_SEND_DTL_SEQ
         WHERE b.SEND_STS_CD = 'SR'
           and a.STM_FIR_REG_DT > date_add(now(), interval -1 week)

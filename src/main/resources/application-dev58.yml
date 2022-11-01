@@ -120,3 +120,8 @@ polling:
       send-email-check-time: 60000
       send-email-event-check-time: 60000
 
+#################################################
+# mybatis mapper
+#################################################
+mybatis:
+  mapper-locations: classpath:mybatis/*.xml

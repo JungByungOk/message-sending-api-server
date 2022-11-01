@@ -2,9 +2,9 @@ package com.msas.scheduler.job;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.msas.common.utils.ForeachUtils;
 import com.msas.common.utils.LocalDateTimeDeserializer;
 import com.msas.common.utils.LocalDateTimeSerializer;
-import com.msas.common.utils.ForeachUtils;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
 import com.msas.ses.dto.RequestTemplatedEmailDto;
 import com.msas.ses.service.SESMailService;
@@ -18,13 +18,14 @@ import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
 /**
- * API Controller 통해서 들어온
- * 이메일 전송 예약일 경우에 사용하는 작업 처리기
+ * PollingNewEmailFromNFTDB 서비스 통해서 들어온
+ * 이메일 전송 예약 작업 처리기
+ * !) 이메일 등록 테이블의 상태 벼경을 위한 이벤트 추가됨
  */
 @Component
 @Slf4j
 @DisallowConcurrentExecution // 동시 실행 방지
-public class SendTemplatedEmailJob extends QuartzJobBean implements InterruptableJob {
+public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements InterruptableJob {
     private final int EMAIL_SEND_DELAY_SECONDS = 2;
 
     /**
@@ -99,6 +100,11 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
         }));
 
         log.info("⚓SendTemplatedEmailJob ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
+
+        // TODO. 이메일 처리중 상태 변경 이벤트 발생 -> 이벤트 수신기에서 상태 변경 처리
+        {
+
+        }
     }
 
     RequestTemplatedEmailDto getTemplatedEmailDto(RequestTemplatedEmailScheduleJobDTO scheduleData, int idx) {
