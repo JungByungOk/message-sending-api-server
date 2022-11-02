@@ -1,7 +1,5 @@
 package com.msas.scheduler.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -26,7 +24,7 @@ Sample
             "to": [
                 "jbo2541@gmail.com"
             ],
-            "templateData": {
+            "templateParameters": {
                 "user_name": "Alyssa"
             }
         },
@@ -34,7 +32,7 @@ Sample
             "to": [
                 "jbo2541@gmail.com"
             ],
-            "templateData": {
+            "templateParameters": {
                 "user_name": "Angela"
             }
         },
@@ -42,7 +40,7 @@ Sample
             "to": [
                 "jbo2541@gmail.com"
             ],
-            "templateData": {
+            "templateParameters": {
                 "user_name": "Emma"
             }
         },
@@ -50,7 +48,7 @@ Sample
             "to": [
                 "jbo2541@gmail.com"
             ],
-            "templateData": {
+            "templateParameters": {
                 "user_name": "Lucy"
             }
         }
@@ -98,6 +96,10 @@ public class RequestTemplatedEmailScheduleJobDTO {
     @Data
     public static class TemplatedEmailDto {
 
+        // 이메일 건당 식별
+        // id = aws ses messageId 맵핑하여 기록 추적용
+        String id;
+
         @NotNull
         @NotEmpty(message = "Email (to) receivers cannot be Null")
         List<String> to;
@@ -108,7 +110,7 @@ public class RequestTemplatedEmailScheduleJobDTO {
 
         @NotNull
         @NotEmpty(message = "Email template data cannot be Null")
-        Map<String, String> templateData;
+        Map<String, String> templateParameters;
 
     }
 

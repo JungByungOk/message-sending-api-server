@@ -101,15 +101,20 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
         log.info("⚓SendTemplatedEmailJob ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
     }
 
+    /**
+     * 대량 발송 이메일 그룹에서 개별 이메일 정보 가져오기
+     */
     RequestTemplatedEmailDto getTemplatedEmailDto(RequestTemplatedEmailScheduleJobDTO scheduleData, int idx) {
         RequestTemplatedEmailDto requestTemplatedEmailDto = new RequestTemplatedEmailDto();
-        requestTemplatedEmailDto.setFrom(scheduleData.getFrom());
-        requestTemplatedEmailDto.setTo(scheduleData.getTemplatedEmailList().get(idx).getTo());
-        requestTemplatedEmailDto.setTemplateName(scheduleData.getTemplateName());
-        requestTemplatedEmailDto.setTemplateData(scheduleData.getTemplatedEmailList().get(idx).getTemplateData());
-        requestTemplatedEmailDto.setCc(scheduleData.getTemplatedEmailList().get(idx).getCc());
-        requestTemplatedEmailDto.setBcc(scheduleData.getTemplatedEmailList().get(idx).getBcc());
-        requestTemplatedEmailDto.setTags(scheduleData.getTags());
+        {
+            requestTemplatedEmailDto.setFrom(scheduleData.getFrom());
+            requestTemplatedEmailDto.setTo(scheduleData.getTemplatedEmailList().get(idx).getTo());
+            requestTemplatedEmailDto.setTemplateName(scheduleData.getTemplateName());
+            requestTemplatedEmailDto.setTemplateData(scheduleData.getTemplatedEmailList().get(idx).getTemplateParameters());
+            requestTemplatedEmailDto.setCc(scheduleData.getTemplatedEmailList().get(idx).getCc());
+            requestTemplatedEmailDto.setBcc(scheduleData.getTemplatedEmailList().get(idx).getBcc());
+            requestTemplatedEmailDto.setTags(scheduleData.getTags());
+        }
         return requestTemplatedEmailDto;
     }
 

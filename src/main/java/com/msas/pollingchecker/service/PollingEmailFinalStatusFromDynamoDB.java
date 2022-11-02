@@ -4,29 +4,31 @@ import com.msas.common.utils.ForeachUtils;
 import com.msas.pollingchecker.model.SESEventsEntity;
 import com.msas.pollingchecker.repository.SESDynamoDBRepository;
 import com.msas.pollingchecker.repository.SESMariaDBRepository;
-import com.msas.pollingchecker.types.EnumEmailSendStatusCode;
 import com.msas.pollingchecker.types.EnumSESEventTypeCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.annotations.Delete;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class PollingNewEmailResultFromDynamoDB {
+public class PollingEmailFinalStatusFromDynamoDB {
 
     private final SESDynamoDBRepository sesEventsDynamoDBRepository;
     private final SESMariaDBRepository sesMariaDBRepository;
     @Value("${spring.application.name}")
     private String serverName;
 
-    //@Scheduled(fixedRateString = "${polling.schedule.send-email-event-check-time:10000}", initialDelay = 10000)
+    @Scheduled(fixedRateString = "${polling.schedule.send-email-event-check-time:10000}", initialDelay = 10000)
     public void checkNewEmailResultTask()
     {
         log.info("⏱️이메일 전송 결과 이벤트 정보 확인 폴링 <-> DynamoDB ");
@@ -74,6 +76,9 @@ public class PollingNewEmailResultFromDynamoDB {
                                 return; // 이후 진행 안함
                             }
 
+                            // 블랙리스트 등록 처리
+                            InsertBlacklistEmail(finalStatusEntity, serverName);
+
                             // 해당 messageId 항목 전체 DynamoDB 삭제
                             List<SESEventsEntity> deleteItemList = eventList.stream().filter(sesEventsEntity -> sesEventsEntity.getSesMessageId().equals(messageId)).collect(Collectors.toList());
                             DeleteMessageIds(deleteItemList);
@@ -86,8 +91,8 @@ public class PollingNewEmailResultFromDynamoDB {
     private int UpdateFinalResult(SESEventsEntity finalStatusEntity)
     {
         EnumSESEventTypeCode enumSESEventTypeCode = EnumSESEventTypeCode.valueOf(finalStatusEntity.getEventType());
-        String send_rslt_typ_cd = enumSESEventTypeCode.name();
-        String send_sts_cd = enumSESEventTypeCode.getEmailSendStatusCode().name();
+        String send_rslt_typ_cd = enumSESEventTypeCode.name().toUpperCase(Locale.ENGLISH);
+        String send_sts_cd = enumSESEventTypeCode.getEmailSendStatusCode().name().toUpperCase(Locale.ENGLISH);
 
         int result = sesMariaDBRepository.UpdateFinalEmailStatus(finalStatusEntity.getSesMessageId(), send_sts_cd, send_rslt_typ_cd, serverName);
 
@@ -97,6 +102,39 @@ public class PollingNewEmailResultFromDynamoDB {
             log.info("\tRDBMS 업데이트 대상이 없음");
 
         return result;
+    }
+
+    /*
+     * 블랙리스트 이메일 등록하기
+     */
+    private void InsertBlacklistEmail(SESEventsEntity eventsEntity, String serverName)
+    {
+
+        // SESEventType {BOUNCE, COMPLAINT, REJECT}는 Blacklist 등록된다.
+        EnumSESEventTypeCode enumSESEventTypeCode = EnumSESEventTypeCode.valueOf(eventsEntity.getEventType());
+
+        if(enumSESEventTypeCode == EnumSESEventTypeCode.Bounce ||
+                enumSESEventTypeCode == EnumSESEventTypeCode.Complaint ||
+                enumSESEventTypeCode == EnumSESEventTypeCode.Reject)
+        {
+
+            try
+            {
+                int result = sesMariaDBRepository.InsertBlacklistEmail(
+                        eventsEntity.getDestinationEmail(),
+                        enumSESEventTypeCode.name().toUpperCase(Locale.ENGLISH),
+                        serverName);
+
+                if(result > 0)
+                    log.info("📌 Added Blacklist - {} / {}", eventsEntity.getDestinationEmail(), enumSESEventTypeCode.name().toUpperCase(Locale.ENGLISH));
+            }
+            catch(DuplicateKeyException e)
+            {
+                // 중복 키 에러 무시
+                e.getMessage();
+            }
+
+        } //if
     }
 
     private void DeleteMessageIds(List<SESEventsEntity> deleteItemList)

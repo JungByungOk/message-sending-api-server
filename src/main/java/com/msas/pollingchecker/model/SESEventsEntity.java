@@ -1,6 +1,8 @@
 package com.msas.pollingchecker.model;
 
-import lombok.*;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -11,6 +13,11 @@ public class SESEventsEntity {
     private String SnsPublishTime;      //sort-key: range
 
     private String DestinationEmail;    //index - partition-key: string
+
+    public String getEventType() {
+        EventType = EventType.replace(" ", "");
+        return EventType;
+    }
 
     private String EventType;
 

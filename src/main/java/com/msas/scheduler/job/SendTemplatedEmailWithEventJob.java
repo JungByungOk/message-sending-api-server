@@ -5,16 +5,22 @@ import com.google.gson.GsonBuilder;
 import com.msas.common.utils.ForeachUtils;
 import com.msas.common.utils.LocalDateTimeDeserializer;
 import com.msas.common.utils.LocalDateTimeSerializer;
+import com.msas.pollingchecker.repository.SESMariaDBRepository;
+import com.msas.pollingchecker.types.EnumEmailSendStatusCode;
+import com.msas.pollingchecker.types.EnumSESEventTypeCode;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
 import com.msas.ses.dto.RequestTemplatedEmailDto;
+import com.msas.ses.exception.AwsSesClientException;
 import com.msas.ses.service.SESMailService;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -28,15 +34,22 @@ import java.util.concurrent.TimeUnit;
 public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements InterruptableJob {
     private final int EMAIL_SEND_DELAY_SECONDS = 2;
 
+    @Value("${spring.application.name}")
+    String serverName;
+
     /**
      * 중요!
      * AutowiringSpringBeanJobFactory 에서 서비스 주입을 받기 위해서는
      * 반드시 @Autowired 어노테이션으로만 동작한다.
      */
     private SESMailService sesMailService;
+
+    private SESMariaDBRepository sesMariaDBRepository;
+
     @Autowired
-    public void setSESMailService(SESMailService sesMailService) {
+    public void setSESMailService(SESMailService sesMailService, SESMariaDBRepository sesMariaDBRepository) {
         this.sesMailService = sesMailService;
+        this.sesMariaDBRepository = sesMariaDBRepository;
     }
 
     private volatile boolean isJobInterrupted = false;
@@ -57,7 +70,7 @@ public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements Int
             }
         }
 
-        log.info("⚡SendTemplatedEmailJob started :: jobKey={} - threadName={}", jobKey, currThread.getName());
+        log.info("SendTemplatedEmailJob started :: jobKey={} - threadName={}", jobKey, currThread.getName());
 
         //-------------------------------------------------------------------------------
         // 이메일 전송 처리
@@ -81,13 +94,35 @@ public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements Int
         //---------------------------------------
         requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().forEach(ForeachUtils.withCounter((count, templatedEmail) -> {
 
-            // 이메일 발송
-            String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(requestTemplatedEmailScheduleJobDTO, count));
+            int email_send_dtl_seq = Integer.parseInt(requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().get(count).getId());
+            EnumEmailSendStatusCode successCode = EnumEmailSendStatusCode.SM;
+            EnumSESEventTypeCode failCode = EnumSESEventTypeCode.SESFail;
 
-            log.info("\t이메일 전송 ({}/{}) : templateName = {}, messageId = {}",
-                    count + 1,
-                    requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().size(),
-                    requestTemplatedEmailScheduleJobDTO.getTemplateName(), messageId);
+            try
+            {
+                // 이메일 발송
+                String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(requestTemplatedEmailScheduleJobDTO, count));
+
+                log.info("\t이메일 전송 ({}/{}) : templateName = {}, messageId = {}",
+                        count + 1,
+                        requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().size(),
+                        requestTemplatedEmailScheduleJobDTO.getTemplateName(), messageId);
+
+                // 성공 상태 업데이트
+                UpdateSendEmailStatus(email_send_dtl_seq, successCode.name().toUpperCase(Locale.ENGLISH), null, messageId, serverName);
+
+            }
+            catch(AwsSesClientException e)
+            {
+                log.error("{}", e.getMessage());
+
+                // 실패 상태 업데이트
+                UpdateSendEmailStatus(email_send_dtl_seq,
+                        failCode.getEmailSendStatusCode().name(),
+                        failCode.name().toUpperCase(Locale.ENGLISH),
+                        null,
+                        serverName);
+            }
 
             //14개 전송 속도 쓰로틀링
             if (count % 14 == 0) {
@@ -99,23 +134,43 @@ public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements Int
             }
         }));
 
-        log.info("⚓SendTemplatedEmailJob ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
-
-        // TODO. 이메일 처리중 상태 변경 이벤트 발생 -> 이벤트 수신기에서 상태 변경 처리
-        {
-
-        }
+        log.info("SendTemplatedEmailJob ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
     }
 
+    /*
+     * 처리 결과 업데이트
+     */
+    private void UpdateSendEmailStatus(
+            int email_send_dtl_seq,
+            String send_sts_cd,
+            String send_rslt_typ_cd,
+            String messageId, String serverName) {
+
+        int result = sesMariaDBRepository.UpdateSendEmailStatus2AWSSES(
+                email_send_dtl_seq,
+                send_sts_cd,
+                send_rslt_typ_cd,
+                messageId,
+                serverName
+        );
+        log.info("🌿 SQ->SM 이메일 상태 업데이트");
+
+    }
+
+    /**
+     * 대량 발송 이메일 그룹에서 개별 이메일 정보 가져오기
+     */
     RequestTemplatedEmailDto getTemplatedEmailDto(RequestTemplatedEmailScheduleJobDTO scheduleData, int idx) {
         RequestTemplatedEmailDto requestTemplatedEmailDto = new RequestTemplatedEmailDto();
-        requestTemplatedEmailDto.setFrom(scheduleData.getFrom());
-        requestTemplatedEmailDto.setTo(scheduleData.getTemplatedEmailList().get(idx).getTo());
-        requestTemplatedEmailDto.setTemplateName(scheduleData.getTemplateName());
-        requestTemplatedEmailDto.setTemplateData(scheduleData.getTemplatedEmailList().get(idx).getTemplateData());
-        requestTemplatedEmailDto.setCc(scheduleData.getTemplatedEmailList().get(idx).getCc());
-        requestTemplatedEmailDto.setBcc(scheduleData.getTemplatedEmailList().get(idx).getBcc());
-        requestTemplatedEmailDto.setTags(scheduleData.getTags());
+        {
+            requestTemplatedEmailDto.setFrom(scheduleData.getFrom());
+            requestTemplatedEmailDto.setTo(scheduleData.getTemplatedEmailList().get(idx).getTo());
+            requestTemplatedEmailDto.setTemplateName(scheduleData.getTemplateName());
+            requestTemplatedEmailDto.setTemplateData(scheduleData.getTemplatedEmailList().get(idx).getTemplateParameters());
+            requestTemplatedEmailDto.setCc(scheduleData.getTemplatedEmailList().get(idx).getCc());
+            requestTemplatedEmailDto.setBcc(scheduleData.getTemplatedEmailList().get(idx).getBcc());
+            requestTemplatedEmailDto.setTags(scheduleData.getTags());
+        }
         return requestTemplatedEmailDto;
     }
 

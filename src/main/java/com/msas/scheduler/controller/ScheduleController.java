@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -66,6 +67,18 @@ public class ScheduleController {
         }
         return new ResponseEntity<>(new ResponseScheduleDTO(true, "Job deleted successfully"), HttpStatus.OK);
 
+    }
+
+    /**
+     * ------------------------------------------
+     * 예약된 작업 일괄 삭제
+     * ------------------------------------------
+     */
+    @DeleteMapping("/job/all")
+    ResponseEntity<?> deleteScheduleJob() throws SchedulerException {
+        List<JobKey> jobKeyList = scheduleService.deleteAllJob();
+        return new ResponseEntity<>(new ResponseScheduleDTO(true,
+                "All job deleted successfully - " + jobKeyList.toString()), HttpStatus.OK);
     }
 
     /**

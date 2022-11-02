@@ -6,26 +6,34 @@
 [AWS SES]
 ---templated-----------------
     ㄴ list-templates
-    ㄴ get-template [x]
+    ㄴ [x] get-template
     ㄴ create-template
     ㄴ delete-template
     ㄴ update-template
-    ㄴ test-render-template [x]
+    ㄴ [x] test-render-template
 ---send----------------------
     ㄴ send-email
-        ㄴ attachment
+        ㄴ [x] attachment
         ㄴ html
     ㄴ send-templated-email
-        ㄴ attachment
+        ㄴ [x] attachment
 ---schedule-------------------------
     ㄴ send-schedule-templated-email
+    ㄴ resume
+    ㄴ cancel
+    ㄴ job list query
+    ㄴ job modify
+---polling-------------------------
+    ㄴ check new email from rdbms
+    ㄴ check sent email result from aws dynamodb
+        ㄴ blacklist email address
 
 [Telegram]
     ㄴ Multi-channel name setting
     ㄴ Send message by channel name
 
 [Slack]
-    ㄴ Multi-channel name setting
-    ㄴ Send message by channel name
+    ㄴ [x] Multi-channel name setting
+    ㄴ [x] Send message by channel name
 
 »»» ¯\_(ツ)_/¯

@@ -60,6 +60,7 @@ spring:
       org.quartz.plugin.triggHistory.class: org.quartz.plugins.history.LoggingTriggerHistoryPlugin
       org.quartz.plugin.triggHistory.triggerFiredMessage: '🔥Trigger {1}.{0} fired job {6}.{5} at: {4, date, HH:mm:ss MM/dd/yyyy}'
       org.quartz.plugin.triggHistory.triggerCompleteMessage: '🔥Trigger {1}.{0} completed firing job {6}.{5} at {4, date, HH:mm:ss MM/dd/yyyy\}.'
+
   #################################################
   # database
   #################################################
@@ -69,17 +70,25 @@ spring:
     url: jdbc:mariadb://10.1.199.254:3306/nft
     username: nft
     password: Digi@cap!
+#    hikari:
+#      pool-name: NFTReally-Hikari
+#      driver-class-name: org.mariadb.jdbc.Driver
+#      jdbc-url: jdbc:mariadb://10.1.199.254:3306/nft
+#      username: nft
+#      password: Digi@cap!
 
 #################################################
 # AWS {SES, DynamoDB}
 #################################################
-cloud:
-  aws:
-    region:
-      static: ap-northeast-2
-    credentials:
-      access-key: AKIA2F6HCY2MNDRHU6BX
-      secret-key: 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
+aws:
+  dynamo:
+    region: ap-northeast-2
+    access-key: AKIA2F6HCY2MNDRHU6BX
+    secret-key: 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
+  ses:
+    region: ap-northeast-2
+    access-key: AKIA2F6HCY2MNDRHU6BX
+    secret-key: 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
 
 #################################################
 # actuator
@@ -124,3 +133,4 @@ polling:
 #################################################
 mybatis:
   mapper-locations: classpath:mybatis/*.xml
+

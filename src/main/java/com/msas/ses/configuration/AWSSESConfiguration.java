@@ -14,13 +14,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AWSSESConfiguration {
 
-    @Value("${cloud.aws.region.static}")
+    @Value("${aws.ses.region}")
     private String region;
 
-    @Value("${cloud.aws.credentials.access-key}")
+    @Value("${aws.ses.access-key}")
     private String awsAccessKey;
 
-    @Value("${cloud.aws.credentials.secret-key}")
+    @Value("${aws.ses.secret-key}")
     private String awsSecretKey;
 
     /**

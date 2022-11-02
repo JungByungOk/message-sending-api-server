@@ -3,10 +3,21 @@
 
 <mapper namespace="com.msas.pollingchecker.repository.SESMariaDBRepository">
 
-    <update id="UpdateSendEmailStatus">
+    <update id="UpdateSendEmailStatus2Scheduler">
 
         UPDATE ADM_EMAIL_SEND_DTL a
-        SET send_sts_cd          = 'SX',
+        SET send_sts_cd          = #{send_sts_cd},
+            stm_last_upd_dt      = now(),
+            stm_last_upd_user_id = #{stm_last_upd_user_id}
+        WHERE email_send_dtl_seq = ${email_send_dtl_seq}
+
+    </update>
+
+    <update id="UpdateSendEmailStatus2AWSSES">
+
+        UPDATE ADM_EMAIL_SEND_DTL a
+        SET send_sts_cd          = #{send_sts_cd},
+            send_rslt_typ_cd     = #{send_rslt_typ_cd},
             ses_real_send_dt     = now(),
             ses_msg_id           = #{ses_msg_id},
             stm_last_upd_dt      = now(),
@@ -70,7 +81,7 @@
           and a.STM_FIR_REG_DT > date_add(now(), interval -1 week)
     </select>
 
-    <select id="getNewEmail" resultType="map" resultMap="NewEmailEntityResultMap">
+    <select id="getNewEmail" resultType="map">
         SELECT *
         FROM ADM_EMAIL_SEND_MST a
                  LEFT JOIN
@@ -82,5 +93,11 @@
         WHERE b.SEND_STS_CD = 'SR'
           and a.STM_FIR_REG_DT > date_add(now(), interval -1 week)
     </select>
+
+    <insert id="InsertBlacklistEmail">
+        INSERT into ADM_EMAIL_BL_MST
+        (email_addr, email_cutoff_typ_cd, stm_fir_reg_dt, stm_fir_reg_user_id, stm_last_upd_dt, stm_last_upd_user_id)
+        values (#{email_addr}, #{email_cutoff_typ_cd}, now(), #{server_name}, now(), #{server_name})
+    </insert>
 
 </mapper>

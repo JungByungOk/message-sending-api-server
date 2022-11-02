@@ -6,6 +6,8 @@ import org.quartz.Job;
 import org.quartz.JobKey;
 import org.quartz.SchedulerException;
 
+import java.util.List;
+
 public interface ScheduleService {
 
     /**
@@ -60,5 +62,5 @@ public interface ScheduleService {
     /**
      * 스케쥴 전체 일괄 삭제
      */
-    void deleteAllJob(JobKey jobKey) throws SchedulerException;
+    List<JobKey> deleteAllJob() throws SchedulerException;
 }

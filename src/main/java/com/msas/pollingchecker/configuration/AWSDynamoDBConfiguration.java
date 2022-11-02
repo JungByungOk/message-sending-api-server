@@ -14,13 +14,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class AWSDynamoDBConfiguration {
 
-    @Value("${cloud.aws.region.static}")
+    @Value("${aws.dynamo.region}")
     private String region;
 
-    @Value("${cloud.aws.credentials.access-key}")
+    @Value("${aws.dynamo.access-key}")
     private String awsAccessKey;
 
-    @Value("${cloud.aws.credentials.secret-key}")
+    @Value("${aws.dynamo.secret-key}")
     private String awsSecretKey;
 
     /**

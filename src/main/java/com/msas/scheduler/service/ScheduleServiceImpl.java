@@ -21,7 +21,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @Slf4j
 @Component
@@ -140,7 +139,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 .build();
 
         Trigger trigger = null;
-        if(requestTemplatedEmailScheduleJobDTO.getStartDateAt() == null) {
+        if (requestTemplatedEmailScheduleJobDTO.getStartDateAt() == null) {
             // 트리거 정의
             // 반복 없이 즉시 실행하는 트리거
             trigger = TriggerBuilder.newTrigger()
@@ -152,9 +151,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                             .withMisfireHandlingInstructionFireNow()
                     )
                     .build();
-        }
-        else
-        {
+        } else {
             // 트리거 정의
             // 반복 없이 지정한 시간에 한번만 실행하는 트리거
             trigger = TriggerBuilder.newTrigger()
@@ -171,8 +168,12 @@ public class ScheduleServiceImpl implements ScheduleService {
             // 스케쥴러에 등록
             // return Date Format -> Fri Oct 14 23:05:32 KST 2022
             Date registeredDate = schedulerFactoryBean.getScheduler().scheduleJob(jobDetail, trigger);
+
+            log.info("🧩 Added Schedule Job at {} :: jobKey = {}", registeredDate, jobDetail.getKey().getName());
+
         } catch (SchedulerException e) {
-            log.error("error occurred while scheduling with jobKey : {}", jobDetail.getKey(), e);
+            log.error("error occurred while scheduling with jobKey : {}", jobDetail.getKey());
+            log.error("{}", e.getMessage());
             throw e;
         }
 
@@ -183,12 +184,35 @@ public class ScheduleServiceImpl implements ScheduleService {
      */
     @Override
     public boolean changeTrigger(RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO) {
+        // TODO. 예약 시간 변경 구현
         return false;
     }
 
+    /**
+     * 예약된 작업 일괄 삭제
+     */
     @Override
-    public void deleteAllJob(JobKey jobKey) throws SchedulerException {
+    public List<JobKey> deleteAllJob() throws SchedulerException {
 
+
+        List<JobKey> jobKeyList = new ArrayList<>();
+
+        try {
+            Scheduler scheduler = schedulerFactoryBean.getScheduler();
+
+            for (String groupName : scheduler.getJobGroupNames()) {
+                jobKeyList.addAll(scheduler.getJobKeys(GroupMatcher.jobGroupEquals(groupName)));
+            }
+
+            scheduler.deleteJobs(jobKeyList);
+
+        } catch (SchedulerException e) {
+            log.error("[scheduler-debug] error occurred while all deleting job with jobKeys : {}", jobKeyList);
+            log.error("[scheduler-debug] {} : {}", jobKeyList, e.getMessage());
+            throw e;
+        }
+
+        return jobKeyList;
     }
 
     /**
@@ -217,7 +241,8 @@ public class ScheduleServiceImpl implements ScheduleService {
         try {
             schedulerFactoryBean.getScheduler().deleteJob(jobKey);
         } catch (SchedulerException e) {
-            log.error("[scheduler-debug] error occurred while deleting job with jobKey : {}", jobKey, e);
+            log.error("[scheduler-debug] error occurred while deleting job with jobKey : {}", jobKey);
+            log.error("[scheduler-debug] {} : {}", jobKey, e.getMessage());
             throw e;
         }
     }

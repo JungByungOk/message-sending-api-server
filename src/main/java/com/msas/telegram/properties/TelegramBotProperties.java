@@ -3,18 +3,15 @@ package com.msas.telegram.properties;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  *
  * bot:
  *  telegram:
- *      token-id: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ *      token-id: "token"
  *      channel-names:
  *          - "channel1"
  *          - "channel2"
