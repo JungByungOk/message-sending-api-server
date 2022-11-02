@@ -66,9 +66,9 @@ spring:
   datasource:
     name: NFTReally
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://10.1.199.254:3306/nft
-    username: nft
-    password: Digi@cap!
+    url: jdbc:mariadb://58.232.131.21:3306/nft
+    username: quartz
+    password: quartz
 #    hikari:
 #      pool-name: NFTReally-Hikari
 #      driver-class-name: org.mariadb.jdbc.Driver
