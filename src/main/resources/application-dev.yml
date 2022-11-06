@@ -5,6 +5,17 @@ server:
   port: 7092
 
 #################################################
+# logging
+#################################################
+logging:
+  config: classpath:logback/logback-${spring.config.activate.on-profile}.xml
+#  level:
+#    root: ERROR
+#    org.springframework.web: INFO
+#    org.quartz: DEBUG
+#    com.msas: DEBUG
+
+#################################################
 # spring setting
 #################################################
 spring:
@@ -101,16 +112,6 @@ management:
   endpoint:
     quartz:
       enabled: true
-
-#################################################
-# logging
-#################################################
-logging:
-  level:
-    root: ERROR
-    org.springframework.web: INFO
-    org.quartz: DEBUG
-    com.msas: DEBUG
 
 #################################################
 # bot

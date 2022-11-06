@@ -5,6 +5,17 @@ server:
   port: 7092
 
 #################################################
+# logging
+#################################################
+logging:
+  config: classpath:logback/logback-${spring.config.activate.on-profile}.xml
+#  level:
+#    root: ERROR
+#    org.springframework.web: INFO
+#    org.quartz: DEBUG
+#    com.msas: DEBUG
+
+#################################################
 # spring setting
 #################################################
 spring:
@@ -64,17 +75,11 @@ spring:
   # database
   #################################################
   datasource:
-    name: NFTReally
+    name: NFTReally-Database
     driver-class-name: org.mariadb.jdbc.Driver
     url: jdbc:mariadb://58.232.131.21:3306/nft
     username: quartz
     password: quartz
-#    hikari:
-#      pool-name: NFTReally-Hikari
-#      driver-class-name: org.mariadb.jdbc.Driver
-#      jdbc-url: jdbc:mariadb://10.1.199.254:3306/nft
-#      username: nft
-#      password: Digi@cap!
 
 #################################################
 # AWS {SES, DynamoDB}
@@ -102,16 +107,6 @@ management:
       enabled: true
 
 #################################################
-# logging
-#################################################
-logging:
-  level:
-    root: ERROR
-    org.springframework.web: INFO
-    org.quartz: DEBUG
-    com.msas: DEBUG
-
-#################################################
 # bot
 #################################################
 bot:
@@ -132,4 +127,3 @@ polling:
 #################################################
 mybatis:
   mapper-locations: classpath:mybatis/*.xml
-
