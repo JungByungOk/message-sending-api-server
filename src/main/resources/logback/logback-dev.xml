@@ -19,8 +19,8 @@
         </encoder>
     </appender>
 
-    <appender name="TELEGRAM"
-              class="org.nftreally.TelegramAppender">
+    <!-- TELEGRAM APPENDER -->
+    <appender name="TELEGRAM" class="org.nftreally.TelegramAppender">
         <botToken>5710353844:AAEqVlaqAa7-Ixv-hnximDy8xa_BkkepRV8</botToken>
         <chatId>-1001867481964</chatId>
 
