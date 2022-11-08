@@ -19,6 +19,10 @@ repositories {
 }
 
 dependencies {
+
+    // nftreally-logback for test
+    implementation files('libs/nftreally-logback.jar')
+
     // TelegramBot
     // https://mvnrepository.com/artifact/com.github.pengrad/java-telegram-bot-api/6.2.0
     implementation 'com.github.pengrad:java-telegram-bot-api:6.2.0'
@@ -30,11 +34,6 @@ dependencies {
     // AWS SDK for DynamoDB
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-dynamodb/1.12.325
     implementation group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.12.322'
-
-    // JPA for DynamoDB
-    // https://boostchicken.github.io/spring-data-dynamodb/
-    // https://mvnrepository.com/artifact/io.github.boostchicken/spring-data-dynamodb
-    // implementation group: 'io.github.boostchicken', name: 'spring-data-dynamodb', version: '5.2.5'
 
     // Gson
     // https://mvnrepository.com/artifact/com.google.code.gson/gson

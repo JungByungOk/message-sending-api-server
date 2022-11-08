@@ -5,6 +5,7 @@ import com.msas.pollingchecker.repository.SESMariaDBRepository;
 import com.msas.pollingchecker.types.EnumSESEventTypeCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.nftreally.TelegramUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -111,8 +112,6 @@ class MariaDBTest {
         // then
         assertThat(result).isEqualTo(1);
 
-
     }
-
 
 }
