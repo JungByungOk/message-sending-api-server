@@ -57,12 +57,12 @@ public class SESMailService {
             sendEmailResult = amazonSimpleEmailService.sendEmail(request);
 
         } catch (AmazonSimpleEmailServiceException ex) {
-            log.debug("이메일 전송 실패", ex);
-            throw new AwsSesClientException("이메일 전송 실패", ex); // to GlobalControllerAdvice
+            log.error("SESMailService - Email sending failed.", ex);
+            throw new AwsSesClientException("Email sending failed.", ex); // to GlobalControllerAdvice
         }
 
         String emailMessageId = sendEmailResult.getMessageId();
-        log.debug("이메일 전송 완료 (messageId: {})", emailMessageId);
+        log.info("SESMailService - Email has been sent. (messageId: {})", emailMessageId);
 
         return emailMessageId;
     }
@@ -83,12 +83,12 @@ public class SESMailService {
             createTemplateResult = amazonSimpleEmailService.createTemplate(request);
 
         } catch (AmazonSimpleEmailServiceException ex) {
-            log.debug("탬플릿 등록 실패", ex);
-            throw new AwsSesClientException("탬플릿 등록 실패", ex); // to GlobalControllerAdvice
+            log.error("SESMailService - Template registration failed.", ex);
+            throw new AwsSesClientException("SESMailService - Template registration failed.", ex); // to GlobalControllerAdvice
         }
 
         String awsRequestId = createTemplateResult.getSdkResponseMetadata().getRequestId();
-        log.debug("탬플릿 등록 완료 (AWS_REQUEST_ID: {})", awsRequestId);
+        log.info("SESMailService - A template has been registered. (AWS_REQUEST_ID: {})", awsRequestId);
 
         return awsRequestId;
     }
@@ -116,12 +116,12 @@ public class SESMailService {
 
             sendTemplatedEmailResult = amazonSimpleEmailService.sendTemplatedEmail(emailRequest);
         } catch (AmazonSimpleEmailServiceException ex) {
-            log.debug("탬플릿 메일 전송 실패", ex);
-            throw new AwsSesClientException("탬플릿 메일 전송 실패", ex); // to GlobalControllerAdvice
+            log.error("SESMailService - Failed to send template mail.", ex);
+            throw new AwsSesClientException("SESMailService - Failed to send template mail.", ex); // to GlobalControllerAdvice
         }
 
         String messageId = sendTemplatedEmailResult.getMessageId();
-        log.debug("탬플릿 메일 전송 성공 (MessageId: {})", messageId);
+        log.info("SESMailService - Template mail sending was successful. (MessageId: {})", messageId);
 
         return messageId;
     }
@@ -141,12 +141,12 @@ public class SESMailService {
 
             updateTemplateResult = amazonSimpleEmailService.updateTemplate(updateTemplateRequest);
         } catch (AmazonSimpleEmailServiceException ex) {
-            log.debug("탬플릿 수정 실패", ex);
-            throw new AwsSesClientException("탬플릿 수정 실패", ex); // to GlobalControllerAdvice
+            log.error("SESMailService - Template modification failed.", ex);
+            throw new AwsSesClientException("Template modification failed.", ex); // to GlobalControllerAdvice
         }
 
         String awsRequestId = updateTemplateResult.getSdkResponseMetadata().getRequestId();
-        log.debug("탬플릿 수정 실패 (AWS_REQUEST_ID: {})", awsRequestId);
+        log.info("SESMailService - Template modification was successful. (AWS_REQUEST_ID: {})", awsRequestId);
 
         return awsRequestId;
     }
@@ -160,12 +160,12 @@ public class SESMailService {
 
             deleteTemplateResult = amazonSimpleEmailService.deleteTemplate(deleteTemplateRequest);
         } catch (AmazonSimpleEmailServiceException ex) {
-            log.debug("탬플릿 삭제 실패", ex);
-            throw new AwsSesClientException("탬플릿 삭제 실패", ex); // to GlobalControllerAdvice
+            log.error("SESMailService - Failed to delete template.", ex);
+            throw new AwsSesClientException("SESMailService - Failed to delete template.", ex); // to GlobalControllerAdvice
         }
 
         String awsRequestId = deleteTemplateResult.getSdkResponseMetadata().getRequestId();
-        log.debug("탬플릿 수정 실패 (AWS_REQUEST_ID: {})", awsRequestId);
+        log.info("SESMailService - Template deletion successful. (AWS_REQUEST_ID: {})", awsRequestId);
 
         return awsRequestId;
 
@@ -190,12 +190,12 @@ public class SESMailService {
             } while (listTemplatesResult.getNextToken() != null);
 
         } catch (AmazonSimpleEmailServiceException ex) {
-            log.debug("탬플릿 목록 가져오기 실패", ex);
-            throw new AwsSesClientException("탬플릿 목록 가져오기 실패", ex); // to GlobalControllerAdvice
+            log.debug("SESMailService - Failed to get template list.", ex);
+            throw new AwsSesClientException("Failed to get template list.", ex); // to GlobalControllerAdvice
         }
 
         int templateCount = listTotalTemplates.size();
-        log.debug("탬플릿 목록 가져오기 성공 (Number of registered templates : {})", templateCount);
+        log.debug("SESMailService - To get template list was successful. (Number of registered templates : {})", templateCount);
 
         return listTotalTemplates;
 

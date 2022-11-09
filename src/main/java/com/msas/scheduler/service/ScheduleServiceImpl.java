@@ -66,7 +66,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 }
             }
         } catch (SchedulerException e) {
-            log.error("[scheduler-debug] error while fetching all job info", e);
+            log.error("@ScheduleService - error while fetching all job info", e);
         }
 
         jobStatusResponse.setNumOfAllJobs(numOfAllJobs);
@@ -88,7 +88,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 }
             }
         } catch (SchedulerException e) {
-            log.error("[scheduler-debug] error occurred while checking job with jobKey : {}", jobKey, e);
+            log.error("@ScheduleService - error occurred while checking job with jobKey : {}", jobKey, e);
         }
         return false;
     }
@@ -101,7 +101,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 return true;
             }
         } catch (SchedulerException e) {
-            log.error("[scheduler-debug] error occurred while checking job exists :: jobKey : {}", jobKey, e);
+            log.error("@ScheduleService - error occurred while checking job exists :: jobKey : {}", jobKey, e);
             throw e;
         }
         return false;
@@ -109,7 +109,7 @@ public class ScheduleServiceImpl implements ScheduleService {
 
     @Override
     public void addJob(RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO, Class<? extends Job> jobClass) throws SchedulerException {
-        log.debug("[scheduler-debug] Add job with jobKey : {}", new JobKey(requestTemplatedEmailScheduleJobDTO.getJobGroup(), requestTemplatedEmailScheduleJobDTO.getJobName()));
+        log.info("@ScheduleService - Add job with jobKey : {}", new JobKey(requestTemplatedEmailScheduleJobDTO.getJobGroup(), requestTemplatedEmailScheduleJobDTO.getJobName()));
 
         /*
          * jobDataMap 에는 primitive type 만 사용하도록 권장한다.
@@ -169,11 +169,11 @@ public class ScheduleServiceImpl implements ScheduleService {
             // return Date Format -> Fri Oct 14 23:05:32 KST 2022
             Date registeredDate = schedulerFactoryBean.getScheduler().scheduleJob(jobDetail, trigger);
 
-            log.info("🧩 Added Schedule Job at {} :: jobKey = {}", registeredDate, jobDetail.getKey().getName());
+            log.info("@ScheduleService - Added Schedule Job at {} :: jobKey = {}", registeredDate, jobDetail.getKey().getName());
 
         } catch (SchedulerException e) {
-            log.error("error occurred while scheduling with jobKey : {}", jobDetail.getKey());
-            log.error("{}", e.getMessage());
+            log.error("@ScheduleService - error occurred while scheduling with jobKey : {}", jobDetail.getKey());
+            log.error("@ScheduleService - {}", e.getMessage());
             throw e;
         }
 
@@ -207,8 +207,8 @@ public class ScheduleServiceImpl implements ScheduleService {
             scheduler.deleteJobs(jobKeyList);
 
         } catch (SchedulerException e) {
-            log.error("[scheduler-debug] error occurred while all deleting job with jobKeys : {}", jobKeyList);
-            log.error("[scheduler-debug] {} : {}", jobKeyList, e.getMessage());
+            log.error("@ScheduleService - error occurred while all deleting job with jobKeys : {}", jobKeyList);
+            log.error("@ScheduleService - {} : {}", jobKeyList, e.getMessage());
             throw e;
         }
 
@@ -225,46 +225,46 @@ public class ScheduleServiceImpl implements ScheduleService {
         if (!isJobRunning(jobKey))
             return;
 
-        log.debug("[scheduler-debug] Stop a running job with jobKey : {}", jobKey);
+        log.info("@ScheduleService - Stop a running job with jobKey : {}", jobKey);
         try {
             schedulerFactoryBean.getScheduler().interrupt(jobKey); // 작업 중지
             //this.deleteJob(jobKey); // 스케쥴에서 작업 삭제
         } catch (UnableToInterruptJobException e) {
-            log.error("[scheduler-debug] error occurred while stopping job with jobKey : {}", jobKey, e);
+            log.error("@ScheduleService - error occurred while stopping job with jobKey : {}", jobKey, e);
             throw e;
         }
     }
 
     @Override
     public void deleteJob(JobKey jobKey) throws SchedulerException {
-        log.debug("[scheduler-debug] deleting job with jobKey : {}", jobKey);
+        log.info("@ScheduleService - deleting job with jobKey : {}", jobKey);
         try {
             schedulerFactoryBean.getScheduler().deleteJob(jobKey);
         } catch (SchedulerException e) {
-            log.error("[scheduler-debug] error occurred while deleting job with jobKey : {}", jobKey);
-            log.error("[scheduler-debug] {} : {}", jobKey, e.getMessage());
+            log.error("@ScheduleService - error occurred while deleting job with jobKey : {}", jobKey);
+            log.error("@ScheduleService - {} : {}", jobKey, e.getMessage());
             throw e;
         }
     }
 
     @Override
     public void pauseJob(JobKey jobKey) throws SchedulerException {
-        log.debug("[scheduler-debug] pausing job with jobKey : {}", jobKey);
+        log.info("@ScheduleService - pausing job with jobKey : {}", jobKey);
         try {
             schedulerFactoryBean.getScheduler().pauseJob(jobKey);
         } catch (SchedulerException e) {
-            log.error("[scheduler-debug] error occurred while deleting job with jobKey : {}", jobKey, e);
+            log.error("@ScheduleService - error occurred while deleting job with jobKey : {}", jobKey, e);
             throw e;
         }
     }
 
     @Override
     public void resumeJob(JobKey jobKey) throws SchedulerException {
-        log.debug("[scheduler-debug] resuming job with jobKey : {}", jobKey);
+        log.info("@ScheduleService - resuming job with jobKey : {}", jobKey);
         try {
             schedulerFactoryBean.getScheduler().resumeJob(jobKey);
         } catch (SchedulerException e) {
-            log.error("[scheduler-debug] error occurred while resuming job with jobKey : {}", jobKey, e);
+            log.error("@ScheduleService - error occurred while resuming job with jobKey : {}", jobKey, e);
             throw e;
         }
     }
@@ -288,7 +288,7 @@ public class ScheduleServiceImpl implements ScheduleService {
                 }
             }
         } catch (SchedulerException e) {
-            log.error("[scheduler-debug] Error occurred while getting job state with jobKey : {}", jobKey, e);
+            log.error("@ScheduleService - Error occurred while getting job state with jobKey : {}", jobKey, e);
             throw e;
         }
         return null;

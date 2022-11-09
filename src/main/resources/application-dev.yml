@@ -48,7 +48,7 @@ spring:
     properties:
       org.quartz.scheduler.instanceId: AUTO
       org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
-      org.quartz.threadPool.threadCount: 10
+      org.quartz.threadPool.threadCount: 20
 
       #_________________________________________________________________________________________________
       # (!) RAMStore 사용시 이후 설정 모두 주석 처리
@@ -58,13 +58,18 @@ spring:
 
       # Database Store
       org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
-      org.quartz.dataSource.quartzDataSource.provider: hikaricp
       org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
       org.quartz.jobStore.dataSource: quartzDataSource
+      org.quartz.dataSource.quartzDataSource.provider: hikaricp
       org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
       org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://10.1.199.254:3306/nft
       org.quartz.dataSource.quartzDataSource.user: nft
       org.quartz.dataSource.quartzDataSource.password: Digi@cap!
+      #
+      org.quartz.dataSource.quartzDataSource.maximumPoolSize: 20
+      org.quartz.dataSource.quartzDataSource.connectionTestQuery: SELECT 1
+      org.quartz.dataSource.quartzDataSource.validationTimeout: 5000
+      org.quartz.dataSource.quartzDataSource.idleTimeout: 0
 
       # Logging Trigger History
       # https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/ConfigPlugins.html
@@ -81,12 +86,6 @@ spring:
     url: jdbc:mariadb://10.1.199.254:3306/nft
     username: nft
     password: Digi@cap!
-#    hikari:
-#      pool-name: NFTReally-Hikari
-#      driver-class-name: org.mariadb.jdbc.Driver
-#      jdbc-url: jdbc:mariadb://10.1.199.254:3306/nft
-#      username: nft
-#      password: Digi@cap!
 
 #################################################
 # AWS {SES, DynamoDB}

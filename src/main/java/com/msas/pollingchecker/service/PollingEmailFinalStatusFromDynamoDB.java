@@ -31,7 +31,7 @@ public class PollingEmailFinalStatusFromDynamoDB {
     @Scheduled(fixedRateString = "${polling.schedule.send-email-event-check-time:10000}", initialDelay = 10000)
     public void checkNewEmailResultTask()
     {
-        log.info("⏱️이메일 전송 결과 이벤트 정보 확인 폴링 <-> DynamoDB ");
+        log.info("@AWS DynamoDB Checking - Does an email result event exist?");
 
         Optional<List<SESEventsEntity>> sesEventsEntityList = sesEventsDynamoDBRepository.getItems();
 
@@ -52,7 +52,7 @@ public class PollingEmailFinalStatusFromDynamoDB {
                 .distinct()
                 .collect(Collectors.toList());
 
-        log.info("⚠️신규 SESMessageId [ {} 개 ] 이벤트 조회", messageIds.size());
+        log.info("@AWS DynamoDB Checking - SESMessageId [ {} 개 ] events confirmed.", messageIds.size());
 
         // 1) DynamoDB - messageId 별로 마지막 최종 상태 확인
         // 2) RDBMS 최종 상태 업데이트
@@ -63,16 +63,16 @@ public class PollingEmailFinalStatusFromDynamoDB {
                         (count, messageId)->
                         {
                             count++;
-                            log.info("이메일 상태 업데이트 처리 {}/{} : {}", String.format("%02d", count), messageIds.size(), messageId);
+                            log.info("@AWS DynamoDB Checking - Processed email status updates {}/{} : {}", String.format("%02d", count), messageIds.size(), messageId);
 
                             // messageId 아이템 중에서 최종 상태 가져오기
                             SESEventsEntity finalStatusEntity = eventList.stream().filter(sesEventsEntity -> sesEventsEntity.getSesMessageId().equals(messageId)).findFirst().get();
-                            log.info("\t{} 상태 -> ({})", finalStatusEntity.getSesMessageId(), finalStatusEntity.getEventType());
+                            log.info("@AWS DynamoDB Checking - SESMessageID:{} -> ({})", finalStatusEntity.getSesMessageId(), finalStatusEntity.getEventType());
 
                             // 최종 상태를 rdbms 업데이트
                             if(UpdateFinalResult(finalStatusEntity) == 0)
                             {
-                                log.info("\tDynamoDB Event 삭제 안하고 유지");
+                                log.info("@AWS DynamoDB Checking - Do not delete and keep in DynamoDB Event");
                                 return; // 이후 진행 안함
                             }
 
@@ -97,9 +97,9 @@ public class PollingEmailFinalStatusFromDynamoDB {
         int result = sesMariaDBRepository.UpdateFinalEmailStatus(finalStatusEntity.getSesMessageId(), send_sts_cd, send_rslt_typ_cd, serverName);
 
         if(result == 1)
-            log.info("\tRDBMS 업데이트 완료");
+            log.info("@AWS DynamoDB Checking - Updated email sending result to RDBMS.");
         else
-            log.info("\tRDBMS 업데이트 대상이 없음");
+            log.info("@AWS DynamoDB Checking - (SKIP) No update target for email sending result in RDBMS.");
 
         return result;
     }
@@ -126,7 +126,7 @@ public class PollingEmailFinalStatusFromDynamoDB {
                         serverName);
 
                 if(result > 0)
-                    log.info("📌 Added Blacklist - {} / {}", eventsEntity.getDestinationEmail(), enumSESEventTypeCode.name().toUpperCase(Locale.ENGLISH));
+                    log.info("@Added Blacklist to Database - {} / {}", eventsEntity.getDestinationEmail(), enumSESEventTypeCode.name().toUpperCase(Locale.ENGLISH));
             }
             catch(DuplicateKeyException e)
             {

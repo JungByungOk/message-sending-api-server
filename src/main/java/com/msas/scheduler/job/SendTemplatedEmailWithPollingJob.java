@@ -24,14 +24,13 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
- * PollingNewEmailFromNFTDB 서비스 통해서 들어온
- * 이메일 전송 예약 작업 처리기
+ * PollingNewEmailFromNFTDB 서비스 통해서 들어온 이메일 전송 예약 작업 처리기
  * !) 이메일 등록 테이블의 상태 벼경을 위한 이벤트 추가됨
  */
 @Component
 @Slf4j
 @DisallowConcurrentExecution // 동시 실행 방지
-public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements InterruptableJob {
+public class SendTemplatedEmailWithPollingJob extends QuartzJobBean implements InterruptableJob {
     private final int EMAIL_SEND_DELAY_SECONDS = 2;
 
     @Value("${spring.application.name}")
@@ -70,7 +69,7 @@ public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements Int
             }
         }
 
-        log.info("SendTemplatedEmailJob started :: jobKey={} - threadName={}", jobKey, currThread.getName());
+        log.info("@SendTemplatedEmailWithPollingJob - started :: jobKey={} - threadName={}", jobKey, currThread.getName());
 
         //-------------------------------------------------------------------------------
         // 이메일 전송 처리
@@ -103,7 +102,7 @@ public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements Int
                 // 이메일 발송
                 String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(requestTemplatedEmailScheduleJobDTO, count));
 
-                log.info("\t이메일 전송 ({}/{}) : templateName = {}, messageId = {}",
+                log.info("@SendTemplatedEmailWithPollingJob - Email sending ({}/{}) : templateName = {}, messageId = {}",
                         count + 1,
                         requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().size(),
                         requestTemplatedEmailScheduleJobDTO.getTemplateName(), messageId);
@@ -114,7 +113,7 @@ public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements Int
             }
             catch(AwsSesClientException e)
             {
-                log.error("{}", e.getMessage());
+                log.error("@SendTemplatedEmailWithPollingJob - {}", e.getMessage());
 
                 // 실패 상태 업데이트
                 UpdateSendEmailStatus(email_send_dtl_seq,
@@ -134,7 +133,7 @@ public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements Int
             }
         }));
 
-        log.info("SendTemplatedEmailJob ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
+        log.info("@SendTemplatedEmailWithPollingJob - ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
     }
 
     /*
@@ -153,7 +152,7 @@ public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements Int
                 messageId,
                 serverName
         );
-        log.info("🌿 SQ->SM 이메일 상태 업데이트");
+        log.info("@SendTemplatedEmailWithPollingJob - Email status update with [ SQ->SM ].");
 
     }
 
@@ -181,7 +180,7 @@ public class SendTemplatedEmailWithEventJob extends QuartzJobBean implements Int
     public void interrupt() throws UnableToInterruptJobException {
         Thread currThread = Thread.currentThread();
         isJobInterrupted = true;
-        log.info("interrupting - {}", currThread.getName());
+        log.info("@SendTemplatedEmailWithPollingJob - thread interrupting (stop working) - {}", currThread.getName());
         currThread.interrupt(); //쓰레드가 일시 정지 상태이면 바로 깨워서 실행시킨다
     }
 }

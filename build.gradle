@@ -29,7 +29,7 @@ dependencies {
 
     // AWS SDK for SES
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-ses
-    implementation group: 'com.amazonaws', name: 'aws-java-sdk-ses', version: '1.12.322'
+    implementation group: 'com.amazonaws', name: 'aws-java-sdk-ses', version: '1.12.332'
 
     // AWS SDK for DynamoDB
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-dynamodb/1.12.325
@@ -76,7 +76,7 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-//bootRun {
-//    String activeProfile = System.properties['spring.profiles.active']
-//    systemProperty "spring.profiles.active", activeProfile
-//}
+bootJar {
+    // build 중에 중복되는 파일이 생성될경우 에러가 발생한다. 그것을 방지하기 위한 설정이다.
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}

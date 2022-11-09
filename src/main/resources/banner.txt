@@ -26,7 +26,8 @@
 ---polling-------------------------
     ㄴ check new email from rdbms
     ㄴ check sent email result from aws dynamodb
-        ㄴ blacklist email address
+        ㄴ registry blacklist email address
+        ㄴ [x] filtering blacklist email sending
 
 [Telegram]
     ㄴ Multi-channel name setting

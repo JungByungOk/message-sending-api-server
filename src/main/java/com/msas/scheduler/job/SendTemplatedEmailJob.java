@@ -56,7 +56,7 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
             }
         }
 
-        log.info("⚡SendTemplatedEmailJob started :: jobKey={} - threadName={}", jobKey, currThread.getName());
+        log.info("@SendTemplatedEmailJob - started :: jobKey={} - threadName={}", jobKey, currThread.getName());
 
         //-------------------------------------------------------------------------------
         // 이메일 전송 처리
@@ -83,7 +83,7 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
             // 이메일 발송
             String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(requestTemplatedEmailScheduleJobDTO, count));
 
-            log.info("\t이메일 전송 ({}/{}) : templateName = {}, messageId = {}",
+            log.info("@SendTemplatedEmailJob - Email sending ({}/{}) : templateName = {}, messageId = {}",
                     count + 1,
                     requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().size(),
                     requestTemplatedEmailScheduleJobDTO.getTemplateName(), messageId);
@@ -98,7 +98,7 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
             }
         }));
 
-        log.info("⚓SendTemplatedEmailJob ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
+        log.info("@SendTemplatedEmailJob - ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
     }
 
     /**
@@ -125,7 +125,7 @@ public class SendTemplatedEmailJob extends QuartzJobBean implements Interruptabl
     public void interrupt() throws UnableToInterruptJobException {
         Thread currThread = Thread.currentThread();
         isJobInterrupted = true;
-        log.info("interrupting - {}", currThread.getName());
+        log.info("@SendTemplatedEmailJob - thread interrupting (stop working) - {}", currThread.getName());
         currThread.interrupt(); //쓰레드가 일시 정지 상태이면 바로 깨워서 실행시킨다
     }
 }

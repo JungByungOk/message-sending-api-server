@@ -18,6 +18,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * HTTP Request 와 Response 로깅 인터셉터
+ */
 @Slf4j
 @RequiredArgsConstructor
 @Component

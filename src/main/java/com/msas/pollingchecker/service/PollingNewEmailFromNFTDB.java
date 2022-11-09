@@ -6,7 +6,7 @@ import com.msas.pollingchecker.model.NewEmailEntity;
 import com.msas.pollingchecker.repository.SESMariaDBRepository;
 import com.msas.pollingchecker.types.EnumEmailSendStatusCode;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
-import com.msas.scheduler.job.SendTemplatedEmailWithEventJob;
+import com.msas.scheduler.job.SendTemplatedEmailWithPollingJob;
 import com.msas.scheduler.service.ScheduleServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +34,7 @@ public class PollingNewEmailFromNFTDB {
     @Scheduled(fixedRateString = "${polling.schedule.send-email-check-time:10000}", initialDelay = 20000)
     public void checkNewEmailTask() {
 
-        log.info("⏱️신규 이메일 전송 대기 항목 확인 폴링 <-> MariaDB ");
+        log.info("@RDBMS Checking - Are there new email items to send?");
 
         List<NewEmailEntity> newEmailEntities = sesMariaDBRepository.findNewEmail();
 
@@ -47,7 +47,7 @@ public class PollingNewEmailFromNFTDB {
         newEmailEntities.forEach(newEmailEntity -> {
             nSendingEmails.addAndGet(newEmailEntity.getNewEmailDetailEntities().size());
         });
-        log.info("⚠️신규 이메일 발송 요청 [ {} 개 ] 확인", nSendingEmails);
+        log.info("@RDBMS Checking - New registered email [ {} ]", nSendingEmails);
 
         // 이메일 발송 스케쥴러에 등록
         //------------------------------------------
@@ -56,7 +56,7 @@ public class PollingNewEmailFromNFTDB {
             RequestTemplatedEmailScheduleJobDTO dto = convertNewEmailEntity2RequestTemplatedEmailScheduleJobDTO(newEmailEntity);
 
             try {
-                scheduleService.addJob(dto, SendTemplatedEmailWithEventJob.class);
+                scheduleService.addJob(dto, SendTemplatedEmailWithPollingJob.class);
             } catch (SchedulerException e) {
                 throw new RuntimeException(e);
             }
@@ -80,7 +80,7 @@ public class PollingNewEmailFromNFTDB {
                     EnumEmailSendStatusCode.SQ.name(),
                     serverName
             );
-            log.info("🌿 SR->SQ 이메일 상태 업데이트");
+            log.info("@RDBMS Checking - Email status update with [ SR->SQ ].");
 
         });
     }

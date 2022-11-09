@@ -13,10 +13,10 @@ public class SimpleJob extends QuartzJobBean {
         JobKey jobKey = context.getJobDetail().getKey();
         Thread currThread = Thread.currentThread();
 
-        log.info("⚡️SimpleJob started :: jobKey={} - threadName={}", jobKey, currThread.getName());
+        log.info("@SimpleJob - started :: jobKey={} - threadName={}", jobKey, currThread.getName());
         {
 
         }
-        log.info("⚓️SimpleJob ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
+        log.info("@SimpleJob - ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
     }
 }
