@@ -39,33 +39,6 @@ public class TelegramBotService {
 
     @PostConstruct
     public void init() {
-                /*
-         {
-          "update_id": 175775917,
-          "channel_post": {
-            "message_id": 136,
-            "sender_chat": {
-              "id": -1001877435674,
-              "type": "channel",
-              "title": "NFTReally.Notification"
-            },
-            "date": 1666007691,
-            "chat": {
-         ->   "id": -1001877435674,
-              "type": "channel",
-         ->   "title": "NFTReally.Notification"
-            },
-         -> "text": "/start",
-            "entities": [
-              {
-         ->     "type": "bot_command",
-                "offset": 0,
-                "length": 6
-              }
-            ]
-          }
-         */
-
         //+++++++++++++++++++++++++++++++++++++++
         // /getUpdates 리스너 등록
         // bot_command = /start 확인하고, 채널 채팅방 이름 확인하여 채널 아이디 저장
@@ -98,10 +71,9 @@ public class TelegramBotService {
                 /*
                 https://github.com/yagop/node-telegram-bot-api/issues/488
                 com.pengrad.telegrambot.TelegramException: GetUpdates failed with error_code 409 Conflict: terminated by other getUpdates request; make sure that only one bot instance is running
-                이 오류는 동일한 봇 토큰을 사용하는 봇의 인스턴스가 1개 이상일 때 발생하며, 이는 Telegram API에서 오류를 유발합니다.
+                이 오류는 동일한 봇 토큰을 사용하는 봇의 인스턴스가 1개 이상일 때 발생하며, 이는 Telegram API 에서 오류를 유발합니다.
                 이것이 봇 토큰을 변경하거나 다른 작업을 닫으면 이 오류가 해결되는 이유입니다.
                 */
-
                 log.error(e.toString());
             }
         });
@@ -113,7 +85,6 @@ public class TelegramBotService {
     public User GetMe() {
         GetMe request = new GetMe();
         GetMeResponse getMeResponse = telegramBot.execute(request);
-
         return getMeResponse.user();
     }
 

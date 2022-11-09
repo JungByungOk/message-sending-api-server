@@ -2,9 +2,69 @@
 
 ### feature
 
-- AWS SES 이메일 전송 (텍스트, HTML, Template)
-- AWS SES 탬플릿 등록/수정/삭제/조회
-- 이메일 예약 발송 등록/삭제/조회/멈춤/재시작/중지
+[AWS SES]
+
+---templated-----------------
+
+ㄴ list-templates
+
+ㄴ [x] get-template
+
+ㄴ create-template
+
+ㄴ delete-template
+
+ㄴ update-template
+
+ㄴ [x] test-render-template
+
+---send----------------------
+
+ㄴ send-email
+
+>ㄴ [x] attachment
+
+ㄴ html
+
+ㄴ send-templated-email
+
+>ㄴ [x] attachment
+
+---schedule-------------------------
+ㄴ send-schedule-templated-email
+
+ㄴ resume
+
+ㄴ cancel
+
+ㄴ job list query
+
+ㄴ job modify
+
+---polling-------------------------
+ㄴ check new email from rdbms
+
+ㄴ check sent email result from aws dynamodb
+
+ㄴ registry blacklist email address
+
+>ㄴ [x] filtering blacklist email sending
+
+[Telegram]
+
+ㄴ Multi-channel name setting
+
+ㄴ Send message by channel name
+
+ㄴ GetUpdate Long Polling
+
+[Slack]
+
+ㄴ [x] Multi-channel name setting
+
+ㄴ [x] Send message by channel name
+
+»»» ¯\_(ツ)_/¯
 
 ### reference
 

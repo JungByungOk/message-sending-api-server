@@ -61,16 +61,23 @@ spring:
       org.quartz.dataSource.quartzDataSource.provider: hikaricp
       org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
       org.quartz.jobStore.dataSource: quartzDataSource
+      #
       org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
       org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://58.232.131.21:3306/quartz
       org.quartz.dataSource.quartzDataSource.user: quartz
       org.quartz.dataSource.quartzDataSource.password: quartz
+      #
+      org.quartz.dataSource.quartzDataSource.maximumPoolSize: 10
+      org.quartz.dataSource.quartzDataSource.connectionTestQuery: SELECT 1
+      org.quartz.dataSource.quartzDataSource.validationTimeout: 5000
+      org.quartz.dataSource.quartzDataSource.idleTimeout: 0
 
       # Logging Trigger History
       # https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/ConfigPlugins.html
       org.quartz.plugin.triggHistory.class: org.quartz.plugins.history.LoggingTriggerHistoryPlugin
       org.quartz.plugin.triggHistory.triggerFiredMessage: '🔥Trigger {1}.{0} fired job {6}.{5} at: {4, date, HH:mm:ss MM/dd/yyyy}'
       org.quartz.plugin.triggHistory.triggerCompleteMessage: '🔥Trigger {1}.{0} completed firing job {6}.{5} at {4, date, HH:mm:ss MM/dd/yyyy\}.'
+
   #################################################
   # database
   #################################################

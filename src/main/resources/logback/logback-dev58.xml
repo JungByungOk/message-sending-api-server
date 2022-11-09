@@ -5,9 +5,9 @@
     <include resource="logback/logback-defaults.xml"/>
 
     <!-- LOGGER -->
-    <logger name="org.springframework.web" level="INFO"/>
-    <logger name="org.mybatis" level="INFO"/>
-    <logger name="org.mariadb.jdbc" level="INFO"/>
+    <logger name="org.springframework.web" level="DEBUG"/>
+    <logger name="org.mybatis" level="DEBUG"/>
+    <logger name="org.mariadb.jdbc" level="DEBUG"/>
     <logger name="org.quartz" level="DEBUG"/>
     <logger name="com.msas" level="DEBUG"/>
 
@@ -21,13 +21,12 @@
 
     <!-- TELEGRAM APPENDER -->
     <appender name="TELEGRAM" class="org.nftreally.TelegramAppender">
+        <minInterval>1000</minInterval>
         <botToken>5710353844:AAEqVlaqAa7-Ixv-hnximDy8xa_BkkepRV8</botToken>
         <chatId>-1001867481964</chatId>
-
         <Layout class="ch.qos.logback.classic.PatternLayout">
             <Pattern>[%d{HH:mm:ss.SSS}] [%-5level] [%logger{%-36.36t}] - %msg%n</Pattern>
         </Layout>
-
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
             <level>ERROR</level>
         </filter>
