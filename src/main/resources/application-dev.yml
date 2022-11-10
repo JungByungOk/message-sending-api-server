@@ -9,11 +9,6 @@ server:
 #################################################
 logging:
   config: classpath:logback/logback-${spring.config.activate.on-profile}.xml
-#  level:
-#    root: ERROR
-#    org.springframework.web: INFO
-#    org.quartz: DEBUG
-#    com.msas: DEBUG
 
 #################################################
 # spring setting
@@ -82,11 +77,14 @@ spring:
   # database
   #################################################
   datasource:
-    name: NFTReally
+    name: NFTReally-Database
     driver-class-name: org.mariadb.jdbc.Driver
     url: jdbc:mariadb://10.1.199.254:3306/nft
     username: nft
     password: Digi@cap!
+    hikari:
+      maximum-pool-size: 10
+      pool-name: NFTReally-HikariCP
 
 #################################################
 # AWS {SES, DynamoDB}
@@ -112,6 +110,8 @@ management:
   endpoint:
     quartz:
       enabled: true
+    health:
+      show-details: always
 
 #################################################
 # bot

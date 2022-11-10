@@ -87,6 +87,9 @@ spring:
     url: jdbc:mariadb://58.232.131.21:3306/nft
     username: quartz
     password: quartz
+    hikari:
+      pool-name: NFTReally-HikariCP
+      maximum-pool-size: 10
 
 #################################################
 # AWS {SES, DynamoDB}
@@ -112,6 +115,8 @@ management:
   endpoint:
     quartz:
       enabled: true
+    health:
+      show-details: always
 
 #################################################
 # bot

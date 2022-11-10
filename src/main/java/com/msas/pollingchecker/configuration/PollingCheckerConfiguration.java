@@ -16,7 +16,7 @@ public class PollingCheckerConfiguration implements SchedulingConfigurer {
         ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
         {
             threadPoolTaskScheduler.setPoolSize(10);
-            threadPoolTaskScheduler.setThreadNamePrefix("polling-task-");
+            threadPoolTaskScheduler.setThreadNamePrefix("Polling-Task-");
             threadPoolTaskScheduler.setWaitForTasksToCompleteOnShutdown(true);
             threadPoolTaskScheduler.initialize();
         }
