@@ -23,7 +23,7 @@ class DynamoDBTest {
 
     @Test
     @DisplayName("DynamoDB PartiQL Select 쿼리 - 커스텀 태그로 조회 테스트")
-    public void getItemByCustomTagFromDynamoDB()
+    void getItemByCustomTagFromDynamoDB()
     {
         //given
         String CustomTag = "20221025154600";
@@ -42,7 +42,7 @@ class DynamoDBTest {
 
     @Test
     @DisplayName("DynamoDB PartiQL Select 쿼리 - 전체 조회 테스트")
-    public void getItemFromDynamoDB()
+    void getItemFromDynamoDB()
     {
         //when
         Optional<List<SESEventsEntity>> resultList = sesEventsDynamoDBRepository.getItems();
@@ -59,7 +59,7 @@ class DynamoDBTest {
 
     @Test
     @DisplayName("DynamoDB PartiQL Select 쿼리 - MessageId로 아이템 삭제")
-    public void DeleteEventItem()
+    void DeleteEventItem()
     {
         // given
         int result;
