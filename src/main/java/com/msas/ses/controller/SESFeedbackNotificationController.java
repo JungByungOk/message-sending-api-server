@@ -35,31 +35,29 @@ import javax.servlet.http.HttpServletRequest;
 @Slf4j
 public class SESFeedbackNotificationController {
 
-    // TODO. SES 통지 데이터를 데이타베이스에 저장하도록 구현해야 한다. -> 통지 데이터를 통해 집계를 해야한다.
-    // TODO. SNS 구독 하지 않음 : SES -> LAMBDA -> DYNAMO 구조로 DynamoDB 에서 이벤트 수집 처리
-    // FIXME. 직접 이벤트 내역을 RDBMS 관리하려면 구독 이벤트 수신 서버를 별도로 구성하는 방안이 좋을 것 같다.
+    final String subscriptionString = "SubscriptionConfirmation";
 
     @PostMapping("/bounces")
     public void bounce(@RequestBody String body, HttpServletRequest request) {
-        if (body.contains("SubscriptionConfirmation"))
+        if (body.contains(subscriptionString))
             log.info("Bounces - SubscriptionConfirmation\n{}\n", body);
     }
 
     @PostMapping("/complaints")
     public void complaints(@RequestBody String body, HttpServletRequest request) {
-        if (body.contains("SubscriptionConfirmation"))
+        if (body.contains(subscriptionString))
             log.info("Complaints SubscriptionConfirmation\n{}\n", body);
     }
 
     @PostMapping("/deliveries")
     public void delivery(@RequestBody String body, HttpServletRequest request) {
-        if (body.contains("SubscriptionConfirmation"))
+        if (body.contains(subscriptionString))
             log.info("Deliveries - SubscriptionConfirmation\n{}\n", body);
     }
 
     @PostMapping("/events")
     public void event(@RequestBody String body, HttpServletRequest request) {
-        if (body.contains("SubscriptionConfirmation"))
+        if (body.contains(subscriptionString))
             log.info("Events - SubscriptionConfirmation\n{}\n", body);
     }
 }
