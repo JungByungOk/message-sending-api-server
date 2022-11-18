@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-@Deprecated
 public enum EnumEmailSendDivisionCode {
 
     IMT("즉시발송"),

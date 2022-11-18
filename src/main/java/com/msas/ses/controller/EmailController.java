@@ -19,7 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EmailController {
 
-    private final SESMailService SESMailService;
+    private final SESMailService sesMailService;
 
     /**
      * ------------------------------------------
@@ -29,7 +29,7 @@ public class EmailController {
     @PostMapping("/text-mail")
     public ResponseEntity<ResponseBasicEmailDTO> sendEmail(@Valid @RequestBody RequestBasicEmailDto requestBasicEmailDTO) {
 
-        String messageId = SESMailService.sendEmail(requestBasicEmailDTO);
+        String messageId = sesMailService.sendEmail(requestBasicEmailDTO);
 
         ResponseBasicEmailDTO responseBasicEmailDTO = new ResponseBasicEmailDTO();
         responseBasicEmailDTO.setMessageId(messageId);
@@ -45,7 +45,7 @@ public class EmailController {
      */
     @PostMapping("/templated-mail")
     public ResponseEntity<ResponseTemplatedEmailDTO> sendTemplatedEmail(@Valid @RequestBody RequestTemplatedEmailDto requestTemplatedEmailDto) {
-        String messageId = SESMailService.sendTemplatedEmail(requestTemplatedEmailDto);
+        String messageId = sesMailService.sendTemplatedEmail(requestTemplatedEmailDto);
 
         ResponseTemplatedEmailDTO responseTemplatedEmailDTO = new ResponseTemplatedEmailDTO();
         responseTemplatedEmailDTO.setMessageId(messageId);
@@ -61,7 +61,7 @@ public class EmailController {
      */
     @PostMapping("/template")
     public ResponseEntity<ResponseTemplatedDTO> createTemplate(@Valid @RequestBody RequestTemplateDto requestTemplateDto) {
-        String awsRequestId = SESMailService.createTemplateEmail(requestTemplateDto);
+        String awsRequestId = sesMailService.createTemplateEmail(requestTemplateDto);
 
         ResponseTemplatedDTO responseTemplatedDTO = new ResponseTemplatedDTO();
         responseTemplatedDTO.setAwsRequestId(awsRequestId);
@@ -77,7 +77,7 @@ public class EmailController {
      */
     @PatchMapping("/template")
     public ResponseEntity<ResponseTemplatedDTO> updateTemplate(@Valid @RequestBody RequestTemplateDto requestTemplateDto) {
-        String awsRequestId = SESMailService.updateTemplateEmail(requestTemplateDto);
+        String awsRequestId = sesMailService.updateTemplateEmail(requestTemplateDto);
 
         ResponseTemplatedDTO responseTemplatedDTO = new ResponseTemplatedDTO();
         responseTemplatedDTO.setAwsRequestId(awsRequestId);
@@ -93,7 +93,7 @@ public class EmailController {
      */
     @DeleteMapping("/template")
     public ResponseEntity<ResponseDeleteTemplatedDTO> deleteTemplate(@Valid @RequestBody RequestDeleteTemplateDto requestDeleteTemplateDto) {
-        String awsRequestId = SESMailService.deleteTemplate(requestDeleteTemplateDto);
+        String awsRequestId = sesMailService.deleteTemplate(requestDeleteTemplateDto);
 
         ResponseDeleteTemplatedDTO responseDeleteTemplatedDTO = new ResponseDeleteTemplatedDTO();
         responseDeleteTemplatedDTO.setAwsRequestId(awsRequestId);
@@ -109,7 +109,7 @@ public class EmailController {
      */
     @GetMapping("/templates")
     public ResponseEntity<List<TemplateMetadata>> listTemplate() {
-        return new ResponseEntity<List<TemplateMetadata>>(SESMailService.listTemplates(), HttpStatus.OK);
+        return new ResponseEntity<List<TemplateMetadata>>(sesMailService.listTemplates(), HttpStatus.OK);
     }
 
 }
