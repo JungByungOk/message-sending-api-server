@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="30 seconds">
 
+    <property name="LOGS" value="./logs" />
+
     <!-- use Spring default values -->
     <include resource="logback/logback-defaults.xml"/>
 
     <!-- LOGGER -->
     <logger name="org.springframework.web" level="DEBUG"/>
-    <logger name="org.mybatis" level="DEBUG"/>
+    <logger name="org.mybatis" level="INFO"/>
     <logger name="org.mariadb.jdbc" level="DEBUG"/>
     <logger name="org.quartz" level="DEBUG"/>
     <logger name="com.msas" level="DEBUG"/>
@@ -17,6 +19,37 @@
             <pattern>${CONSOLE_LOG_PATTERN}</pattern>
             <charset>${CONSOLE_LOG_CHARSET}</charset>
         </encoder>
+    </appender>
+
+    <!-- File Appender -->
+    <appender name="ROLLING_FILE"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOGS}/msas.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>${FILE_LOG_CHARSET}</charset>
+        </encoder>
+
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- rollover daily and when the file reaches 10 MegaBytes -->
+            <fileNamePattern>${LOGS}/archived/msas-%d{yyyy-MM-dd}.%i.log
+            </fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy
+                    class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>10MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+    </appender>
+
+    <!-- AsyncAppender -->
+    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="ROLLING_FILE" />
+        <queueSize>256</queueSize>
+        <discardingThreshold>20</discardingThreshold>
+        <includeCallerData>true</includeCallerData>
+        <maxFlushTime>10</maxFlushTime>
+        <neverBlock>true</neverBlock>
     </appender>
 
     <!-- TELEGRAM APPENDER -->
@@ -35,6 +68,7 @@
     <!-- LOGGING -->
     <root level="ERROR">
         <appender-ref ref="STDOUT"/>
+        <appender-ref ref="ROLLING_FILE"/>
         <appender-ref ref="TELEGRAM"/>
     </root>
 </configuration>
