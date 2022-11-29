@@ -16,8 +16,7 @@ logging:
 spring:
   config:
     activate:
-      on-profile: dev
-    import: /svc/nte/config/nte-config.yml
+      on-profile: local
   application:
     #__________________________________________________________________
     # application name for NFTReally : ntc:7091, nte:7092, nts:7093

@@ -66,6 +66,24 @@
 
 »»» ¯\_(ツ)_/¯
 
+### deployment  
+1. gradle bootJar 빌드 -> /build/libs/nte.jar 생성 됩니다.
+2. 프로젝트의 deploy/bin 폴더로 복사한 후에 서버의 /svc/nte 경로에 업로드 한다.
+3. /svc/nte/script/start.sh 스크립트로 서버를 구동한다.
+
+```
+<주의>
+
+/svc/script/start.sh  
+   -Dspring.profiles.active={dev or prod} 확인 합니다.
+  
+/svc/config/nte-config.yml
+   nte.jar 내부의 Properties 의 속성 값을 변경하여 서버 구동 합니다.  
+   외부 설정 값이 없을 경우 내부의 properties 속성이 반영 됩니다.
+   - Database 확인
+   - AWS 확인
+```
+
 ### reference
 
 aws ses
@@ -75,17 +93,14 @@ aws ses
 quartz
 - https://github.com/kenshin579/tutorials-java/blob/master/springboot-quartz-in-memory
 - http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials
-
 - https://advenoh.tistory.com/52
 - https://advenoh.tistory.com/m/55
 - https://advenoh.tistory.com/m/56
 
 telegram
- - https://core.telegram.org/bots/api#getting-updates
- 
-   (1) https://github.com/pengrad/java-telegram-bot-api/#updating-messages
-
-   (2) https://github.com/rubenlagus/TelegramBots
+ - https://core.telegram.org/bots/api#getting-updates  
+   > https://github.com/pengrad/java-telegram-bot-api/#updating-messages  
+   > https://github.com/rubenlagus/TelegramBots
 
 logback appender
 - https://github.com/paolodenti/telegram-logback

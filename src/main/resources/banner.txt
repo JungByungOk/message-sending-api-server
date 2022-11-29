@@ -3,4 +3,8 @@
  _//o\\_                         \'\/+-\/`/`/
   /   \                           \/-+--\/`/
 
+External Dependency Services
+- AWS SES (Simple Email Service)
+- AWS DynamoDB (Email Sending Status Logging)
+
 »»» ¯\_(ツ)_/¯

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="30 seconds">
 
-    <property name="LOGS_TRACE" value="/svc/nte/logs/trace" />
-    <property name="LOGS_ERROR" value="/svc/nte/logs/error" />
-    <property name="LOGS_ACCESS" value="/svc/nte/logs/access" />
+    <property name="LOGS_TRACE" value="./nte/logs/trace" />
+    <property name="LOGS_ERROR" value="./nte/logs/error" />
+    <property name="LOGS_ACCESS" value="./nte/logs/access" />
 
     <!-- use Spring default values -->
     <include resource="logback/logback-defaults.xml"/>
