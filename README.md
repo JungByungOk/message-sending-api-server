@@ -1,72 +1,57 @@
 # message_sending_api_server
 
-### feature
+## feature
 
 [AWS SES]
 
 ---templated-----------------
 
-ㄴ list-templates
-
-ㄴ [x] get-template
-
-ㄴ create-template
-
-ㄴ delete-template
-
-ㄴ update-template
-
+ㄴ list-templates  
+ㄴ [x] get-template  
+ㄴ create-template  
+ㄴ delete-template  
+ㄴ update-template  
 ㄴ [x] test-render-template
 
 ---send----------------------
 
-ㄴ send-email
+ㄴ send-email    
+> ㄴ [x] attachment
 
->ㄴ [x] attachment
-
-ㄴ html
-
-ㄴ send-templated-email
-
+ㄴ html  
+ㄴ send-templated-email  
 >ㄴ [x] attachment
 
 ---schedule-------------------------
-ㄴ send-schedule-templated-email
 
-ㄴ resume
-
-ㄴ cancel
-
-ㄴ job list query
-
+ㄴ send-schedule-templated-email    
+ㄴ resume  
+ㄴ cancel  
+ㄴ job list query   
 ㄴ job modify
 
 ---polling-------------------------
-ㄴ check new email from rdbms
 
-ㄴ check sent email result from aws dynamodb
-
-ㄴ registry blacklist email address
+ㄴ check new email from rdbms  
+ㄴ check sent email result from aws dynamodb  
+ㄴ registry blacklist email address  
 
 >ㄴ [x] filtering blacklist email sending
 
 [Telegram]
 
-ㄴ Multi-channel name setting
-
-ㄴ Send message by channel name
-
+ㄴ Multi-channel name setting  
+ㄴ Send message by channel name  
 ㄴ GetUpdate Long Polling
 
 [Slack]
 
-ㄴ [x] Multi-channel name setting
-
-ㄴ [x] Send message by channel name
+ㄴ [x] Multi-channel name setting  
+ㄴ [x] Send message by channel name  
 
 »»» ¯\_(ツ)_/¯
 
-### deployment  
+## deployment  
 1. gradle bootJar 빌드 -> /build/libs/nte.jar 생성 됩니다.
 2. 프로젝트의 deploy/bin 폴더로 복사한 후에 서버의 /svc/nte 경로에 업로드 한다.
 3. /svc/nte/script/start.sh 스크립트로 서버를 구동한다.
@@ -84,7 +69,7 @@
    - AWS 확인
 ```
 
-### reference
+## reference
 
 aws ses
 - https://www.rajith.me/2020/02/send-emails-using-aws-simple-email.html
