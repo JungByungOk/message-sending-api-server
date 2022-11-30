@@ -16,7 +16,7 @@ logging:
 spring:
   config:
     activate:
-      on-profile: dev
+      on-profile: prod
     import: /svc/nte/config/nte-config.yml
   application:
     #__________________________________________________________________

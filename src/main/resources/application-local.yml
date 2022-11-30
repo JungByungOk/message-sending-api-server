@@ -58,7 +58,7 @@ spring:
       org.quartz.jobStore.dataSource: quartzDataSource
       #
       org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
-      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://10.1.199.254:3306/nft
+      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://211.176.9.214:13306/nft
       org.quartz.dataSource.quartzDataSource.user: nft
       org.quartz.dataSource.quartzDataSource.password: Digi@cap!
       #
@@ -79,7 +79,7 @@ spring:
   datasource:
     name: NFTReally-Database
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://10.1.199.254:3306/nft
+    url: jdbc:mariadb://211.176.9.214:13306/nft
     username: nft
     password: Digi@cap!
     hikari:
