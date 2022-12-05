@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
 
 @RestController
@@ -49,6 +50,19 @@ public class TelegramBotController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         return new ResponseEntity<>(new Gson().toJson(user), headers, HttpStatus.OK);
+    }
+
+    /**
+     * ChatId 정보 조회
+     */
+    @GetMapping("/ids")
+    public ResponseEntity<String> getChatIds()
+    {
+        HashMap<String, Long> ids = telegramBotService.GetChetIds();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return new ResponseEntity<>(new Gson().toJson(ids), headers, HttpStatus.OK);
     }
 
 }

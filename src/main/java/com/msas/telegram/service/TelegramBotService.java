@@ -89,6 +89,13 @@ public class TelegramBotService {
     }
 
     /**
+     * ChatId 정보 가져오기
+     */
+    public HashMap<String, Long> GetChetIds() {
+        return channelMap;
+    }
+
+    /**
      * 지정한 채널로 Message 보내기
      */
     public Message SendMessage(String channelName, String text) {
@@ -115,7 +122,7 @@ public class TelegramBotService {
                 //.disableWebPagePreview(true)
                 //.disableNotification(true)
                 //.replyToMessageId(1)
-                .replyMarkup(new InlineKeyboardMarkup());//channel로 메시지 전송은 inlineKeyboardMarkup으로 설정해야 한다.
+                .replyMarkup(new InlineKeyboardMarkup()); // channel로 메시지 전송은 inlineKeyboardMarkup으로 설정해야 한다.
         SendResponse sendResponse = telegramBot.execute(request);
 
         log.debug(sendResponse.description());
