@@ -119,8 +119,8 @@ management:
 #################################################
 bot:
   telegram:
-    token-id: 5710353844:AAEqVlaqAa7-Ixv-hnximDy8xa_BkkepRV8
-    channel-names: NFTReally.Notification, NFTReally.BackEnd
+    token-id: 5710353844:AAFJeWE2TxtH05yIeSycwQ4Cj71Gm6qzodA
+    channel-names: NFTReally.Notification, NFTReally.BackEnd, NFTReally.NTE, NFTReally.NTC, NFTReally.NTS, NFTReally.NBS, NFTReally.NBA, NFTReally.Deploy
 
 #################################################
 # polling checker

@@ -1,17 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="30 seconds">
 
-    <property name="LOGS" value="./logs" />
+    <property name="LOGS_TRACE" value="./nte/logs/trace" />
+    <property name="LOGS_ERROR" value="./nte/logs/error" />
+    <property name="LOGS_ACCESS" value="./nte/logs/access" />
 
     <!-- use Spring default values -->
     <include resource="logback/logback-defaults.xml"/>
-
-    <!-- LOGGER -->
-    <logger name="org.springframework.web" level="DEBUG"/>
-    <logger name="org.mybatis" level="INFO"/>
-    <logger name="org.mariadb.jdbc" level="DEBUG"/>
-    <logger name="org.quartz" level="DEBUG"/>
-    <logger name="com.msas" level="DEBUG"/>
 
     <!-- APPENDER -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
@@ -22,9 +17,9 @@
     </appender>
 
     <!-- File Appender -->
-    <appender name="ROLLING_FILE"
+    <appender name="ROLLING_FILE_TRACE"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS}/nte.log</file>
+        <file>${LOGS_TRACE}/nte.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
@@ -33,7 +28,7 @@
         <rollingPolicy
                 class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- rollover daily and when the file reaches 10 MegaBytes -->
-            <fileNamePattern>${LOGS}/archived/msas-%d{yyyy-MM-dd}.%i.log
+            <fileNamePattern>${LOGS_TRACE}/archived/nte-%d{yyyy-MM-dd}.%i.log
             </fileNamePattern>
             <!--로그 파일 분할-->
             <timeBasedFileNamingAndTriggeringPolicy
@@ -48,8 +43,87 @@
     </appender>
 
     <!-- AsyncAppender -->
-    <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
-        <appender-ref ref="ROLLING_FILE" />
+    <appender name="ASYNC_ROLLING_FILE_TRACE" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="ROLLING_FILE_TRACE" />
+        <queueSize>256</queueSize>
+        <discardingThreshold>20</discardingThreshold>
+        <includeCallerData>true</includeCallerData>
+        <maxFlushTime>10</maxFlushTime>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <!-- File Appender -->
+    <appender name="ROLLING_FILE_ACCESS"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOGS_ACCESS}/nte.log</file>
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>${FILE_LOG_CHARSET}</charset>
+        </encoder>
+
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- rollover daily and when the file reaches 10 MegaBytes -->
+            <fileNamePattern>${LOGS_ACCESS}/archived/nte-%d{yyyy-MM-dd}.%i.log
+            </fileNamePattern>
+            <!--로그 파일 분할-->
+            <timeBasedFileNamingAndTriggeringPolicy
+                    class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>50MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <!--7일간만 보관-->
+            <maxHistory>7</maxHistory>
+            <!--전체 로그 파일 용량-->
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- AsyncAppender -->
+    <appender name="ASYNC_ROLLING_FILE_ACCESS" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="ROLLING_FILE_ACCESS" />
+        <queueSize>256</queueSize>
+        <discardingThreshold>20</discardingThreshold>
+        <includeCallerData>true</includeCallerData>
+        <maxFlushTime>10</maxFlushTime>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <!-- File Appender -->
+    <appender name="ROLLING_FILE_ERROR"
+              class="ch.qos.logback.core.rolling.RollingFileAppender">
+
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+
+        <file>${LOGS_ERROR}/nte.log</file>
+
+        <encoder>
+            <pattern>${FILE_LOG_PATTERN}</pattern>
+            <charset>${FILE_LOG_CHARSET}</charset>
+        </encoder>
+
+        <rollingPolicy
+                class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- rollover daily and when the file reaches 10 MegaBytes -->
+            <fileNamePattern>${LOGS_ERROR}/archived/nte-%d{yyyy-MM-dd}.%i.log
+            </fileNamePattern>
+            <!--로그 파일 분할-->
+            <timeBasedFileNamingAndTriggeringPolicy
+                    class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>50MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <!--7일간만 보관-->
+            <maxHistory>7</maxHistory>
+            <!--전체 로그 파일 용량-->
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+    </appender>
+
+    <!-- AsyncAppender -->
+    <appender name="ASYNC_ROLLING_FILE_ERROR" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="ROLLING_FILE_ERROR" />
         <queueSize>256</queueSize>
         <discardingThreshold>20</discardingThreshold>
         <includeCallerData>true</includeCallerData>
@@ -60,8 +134,8 @@
     <!-- TELEGRAM APPENDER -->
     <appender name="TELEGRAM" class="org.nftreally.TelegramAppender">
         <minInterval>1000</minInterval>
-        <botToken>5710353844:AAEqVlaqAa7-Ixv-hnximDy8xa_BkkepRV8</botToken>
-        <chatId>-1001867481964</chatId>
+        <botToken>5710353844:AAFJeWE2TxtH05yIeSycwQ4Cj71Gm6qzodA</botToken>
+        <chatId>-1001863623553</chatId>
         <Layout class="ch.qos.logback.classic.PatternLayout">
             <Pattern>[%d{HH:mm:ss.SSS}] [%-5level] [%logger{%-36.36t}] - %msg%n</Pattern>
         </Layout>
@@ -70,10 +144,30 @@
         </filter>
     </appender>
 
-    <!-- LOGGING -->
-    <root level="ERROR">
+    <!-- LOGGER -->
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="org.apache.http.wire" level="OFF"/>
+    <logger name="org.mybatis" level="DEBUG"/>
+    <logger name="org.mariadb.jdbc" level="DEBUG"/>
+    <logger name="org.quartz" level="INFO"/>
+    <logger name="com.msas" level="DEBUG"/>
+    <logger name="com.msas.telegram.service" level="INFO"/>
+
+    <!-- LOGGER -->
+    <root level="DEBUG">
         <appender-ref ref="STDOUT"/>
-        <appender-ref ref="ROLLING_FILE"/>
-        <appender-ref ref="TELEGRAM"/>
+        <appender-ref ref="ASYNC_ROLLING_FILE_TRACE"/>
     </root>
+
+    <!-- ACCESS LOGGER -->
+    <logger name="com.msas.common" level="INFO">
+        <appender-ref ref="ASYNC_ROLLING_FILE_ACCESS"/>
+    </logger>
+
+    <!-- ERROR LOGGER -->
+    <logger name="com.msas" level="ERROR">
+        <appender-ref ref="ASYNC_ROLLING_FILE_ERROR"/>
+        <appender-ref ref="TELEGRAM"/>
+    </logger>
+
 </configuration>

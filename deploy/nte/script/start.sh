@@ -8,7 +8,7 @@ SERVICE_HOME="svc"
 SERVICE_BIN_DIR="bin"
 JAVA_OPT="-Duser.timezone=UTC \
 	  -Djava.security.egd=file:/dev/./urandom \
-	  -Dspring.profiles.active=dev \
+	  -Dspring.profiles.active=prod \
 	  -Xms1024m \
 	  -Xmx1024m"
 # Get the arguments
