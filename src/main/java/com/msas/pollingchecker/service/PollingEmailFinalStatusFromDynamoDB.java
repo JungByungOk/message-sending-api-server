@@ -140,6 +140,22 @@ public class PollingEmailFinalStatusFromDynamoDB {
     private void DeleteMessageIds(List<SESEventsEntity> deleteItemList)
     {
         deleteItemList.forEach(sesEventsEntity -> {
+
+            /*
+             * @BOJung
+             * 스트레스 테스트 중에 아래와 같은 에러 발생하여 처리 속도 조절을 위해 시간 지연을 시킴
+             * Request rate is too high.
+             * If you're using a custom retry strategy make sure to retry with exponential back-off.
+             * Otherwise, consider reducing frequency of requests or increasing provisioned capacity for your table or secondary index.
+             * Error: The level of configured provisioned throughput for the table was exceeded.
+             * Consider increasing your provisioning level with the UpdateTable API.
+             */
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
             int result = sesEventsDynamoDBRepository
                     .deleteItemBySESMessageIdAndSnsPublishTime(sesEventsEntity.getSesMessageId(), sesEventsEntity.getSnsPublishTime());
         });
