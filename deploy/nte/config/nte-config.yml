@@ -27,6 +27,6 @@ bot:
 polling:
   schedule:
     send-email-check-time: 60000
-    send-email-event-check-time: 180000
+    send-email-event-check-time: 60000
 
 

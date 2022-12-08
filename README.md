@@ -1,6 +1,13 @@
 # message_sending_api_server
 
-## feature
+## Current Setting 
+> 신규 전송 대기 이메일 체크 주기 - 1 분  
+> 신규 전송 대기 이메일 목록 가져오는 개수 - 280 개
+
+> 이메일 전송 결과 이벤트 확인 주기 - 1 분  
+> 이메일 전송 결과 이벤트 목록 가져오는 개수 - 300 개
+
+## Features
 
 [AWS SES]
 

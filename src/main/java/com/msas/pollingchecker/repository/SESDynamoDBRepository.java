@@ -29,6 +29,7 @@ public class SESDynamoDBRepository {
         try {
             // Create ExecuteStatementRequest
             ExecuteStatementRequest executeStatementRequest = new ExecuteStatementRequest();
+            executeStatementRequest.setLimit(300); // 300개씩 fetch
             executeStatementRequest.setStatement("select * from SESEvents;");
             ExecuteStatementResult executeStatementResult = amazonDynamoDB.executeStatement(executeStatementRequest);
 
