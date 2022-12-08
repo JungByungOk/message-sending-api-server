@@ -151,7 +151,7 @@ public class PollingEmailFinalStatusFromDynamoDB {
              * Consider increasing your provisioning level with the UpdateTable API.
              */
             try {
-                Thread.sleep(50);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
