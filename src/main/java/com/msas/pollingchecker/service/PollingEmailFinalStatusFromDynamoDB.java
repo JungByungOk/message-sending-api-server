@@ -62,8 +62,7 @@ public class PollingEmailFinalStatusFromDynamoDB {
                 ForeachUtils.withCounter(
                         (count, messageId)->
                         {
-                            count++;
-                            log.info("@AWS DynamoDB Checking - Processed email status updates {}/{} : {}", String.format("%02d", count), messageIds.size(), messageId);
+                            log.info("@AWS DynamoDB Checking - Processed email status updates {}/{} : {}", String.format("%02d", count+1), messageIds.size(), messageId);
 
                             // messageId 아이템 중에서 최종 상태 가져오기
                             SESEventsEntity finalStatusEntity = eventList.stream().filter(sesEventsEntity -> sesEventsEntity.getSesMessageId().equals(messageId)).findFirst().get();
@@ -158,6 +157,8 @@ public class PollingEmailFinalStatusFromDynamoDB {
 
             int result = sesEventsDynamoDBRepository
                     .deleteItemBySESMessageIdAndSnsPublishTime(sesEventsEntity.getSesMessageId(), sesEventsEntity.getSnsPublishTime());
+
+            log.info("@AWS DynamoDB Checking - Deleted SESMessageID:{}", sesEventsEntity.getSesMessageId());
         });
     }
 

@@ -79,6 +79,7 @@
              on b.EMAIL_SEND_DTL_SEQ = c.EMAIL_SEND_DTL_SEQ
         WHERE b.SEND_STS_CD = 'SR'
           and a.STM_FIR_REG_DT > date_add(now(), interval -1 week)
+        LIMIT 0, 280
     </select>
 
     <select id="getNewEmail" resultType="map">
@@ -92,6 +93,7 @@
              on b.EMAIL_SEND_DTL_SEQ = c.EMAIL_SEND_DTL_SEQ
         WHERE b.SEND_STS_CD = 'SR'
           and a.STM_FIR_REG_DT > date_add(now(), interval -1 week)
+        LIMIT 0, 280
     </select>
 
     <insert id="InsertBlacklistEmail">
