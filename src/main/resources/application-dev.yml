@@ -17,7 +17,7 @@ spring:
   config:
     activate:
       on-profile: dev
-    import: /svc/nte/config/nte-config.yml
+    import: /svc/nte/config/nte-config-dev.yml
   application:
     #__________________________________________________________________
     # application name for NFTReally : ntc:7091, nte:7092, nts:7093
@@ -59,7 +59,7 @@ spring:
       org.quartz.jobStore.dataSource: quartzDataSource
       #
       org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
-      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://192.168.1.102:3306/nft
+      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://192.168.1.201:3306/nft
       org.quartz.dataSource.quartzDataSource.user: nft
       org.quartz.dataSource.quartzDataSource.password: Digi@cap!
       #
@@ -80,7 +80,7 @@ spring:
   datasource:
     name: NFTReally-Database
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://192.168.1.102:3306/nft
+    url: jdbc:mariadb://192.168.1.201:3306/nft
     username: nft
     password: Digi@cap!
     hikari:
@@ -119,8 +119,8 @@ management:
 #################################################
 bot:
   telegram:
-    token-id: 5710353844:AAFJeWE2TxtH05yIeSycwQ4Cj71Gm6qzodA
-    channel-names: NFTReally.Notification, NFTReally.BackEnd, NFTReally.NTE, NFTReally.NTC, NFTReally.NTS, NFTReally.NBS, NFTReally.NBA
+    token-id: 5919327889:AAFKMb67gXEnR8zN2KtjzXiFAIJqOQ_PTwI
+    channel-names: NFTReally.Dev.BackEnd
 
 #################################################
 # polling checker

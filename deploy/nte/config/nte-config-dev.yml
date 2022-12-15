@@ -1,0 +1,32 @@
+# Override Value
+
+#################################################
+# AWS {SES, DynamoDB}
+#################################################
+aws:
+  dynamo:
+    region: ap-northeast-2
+    access-key: AKIA2F6HCY2MNDRHU6BX
+    secret-key: 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
+  ses:
+    region: ap-northeast-2
+    access-key: AKIA2F6HCY2MNDRHU6BX
+    secret-key: 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
+
+#################################################
+# bot
+#################################################
+bot:
+  telegram:
+    token-id: 5919327889:AAFKMb67gXEnR8zN2KtjzXiFAIJqOQ_PTwI
+    channel-names: NFTReally.Dev.BackEnd
+
+#################################################
+# polling checker
+#################################################
+polling:
+  schedule:
+    send-email-check-time: 60000
+    send-email-event-check-time: 60000
+
+
