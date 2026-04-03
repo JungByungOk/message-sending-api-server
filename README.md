@@ -1,99 +1,166 @@
-# message_sending_api_server
+# Message Sending API Server (NTE)
 
-## Current Setting 
-> 신규 전송 대기 이메일 체크 주기 - 1 분  
-> 신규 전송 대기 이메일 목록 가져오는 개수 - 280 개
+멀티채널 메시지 발송 API 서버 - AWS SES 이메일, Telegram, Slack 메시지를 통합 관리하는 Spring Boot 기반 알림 서버
 
-> 이메일 전송 결과 이벤트 확인 주기 - 1 분  
-> 이메일 전송 결과 이벤트 목록 가져오는 개수 - 300 개
+## Tech Stack
+
+| Category | Technology |
+|----------|-----------|
+| Framework | Spring Boot 3.4.1 |
+| Language | Java 17 |
+| Database | MariaDB 11, AWS DynamoDB |
+| ORM | MyBatis 3.0.4 |
+| Scheduler | Quartz (DB 기반) |
+| Cloud | AWS SES (SDK v2), AWS DynamoDB (SDK v2) |
+| Messaging | Telegram Bot API 7.11.0 |
+| Security | Spring Security (API Key 인증) |
+| Build | Gradle, Docker (Multi-stage) |
+| Etc | Guava (RateLimiter), Gson, Lombok |
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    API Server (NTE)                      │
+│                     Port: 7092                           │
+├──────────┬──────────────┬────────────┬──────────────────┤
+│  SES     │  Telegram    │  Scheduler │  Polling Checker │
+│  Module  │  Module      │  Module    │  Module          │
+├──────────┴──────────────┴────────────┴──────────────────┤
+│              Spring Security (API Key)                   │
+├─────────────────────────────────────────────────────────┤
+│  MariaDB (이메일/스케줄러)  │  DynamoDB (SES 이벤트)     │
+└─────────────────────────────────────────────────────────┘
+```
+
+## API Endpoints
+
+### AWS SES - 이메일 발송
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/ses/text-mail` | HTML 이메일 발송 |
+| `POST` | `/ses/templated-mail` | 템플릿 기반 이메일 발송 |
+| `POST` | `/ses/template` | 이메일 템플릿 생성 |
+| `PATCH` | `/ses/template` | 이메일 템플릿 수정 |
+| `DELETE` | `/ses/template` | 이메일 템플릿 삭제 |
+| `GET` | `/ses/templates` | 템플릿 목록 조회 |
+
+### Telegram - 메시지 발송
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/telegram/message` | 채널별 메시지 발송 |
+| `GET` | `/telegram/info` | 봇 정보 조회 |
+| `GET` | `/telegram/ids` | 등록된 채널 ID 조회 |
+
+### Scheduler - 예약 발송
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/scheduler/job` | 예약 발송 작업 생성 |
+| `GET` | `/scheduler/jobs` | 작업 목록 조회 |
+| `PUT` | `/scheduler/job/pause` | 작업 일시정지 |
+| `PUT` | `/scheduler/job/resume` | 작업 재개 |
+| `PUT` | `/scheduler/job/stop` | 작업 중지 |
+| `DELETE` | `/scheduler/job` | 작업 삭제 |
+| `DELETE` | `/scheduler/job/all` | 전체 작업 삭제 |
 
 ## Features
 
-[AWS SES]
+### AWS SES 이메일
+- HTML 이메일 및 템플릿 기반 이메일 발송
+- 템플릿 CRUD 관리
+- CC/BCC 수신자 지원
+- 메시지 태그 (캠페인/이벤트) 추적
+- 첨부파일 지원
 
----templated-----------------
+### Quartz 스케줄러
+- DB 기반 예약 발송 (MariaDB)
+- 작업 상태 관리 (RUNNING, SCHEDULED, PAUSED, COMPLETE)
+- 작업 일시정지/재개/중지
+- Thread Pool: 10 threads
 
-ㄴ list-templates  
-ㄴ [x] get-template  
-ㄴ create-template  
-ㄴ delete-template  
-ㄴ update-template  
-ㄴ [x] test-render-template
+### Polling Checker
+- **신규 이메일 폴링**: MariaDB에서 60초 주기로 대기 이메일 확인 (최대 280건/회)
+- **발송 결과 폴링**: DynamoDB에서 60초 주기로 SES 이벤트 확인 (최대 300건/회)
+- Delivery, Bounce, Complaint 이벤트 추적
+- Blacklist 이메일 주소 필터링
 
----send----------------------
+### Telegram
+- 멀티채널 메시지 발송
+- 채널명 기반 발송 (채널 ID 자동 매핑)
+- Long Polling 방식 업데이트 수신
 
-ㄴ send-email    
-> ㄴ [x] attachment
+### 보안
+- API Key 기반 인증
+- Health Check 엔드포인트 공개 (`/actuator/health`, `/actuator/info`)
+- HTTP 요청/응답 로깅
 
-ㄴ html  
-ㄴ send-templated-email  
->ㄴ [x] attachment
+## Getting Started
 
----schedule-------------------------
+### Prerequisites
+- Java 17+
+- MariaDB 11+
+- AWS 계정 (SES, DynamoDB)
+- Telegram Bot Token (선택)
 
-ㄴ send-schedule-templated-email    
-ㄴ resume  
-ㄴ cancel  
-ㄴ job list query   
-ㄴ job modify
+### Docker 실행
 
----polling-------------------------
+```bash
+# 환경변수 설정
+export AWS_ACCESS_KEY=your-access-key
+export AWS_SECRET_KEY=your-secret-key
+export TELEGRAM_BOT_TOKEN=your-bot-token
+export TELEGRAM_CHAT_ID=your-chat-id
+export API_KEY=your-api-key
 
-ㄴ check new email from rdbms  
-ㄴ check sent email result from aws dynamodb  
-ㄴ registry blacklist email address  
-
->ㄴ [x] filtering blacklist email sending
-
-[Telegram]
-
-ㄴ Multi-channel name setting  
-ㄴ Send message by channel name  
-ㄴ GetUpdate Long Polling
-
-[Slack]
-
-ㄴ [x] Multi-channel name setting  
-ㄴ [x] Send message by channel name  
-
-»»» ¯\_(ツ)_/¯
-
-## deployment  
-1. gradle bootJar 빌드 -> /build/libs/nte.jar 생성 됩니다.
-2. 프로젝트의 deploy/bin 폴더로 복사한 후에 서버의 /svc/nte 경로에 업로드 한다.
-3. /svc/nte/script/start.sh 스크립트로 서버를 구동한다.
-
-```
-<주의>
-
-/svc/script/start.sh  
-   -Dspring.profiles.active={dev or prod} 확인 합니다.
-  
-/svc/config/nte-config.yml
-   nte.jar 내부의 Properties 의 속성 값을 변경하여 서버 구동 합니다.  
-   외부 설정 값이 없을 경우 내부의 properties 속성이 반영 됩니다.
-   - Database 확인
-   - AWS 확인
+# Docker Compose 실행
+docker-compose up -d
 ```
 
-## reference
+### 로컬 빌드
 
-aws ses
-- https://www.rajith.me/2020/02/send-emails-using-aws-simple-email.html
-- https://github.com/Rajithkonara/aws-ses-sdk-spring-boot
+```bash
+# 빌드
+./gradlew bootJar
 
-quartz
-- https://github.com/kenshin579/tutorials-java/blob/master/springboot-quartz-in-memory
-- http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials
-- https://advenoh.tistory.com/52
-- https://advenoh.tistory.com/m/55
-- https://advenoh.tistory.com/m/56
+# 실행
+java -Dspring.profiles.active=dev -jar build/libs/nte.jar
+```
 
-telegram
- - https://core.telegram.org/bots/api#getting-updates  
-   > https://github.com/pengrad/java-telegram-bot-api/#updating-messages  
-   > https://github.com/rubenlagus/TelegramBots
+## Deployment
 
-logback appender
-- https://github.com/paolodenti/telegram-logback
-- https://github.com/maricn/logback-slack-appender
+1. `gradle bootJar` 빌드 → `/build/libs/nte.jar` 생성
+2. `deploy/bin` 폴더의 파일을 서버 `/svc/nte` 경로에 업로드
+3. `/svc/nte/script/start.sh` 스크립트로 서버 구동
+
+### 주의사항
+
+- **프로필 설정**: `start.sh` 내 `-Dspring.profiles.active={dev|prod}` 확인
+- **외부 설정**: `/svc/nte/config/nte-config.yml` 파일로 내부 Properties 오버라이드 가능
+  - Database 접속 정보
+  - AWS 인증 정보
+  - Telegram 봇 설정
+
+## Project Structure
+
+```
+src/main/java/com/msas/
+├── common/
+│   ├── exceptionhandler/    # 글로벌 예외 처리
+│   ├── httplog/             # HTTP 요청/응답 로깅
+│   ├── security/            # API Key 인증
+│   └── utils/               # 유틸리티
+├── ses/                     # AWS SES 이메일 모듈
+├── telegram/                # Telegram 봇 모듈
+├── scheduler/               # Quartz 스케줄러 모듈
+└── pollingchecker/          # 이메일 상태 폴링 모듈
+```
+
+## Reference
+
+- [AWS SES SDK Spring Boot](https://github.com/Rajithkonara/aws-ses-sdk-spring-boot)
+- [Quartz Scheduler Documentation](http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials)
+- [Telegram Bot API](https://core.telegram.org/bots/api)
+- [Java Telegram Bot API](https://github.com/pengrad/java-telegram-bot-api)
