@@ -27,8 +27,12 @@ message-sending-api-server/
 | [Common Feature Spec](docs/common-feature-spec.md) | 공통 기능 명세 (인증, 에러 처리, 상태 코드 등) |
 | [Backend API Spec](docs/backend-spec.md) | Backend REST API 상세 명세서 |
 | [Backend Development Plan](docs/backend-development-plan.md) | 멀티테넌트 SaaS 전환 개발 계획 |
+| [Frontend Spec](docs/frontend-spec.md) | Frontend 기술 명세 (타입, 상태 관리, 라우팅) |
+| [Frontend Development Plan](docs/frontend-development-plan.md) | Frontend 개발 계획 (Phase 1-5) |
 
 ## Tech Stack
+
+### Backend
 
 | Category | Technology |
 |----------|-----------|
@@ -43,6 +47,19 @@ message-sending-api-server/
 | Build | Gradle, Docker (Multi-stage) |
 | Dev Tools | LocalStack (AWS Mock) |
 | Etc | Guava (RateLimiter), Gson, Lombok |
+
+### Frontend
+
+| Category | Technology |
+|----------|-----------|
+| Framework | React 19 |
+| Language | TypeScript 5.9 |
+| Build | Vite 7 |
+| UI Components | Ant Design 5, @ant-design/pro-components 2.8 |
+| Server State | TanStack Query 5 |
+| Client State | Zustand 5 |
+| Routing | React Router 7 |
+| HTTP Client | Axios 1.13 |
 
 ## Architecture
 
