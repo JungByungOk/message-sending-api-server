@@ -1,5 +1,7 @@
 package com.msas.telegram.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.msas.telegram.dto.RequestTelegramMessageDTO;
@@ -18,6 +20,7 @@ import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.List;
 
+@Tag(name = "Telegram", description = "Telegram 봇 메시지 발송 API")
 @RestController
 @RequestMapping("/telegram")
 @RequiredArgsConstructor
@@ -26,9 +29,7 @@ public class TelegramBotController {
 
     private final TelegramBotService telegramBotService;
 
-    /**
-     * 채팅 메시지 전송
-     */
+    @Operation(summary = "메시지 발송", description = "지정한 Telegram 채널로 메시지를 발송합니다.")
     @PostMapping("/message")
     public ResponseEntity<String> sendMessage(@Valid @RequestBody RequestTelegramMessageDTO requestTelegramMessageDTO)
     {
@@ -39,9 +40,7 @@ public class TelegramBotController {
         return new ResponseEntity<>(new Gson().toJson(message), headers, HttpStatus.OK);
     }
 
-    /**
-     * 채팅 봇 설정 정보 조회
-     */
+    @Operation(summary = "봇 정보 조회", description = "Telegram 봇의 설정 정보를 조회합니다.")
     @GetMapping("/info")
     public ResponseEntity<String> getBotInfo()
     {
@@ -52,9 +51,7 @@ public class TelegramBotController {
         return new ResponseEntity<>(new Gson().toJson(user), headers, HttpStatus.OK);
     }
 
-    /**
-     * ChatId 정보 조회
-     */
+    @Operation(summary = "채널 ID 조회", description = "등록된 Telegram 채널명과 ID 매핑 목록을 조회합니다.")
     @GetMapping("/ids")
     public ResponseEntity<String> getChatIds()
     {

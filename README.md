@@ -2,6 +2,32 @@
 
 멀티채널 메시지 발송 API 서버 - AWS SES 이메일, Telegram, Slack 메시지를 통합 관리하는 Spring Boot 기반 알림 서버
 
+## Project Structure
+
+```
+message-sending-api-server/
+├── backend/                # Spring Boot API 서버
+│   ├── src/
+│   ├── build.gradle
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   └── ...
+├── frontend/               # (예정) 관리 대시보드
+├── docs/                   # 프로젝트 문서
+│   ├── backend-spec.md     # Backend API 명세서
+│   └── backend-development-plan.md  # 멀티테넌트 전환 개발 계획
+└── README.md
+```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Project Overview](docs/project-overview.md) | 프로젝트 개요, 시스템 구성, 데이터 흐름 |
+| [Common Feature Spec](docs/common-feature-spec.md) | 공통 기능 명세 (인증, 에러 처리, 상태 코드 등) |
+| [Backend API Spec](docs/backend-spec.md) | Backend REST API 상세 명세서 |
+| [Backend Development Plan](docs/backend-development-plan.md) | 멀티테넌트 SaaS 전환 개발 계획 |
+
 ## Tech Stack
 
 | Category | Technology |
@@ -108,6 +134,8 @@
 ### Docker 실행
 
 ```bash
+cd backend
+
 # 환경변수 설정
 export AWS_ACCESS_KEY=your-access-key
 export AWS_SECRET_KEY=your-secret-key
@@ -122,6 +150,8 @@ docker-compose up -d
 ### 로컬 빌드
 
 ```bash
+cd backend
+
 # 빌드
 ./gradlew bootJar
 
@@ -131,8 +161,8 @@ java -Dspring.profiles.active=dev -jar build/libs/nte.jar
 
 ## Deployment
 
-1. `gradle bootJar` 빌드 → `/build/libs/nte.jar` 생성
-2. `deploy/bin` 폴더의 파일을 서버 `/svc/nte` 경로에 업로드
+1. `backend/` 디렉토리에서 `gradle bootJar` 빌드 → `build/libs/nte.jar` 생성
+2. `backend/deploy/bin` 폴더의 파일을 서버 `/svc/nte` 경로에 업로드
 3. `/svc/nte/script/start.sh` 스크립트로 서버 구동
 
 ### 주의사항
@@ -143,10 +173,10 @@ java -Dspring.profiles.active=dev -jar build/libs/nte.jar
   - AWS 인증 정보
   - Telegram 봇 설정
 
-## Project Structure
+## Backend Structure
 
 ```
-src/main/java/com/msas/
+backend/src/main/java/com/msas/
 ├── common/
 │   ├── exceptionhandler/    # 글로벌 예외 처리
 │   ├── httplog/             # HTTP 요청/응답 로깅

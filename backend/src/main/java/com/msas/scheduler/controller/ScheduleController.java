@@ -1,5 +1,7 @@
 package com.msas.scheduler.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import com.msas.scheduler.dto.RequestScheduleDTO;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
 import com.msas.scheduler.dto.ResponseAllJobStatusDTO;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
 
+@Tag(name = "Scheduler", description = "Quartz 기반 예약 발송 관리 API")
 @Slf4j
 @RestController
 @RequestMapping("/scheduler")
@@ -25,11 +28,7 @@ public class ScheduleController {
 
     private final ScheduleService scheduleService;
 
-    /**
-     * ------------------------------------------
-     * 예약 작업 추가 (등록)
-     * ------------------------------------------
-     */
+    @Operation(summary = "예약 작업 생성", description = "템플릿 이메일 예약 발송 작업을 등록합니다.")
     @PostMapping("/job")
     public ResponseEntity<?> addScheduleJob(@Valid @RequestBody RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO) throws SchedulerException {
 
@@ -46,11 +45,7 @@ public class ScheduleController {
 
     }
 
-    /**
-     * ------------------------------------------
-     * 예약 작업 삭제
-     * ------------------------------------------
-     */
+    @Operation(summary = "작업 삭제", description = "지정한 예약 발송 작업을 삭제합니다. 실행 중인 작업은 삭제할 수 없습니다.")
     @DeleteMapping("/job")
     public ResponseEntity<?> deleteScheduleJob(@RequestBody RequestScheduleDTO requestScheduleDTO) throws SchedulerException {
 
@@ -69,11 +64,7 @@ public class ScheduleController {
 
     }
 
-    /**
-     * ------------------------------------------
-     * 예약된 작업 일괄 삭제
-     * ------------------------------------------
-     */
+    @Operation(summary = "전체 작업 삭제", description = "등록된 모든 예약 발송 작업을 일괄 삭제합니다.")
     @DeleteMapping("/job/all")
     ResponseEntity<?> deleteScheduleJob() throws SchedulerException {
         List<JobKey> jobKeyList = scheduleService.deleteAllJob();
@@ -81,21 +72,13 @@ public class ScheduleController {
                 "All job deleted successfully - " + jobKeyList.toString()), HttpStatus.OK);
     }
 
-    /**
-     * ------------------------------------------
-     * 예약된 작업 목록
-     * ------------------------------------------
-     */
+    @Operation(summary = "작업 목록 조회", description = "등록된 모든 예약 작업의 상태를 조회합니다.")
     @GetMapping("/jobs")
     public ResponseAllJobStatusDTO getAllJobs() {
         return scheduleService.getAllJobs();
     }
 
-    /**
-     * ------------------------------------------
-     * 잔행중인 작업 일시 중지
-     * ------------------------------------------
-     */
+    @Operation(summary = "작업 일시정지", description = "지정한 작업을 일시정지합니다. 실행 중인 작업은 일시정지할 수 없습니다.")
     @PutMapping("/job/pause")
     public ResponseEntity<?> pauseJob(@RequestBody RequestScheduleDTO requestScheduleDTO) throws SchedulerException {
 
@@ -114,11 +97,7 @@ public class ScheduleController {
 
     }
 
-    /**
-     * ------------------------------------------
-     * 일시 중지 작업 재시작
-     * ------------------------------------------
-     */
+    @Operation(summary = "작업 재개", description = "일시정지된 작업을 재개합니다.")
     @PutMapping("/job/resume")
     public ResponseEntity<?> resumeJob(@RequestBody RequestScheduleDTO requestScheduleDTO) throws SchedulerException {
         JobKey jobKey = new JobKey(requestScheduleDTO.getJobName(), requestScheduleDTO.getJobGroup());
@@ -137,11 +116,7 @@ public class ScheduleController {
     }
 
 
-    /**
-     * ------------------------------------------
-     * 실행중인 작업 중지
-     * ------------------------------------------
-     */
+    @Operation(summary = "작업 중지", description = "실행 중인 작업을 중지합니다.")
     @PutMapping("/job/stop")
     public ResponseEntity<?> stopJob(@RequestBody RequestScheduleDTO requestScheduleDTO) throws SchedulerException {
         JobKey jobKey = new JobKey(requestScheduleDTO.getJobName(), requestScheduleDTO.getJobGroup());
