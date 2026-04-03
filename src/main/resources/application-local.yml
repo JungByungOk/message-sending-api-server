@@ -1,137 +1,14 @@
-#################################################
-# server setting
-#################################################
-server:
-  port: 7092
+# Local profile overrides
 
-#################################################
-# logging
-#################################################
-logging:
-  config: classpath:logback/logback-${spring.config.activate.on-profile}.xml
-
-#################################################
-# spring setting
-#################################################
-spring:
-  config:
-    activate:
-      on-profile: local
-  application:
-    #__________________________________________________________________
-    # application name for NFTReally : ntc:7091, nte:7092, nts:7093
-    #__________________________________________________________________
-    name: NTE
-  output:
-    ansi:
-      enabled: always
-  #################################################
-  # spring-quartz
-  #################################################
-  quartz:
-    scheduler-name: email-sending-scheduler
-    overwrite-existing-jobs: false
-    startup-delay: 10
-    wait-for-jobs-to-complete-on-shutdown: true
-    auto-startup: true
-
-    #__________________________________________________________________
-    # 쿼츠 프로퍼티로 직접 주입해야 설정이 된다.
-    # 레퍼런스나 참조 문서가 없는 상태에서 어렵게 찾아낸 방법이므로 두번 고생하지 말자.
-    # spring.quartz.* 는 실제 쿼츠에 설정이 안먹는다.
-    #__________________________________________________________________
-    properties:
-      org.quartz.scheduler.instanceId: AUTO
-      org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
-      org.quartz.threadPool.threadCount: 10
-
-      #_________________________________________________________________________________________________
-      # (!) RAMStore 사용시 이후 설정 모두 주석 처리
-      # Quartz Configuration: https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/
-      # RAMJobStore -> org.quartz.jobStore.class: org.quartz.simpl.RAMJobStore
-      #_________________________________________________________________________________________________
-
-      # Database Store
-      org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
-      org.quartz.dataSource.quartzDataSource.provider: hikaricp
-      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
-      org.quartz.jobStore.dataSource: quartzDataSource
-      #
-      org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
-      org.quartz.dataSource.quartzDataSource.URL: jdbc:mariadb://211.176.9.214:13306/nft
-      org.quartz.dataSource.quartzDataSource.user: nft
-      org.quartz.dataSource.quartzDataSource.password: Digi@cap!
-      #
-      org.quartz.dataSource.quartzDataSource.maximumPoolSize: 10
-      org.quartz.dataSource.quartzDataSource.connectionTestQuery: SELECT 1
-      org.quartz.dataSource.quartzDataSource.validationTimeout: 5000
-      org.quartz.dataSource.quartzDataSource.idleTimeout: 0
-
-      # Logging Trigger History
-      # https://www.quartz-scheduler.org/documentation/quartz-2.3.0/configuration/ConfigPlugins.html
-      org.quartz.plugin.triggHistory.class: org.quartz.plugins.history.LoggingTriggerHistoryPlugin
-      org.quartz.plugin.triggHistory.triggerFiredMessage: '🔥Trigger {1}.{0} fired job {6}.{5} at: {4, date, HH:mm:ss MM/dd/yyyy}'
-      org.quartz.plugin.triggHistory.triggerCompleteMessage: '🔥Trigger {1}.{0} completed firing job {6}.{5} at {4, date, HH:mm:ss MM/dd/yyyy\}.'
-
-  #################################################
-  # database
-  #################################################
-  datasource:
-    name: NFTReally-Database
-    driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://211.176.9.214:13306/nft
-    username: nft
-    password: Digi@cap!
-    hikari:
-      maximum-pool-size: 10
-      pool-name: NFTReally-HikariCP
-
-#################################################
-# AWS {SES, DynamoDB}
-#################################################
-aws:
-  dynamo:
-    region: ap-northeast-2
-    access-key: AKIA2F6HCY2MNDRHU6BX
-    secret-key: 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
-  ses:
-    region: ap-northeast-2
-    access-key: AKIA2F6HCY2MNDRHU6BX
-    secret-key: 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
-
-#################################################
-# actuator
-#################################################
 management:
   endpoints:
     web:
       exposure:
         include: "*"
   endpoint:
-    quartz:
-      enabled: true
     health:
       show-details: always
 
-#################################################
-# bot
-#################################################
 bot:
   telegram:
-    token-id: 5710353844:AAFJeWE2TxtH05yIeSycwQ4Cj71Gm6qzodA
     channel-names: NFTReally.Notification, NFTReally.BackEnd, NFTReally.NTE, NFTReally.NTC, NFTReally.NTS, NFTReally.NBS, NFTReally.NBA
-
-#################################################
-# polling checker
-#################################################
-polling:
-  schedule:
-      send-email-check-time: 60000
-      send-email-event-check-time: 60000
-
-#################################################
-# mybatis mapper
-#################################################
-mybatis:
-  mapper-locations: classpath:mybatis/*.xml
-

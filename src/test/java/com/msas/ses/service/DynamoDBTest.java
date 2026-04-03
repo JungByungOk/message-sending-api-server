@@ -29,7 +29,7 @@ class DynamoDBTest {
         String CustomTag = "20221025154600";
 
         //when
-        Optional<List<SESEventsEntity>> resultList = sesEventsDynamoDBRepository.getItemsByCumstomTag(CustomTag);
+        Optional<List<SESEventsEntity>> resultList = sesEventsDynamoDBRepository.getItemsByCustomTag(CustomTag);
 
         //then
         assertThat(resultList)

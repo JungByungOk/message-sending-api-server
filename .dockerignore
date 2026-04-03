@@ -1,0 +1,8 @@
+.git
+.gradle
+build
+.omc
+.env
+*.md
+deploy
+aws

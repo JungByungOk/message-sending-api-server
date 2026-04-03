@@ -1,12 +1,12 @@
 plugins {
-    id 'org.springframework.boot' version '2.7.4'
-    id 'io.spring.dependency-management' version '1.0.14.RELEASE'
+    id 'org.springframework.boot' version '3.4.1'
+    id 'io.spring.dependency-management' version '1.1.7'
     id 'java'
 }
 
 group = 'com.example'
 version = '0.0.1-SNAPSHOT'
-sourceCompatibility = '11'
+sourceCompatibility = '17'
 
 configurations {
     compileOnly {
@@ -24,47 +24,43 @@ dependencies {
     implementation files('libs/nftreally-logback.jar')
 
     // TelegramBot
-    // https://mvnrepository.com/artifact/com.github.pengrad/java-telegram-bot-api/6.2.0
-    implementation 'com.github.pengrad:java-telegram-bot-api:6.2.0'
+    // https://mvnrepository.com/artifact/com.github.pengrad/java-telegram-bot-api
+    implementation 'com.github.pengrad:java-telegram-bot-api:7.11.0'
 
-    // AWS SDK for SES
-    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-ses
-    implementation group: 'com.amazonaws', name: 'aws-java-sdk-ses', version: '1.12.332'
-
-    // AWS SDK for DynamoDB
-    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-dynamodb/1.12.325
-    implementation group: 'com.amazonaws', name: 'aws-java-sdk-dynamodb', version: '1.12.322'
+    // AWS SDK v2 BOM
+    implementation platform('software.amazon.awssdk:bom:2.29.0')
+    // AWS SDK v2 for SES
+    implementation 'software.amazon.awssdk:ses'
+    // AWS SDK v2 for DynamoDB
+    implementation 'software.amazon.awssdk:dynamodb'
 
     // Gson
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
-    implementation group: 'com.google.code.gson', name: 'gson', version: '2.10'
+    implementation group: 'com.google.code.gson', name: 'gson', version: '2.11.0'
 
-    // Quartz
-    // https://mvnrepository.com/artifact/com.zaxxer/HikariCP
-    implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
+    // Guava (RateLimiter)
+    implementation 'com.google.guava:guava:33.3.1-jre'
 
-    // Quartz
+    // MariaDB JDBC
     // https://mvnrepository.com/artifact/org.mariadb.jdbc/mariadb-java-client
-    implementation group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '3.0.8'
+    implementation group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '3.4.1'
 
     // Mybatis
     // https://mvnrepository.com/artifact/org.mybatis.spring.boot/mybatis-spring-boot-starter
-    implementation group: 'org.mybatis.spring.boot', name: 'mybatis-spring-boot-starter', version: '2.2.2'
-
-    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-validation
-    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-validation', version: '2.7.4'
-
-    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator
-    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-actuator', version: '2.7.5'
+    implementation group: 'org.mybatis.spring.boot', name: 'mybatis-spring-boot-starter', version: '3.0.4'
 
     // AssertJ
-    // https://www.baeldung.com/introduction-to-assertj
     // https://mvnrepository.com/artifact/org.assertj/assertj-core
-    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.23.1'
+    testImplementation group: 'org.assertj', name: 'assertj-core', version: '3.26.3'
+
+    // Spring Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 
     // default
     implementation 'org.springframework.boot:spring-boot-starter-quartz'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'

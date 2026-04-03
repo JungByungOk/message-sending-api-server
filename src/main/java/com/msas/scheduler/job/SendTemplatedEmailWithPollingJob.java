@@ -1,186 +1,83 @@
 package com.msas.scheduler.job;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.google.common.util.concurrent.RateLimiter;
 import com.msas.common.utils.ForeachUtils;
-import com.msas.common.utils.LocalDateTimeDeserializer;
-import com.msas.common.utils.LocalDateTimeSerializer;
 import com.msas.pollingchecker.repository.SESMariaDBRepository;
 import com.msas.pollingchecker.types.EnumEmailSendStatusCode;
 import com.msas.pollingchecker.types.EnumSESEventTypeCode;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
-import com.msas.ses.dto.RequestTemplatedEmailDto;
 import com.msas.ses.exception.AwsSesClientException;
-import com.msas.ses.service.SESMailService;
 import lombok.extern.slf4j.Slf4j;
-import org.quartz.*;
+import org.quartz.DisallowConcurrentExecution;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
+import org.quartz.JobKey;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.quartz.QuartzJobBean;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 /**
  * PollingNewEmailFromNFTDB 서비스 통해서 들어온 이메일 전송 예약 작업 처리기
- * !) 이메일 등록 테이블의 상태 벼경을 위한 이벤트 추가됨
+ * 이메일 등록 테이블의 상태 변경을 위한 이벤트 추가됨
  */
 @Component
 @Slf4j
-@DisallowConcurrentExecution // 동시 실행 방지
-public class SendTemplatedEmailWithPollingJob extends QuartzJobBean implements InterruptableJob {
-    private final int EMAIL_SEND_DELAY_SECONDS = 2;
+@DisallowConcurrentExecution
+public class SendTemplatedEmailWithPollingJob extends AbstractSendTemplatedEmailJob {
+
+    private final RateLimiter rateLimiter = RateLimiter.create(7.0);
 
     @Value("${spring.application.name}")
-    String serverName;
-
-    /**
-     * 중요!
-     * AutowiringSpringBeanJobFactory 에서 서비스 주입을 받기 위해서는
-     * 반드시 @Autowired 어노테이션으로만 동작한다.
-     */
-    private SESMailService sesMailService;
+    private String serverName;
 
     private SESMariaDBRepository sesMariaDBRepository;
 
     @Autowired
-    public void setSESMailService(SESMailService sesMailService, SESMariaDBRepository sesMariaDBRepository) {
-        this.sesMailService = sesMailService;
+    public void setSESMariaDBRepository(SESMariaDBRepository sesMariaDBRepository) {
         this.sesMariaDBRepository = sesMariaDBRepository;
     }
 
-    private volatile boolean isJobInterrupted = false;
-
     @Override
     protected void executeInternal(JobExecutionContext context) throws JobExecutionException {
-
         JobKey jobKey = context.getJobDetail().getKey();
-        Thread currThread = Thread.currentThread();
+        deleteJobIfNotInterrupted(context);
 
-        // 반복 스케쥴일 경우에는 이전에 interrupt()했으므로
-        // 다음 트리거에 실행되지 않도록 스케쥴에서 제거하고 실행하지 않는다.
-        if (!isJobInterrupted) {
-            try {
-                context.getScheduler().deleteJob(jobKey);
-            } catch (SchedulerException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        log.info("@SendTemplatedEmailWithPollingJob - started :: jobKey={}", jobKey);
 
-        log.info("@SendTemplatedEmailWithPollingJob - started :: jobKey={} - threadName={}", jobKey, currThread.getName());
+        RequestTemplatedEmailScheduleJobDTO dto = deserializeJobData(context);
 
-        //-------------------------------------------------------------------------------
-        // 이메일 전송 처리
-        //-------------------------------------------------------------------------------
-        JobDataMap jobDataMap = context.getMergedJobDataMap();
-        String strJson = (String) jobDataMap.get("TemplatedEmailScheduleJob");
-
-
-         // 커스텀 역직렬화 처리
-        GsonBuilder gsonBuilder = new GsonBuilder();
-        gsonBuilder.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeSerializer());
-        gsonBuilder.registerTypeAdapter(LocalDateTime.class, new LocalDateTimeDeserializer());
-        Gson gson = gsonBuilder.setPrettyPrinting().create();
-
-        RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO =
-                gson.fromJson(strJson, RequestTemplatedEmailScheduleJobDTO.class);
-
-        //---------------------------------------
-        // 이메일 목록이 14개 이상이면,
-        // 14개씩 끊어서 전송한다.
-        //---------------------------------------
-        requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().forEach(ForeachUtils.withCounter((count, templatedEmail) -> {
-
-            int email_send_dtl_seq = Integer.parseInt(requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().get(count).getId());
+        dto.getTemplatedEmailList().forEach(ForeachUtils.withCounter((count, templatedEmail) -> {
+            int emailSendDtlSeq = Integer.parseInt(dto.getTemplatedEmailList().get(count).getId());
             EnumEmailSendStatusCode successCode = EnumEmailSendStatusCode.SM;
             EnumSESEventTypeCode failCode = EnumSESEventTypeCode.SESFail;
 
-            try
-            {
-                // 이메일 발송
-                String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(requestTemplatedEmailScheduleJobDTO, count));
+            try {
+                rateLimiter.acquire();
+
+                String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(dto, count));
 
                 log.info("@SendTemplatedEmailWithPollingJob - Email sending ({}/{}) : templateName = {}, messageId = {}",
-                        count + 1,
-                        requestTemplatedEmailScheduleJobDTO.getTemplatedEmailList().size(),
-                        requestTemplatedEmailScheduleJobDTO.getTemplateName(), messageId);
+                        count + 1, dto.getTemplatedEmailList().size(), dto.getTemplateName(), messageId);
 
-                // 성공 상태 업데이트
-                UpdateSendEmailStatus(email_send_dtl_seq, successCode.name().toUpperCase(Locale.ENGLISH), null, messageId, serverName);
+                updateSendEmailStatus(emailSendDtlSeq, successCode.name().toUpperCase(Locale.ENGLISH), null, messageId);
 
-            }
-            catch(AwsSesClientException e)
-            {
+            } catch (AwsSesClientException e) {
                 log.error("@SendTemplatedEmailWithPollingJob - {}", e.getMessage());
 
-                // 실패 상태 업데이트
-                UpdateSendEmailStatus(email_send_dtl_seq,
+                updateSendEmailStatus(emailSendDtlSeq,
                         failCode.getEmailSendStatusCode().name(),
                         failCode.name().toUpperCase(Locale.ENGLISH),
-                        null,
-                        serverName);
-            }
-
-            //14개 전송 속도 쓰로틀링
-            if (count % 14 == 0) {
-                try {
-                    TimeUnit.SECONDS.sleep(EMAIL_SEND_DELAY_SECONDS); // 14개씩 끊어서 1초 딜레이 전송
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+                        null);
             }
         }));
 
-        log.info("@SendTemplatedEmailWithPollingJob - ended :: jobKey={} - threadName={}", jobKey, currThread.getName());
+        log.info("@SendTemplatedEmailWithPollingJob - ended :: jobKey={}", jobKey);
     }
 
-    /*
-     * 처리 결과 업데이트
-     */
-    private void UpdateSendEmailStatus(
-            int email_send_dtl_seq,
-            String send_sts_cd,
-            String send_rslt_typ_cd,
-            String messageId, String serverName) {
-
-        int result = sesMariaDBRepository.UpdateSendEmailStatus2AWSSES(
-                email_send_dtl_seq,
-                send_sts_cd,
-                send_rslt_typ_cd,
-                messageId,
-                serverName
-        );
-        log.info("@SendTemplatedEmailWithPollingJob - Email status update with [ SQ->SM ].");
-
-    }
-
-    /**
-     * 대량 발송 이메일 그룹에서 개별 이메일 정보 가져오기
-     */
-    RequestTemplatedEmailDto getTemplatedEmailDto(RequestTemplatedEmailScheduleJobDTO scheduleData, int idx) {
-        RequestTemplatedEmailDto requestTemplatedEmailDto = new RequestTemplatedEmailDto();
-        {
-            requestTemplatedEmailDto.setFrom(scheduleData.getFrom());
-            requestTemplatedEmailDto.setTo(scheduleData.getTemplatedEmailList().get(idx).getTo());
-            requestTemplatedEmailDto.setTemplateName(scheduleData.getTemplateName());
-            requestTemplatedEmailDto.setTemplateData(scheduleData.getTemplatedEmailList().get(idx).getTemplateParameters());
-            requestTemplatedEmailDto.setCc(scheduleData.getTemplatedEmailList().get(idx).getCc());
-            requestTemplatedEmailDto.setBcc(scheduleData.getTemplatedEmailList().get(idx).getBcc());
-            requestTemplatedEmailDto.setTags(scheduleData.getTags());
-        }
-        return requestTemplatedEmailDto;
-    }
-
-    /**
-     * 실행중인 작업 스레드 종료 시키기
-     */
-    @Override
-    public void interrupt() throws UnableToInterruptJobException {
-        Thread currThread = Thread.currentThread();
-        isJobInterrupted = true;
-        log.info("@SendTemplatedEmailWithPollingJob - thread interrupting (stop working) - {}", currThread.getName());
-        currThread.interrupt(); //쓰레드가 일시 정지 상태이면 바로 깨워서 실행시킨다
+    private void updateSendEmailStatus(int emailSendDtlSeq, String sendStsCd, String sendRsltTypCd, String messageId) {
+        sesMariaDBRepository.UpdateSendEmailStatus2AWSSES(emailSendDtlSeq, sendStsCd, sendRsltTypCd, messageId, serverName);
+        log.info("@SendTemplatedEmailWithPollingJob - Email status update with [ SQ->{} ].", sendStsCd);
     }
 }

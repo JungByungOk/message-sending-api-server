@@ -138,28 +138,34 @@ public class PollingEmailFinalStatusFromDynamoDB {
 
     private void DeleteMessageIds(List<SESEventsEntity> deleteItemList)
     {
-        deleteItemList.forEach(sesEventsEntity -> {
+        int retryDelayMs = 50;
+        final int maxRetryDelayMs = 3000;
 
-            /*
-             * @BOJung
-             * 스트레스 테스트 중에 아래와 같은 에러 발생하여 처리 속도 조절을 위해 시간 지연을 시킴
-             * Request rate is too high.
-             * If you're using a custom retry strategy make sure to retry with exponential back-off.
-             * Otherwise, consider reducing frequency of requests or increasing provisioned capacity for your table or secondary index.
-             * Error: The level of configured provisioned throughput for the table was exceeded.
-             * Consider increasing your provisioning level with the UpdateTable API.
-             */
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+        for (SESEventsEntity sesEventsEntity : deleteItemList) {
+            boolean success = false;
+            int attempt = 0;
+
+            while (!success && attempt < 5) {
+                try {
+                    sesEventsDynamoDBRepository
+                            .deleteItemBySESMessageIdAndSnsPublishTime(sesEventsEntity.getSesMessageId(), sesEventsEntity.getSnsPublishTime());
+                    log.info("@AWS DynamoDB Checking - Deleted SESMessageID:{}", sesEventsEntity.getSesMessageId());
+                    success = true;
+                    retryDelayMs = 50; // 성공 시 딜레이 초기화
+                } catch (Exception e) {
+                    attempt++;
+                    log.warn("@AWS DynamoDB Checking - Delete retry {}/5 for SESMessageID:{}, delay={}ms",
+                            attempt, sesEventsEntity.getSesMessageId(), retryDelayMs);
+                    try {
+                        Thread.sleep(retryDelayMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        return;
+                    }
+                    retryDelayMs = Math.min(retryDelayMs * 2, maxRetryDelayMs);
+                }
             }
-
-            int result = sesEventsDynamoDBRepository
-                    .deleteItemBySESMessageIdAndSnsPublishTime(sesEventsEntity.getSesMessageId(), sesEventsEntity.getSnsPublishTime());
-
-            log.info("@AWS DynamoDB Checking - Deleted SESMessageID:{}", sesEventsEntity.getSesMessageId());
-        });
+        }
     }
 
 }

@@ -6,19 +6,19 @@
 aws:
   dynamo:
     region: ap-northeast-2
-    access-key: AKIA2F6HCY2MNDRHU6BX
-    secret-key: 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
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
   ses:
     region: ap-northeast-2
-    access-key: AKIA2F6HCY2MNDRHU6BX
-    secret-key: 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
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
 
 #################################################
 # bot
 #################################################
 bot:
   telegram:
-    token-id: 5710353844:AAFJeWE2TxtH05yIeSycwQ4Cj71Gm6qzodA
+    token-id: ${TELEGRAM_BOT_TOKEN}
     channel-names: NFTReally.Notification, NFTReally.BackEnd, NFTReally.NTE, NFTReally.NTC, NFTReally.NTS, NFTReally.NBS, NFTReally.NBA, NFTReally.Deploy
 
 #################################################

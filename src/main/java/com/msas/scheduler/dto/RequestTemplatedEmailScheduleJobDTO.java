@@ -3,9 +3,9 @@ package com.msas.scheduler.dto;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
-import javax.validation.constraints.Future;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +75,7 @@ public class RequestTemplatedEmailScheduleJobDTO {
 
     @NotNull
     @NotEmpty(message = "Email tags (campaign name or event name) cannot be Null")
-    List<com.amazonaws.services.simpleemail.model.MessageTag> tags;
+    List<com.msas.ses.dto.MessageTagDto> tags;
 
     private String jobGroup = "DEFAULT";
 

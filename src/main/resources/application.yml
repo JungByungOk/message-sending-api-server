@@ -1,0 +1,122 @@
+#################################################
+# server setting
+#################################################
+server:
+  port: 7092
+  shutdown: graceful
+
+spring.lifecycle.timeout-per-shutdown-phase: 30s
+
+#################################################
+# logging (logback-spring.xml is auto-detected)
+#################################################
+
+#################################################
+# spring setting
+#################################################
+spring:
+  application:
+    name: NTE
+  output:
+    ansi:
+      enabled: always
+
+  #################################################
+  # spring-quartz
+  #################################################
+  quartz:
+    scheduler-name: email-sending-scheduler
+    overwrite-existing-jobs: false
+    startup-delay: 10
+    wait-for-jobs-to-complete-on-shutdown: true
+    auto-startup: true
+    properties:
+      org.quartz.scheduler.instanceId: AUTO
+      org.quartz.threadPool.class: org.quartz.simpl.SimpleThreadPool
+      org.quartz.threadPool.threadCount: 10
+      # Database Store
+      org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
+      org.quartz.dataSource.quartzDataSource.provider: hikaricp
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+      org.quartz.jobStore.dataSource: quartzDataSource
+      #
+      org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
+      org.quartz.dataSource.quartzDataSource.URL: ${QUARTZ_DB_URL}
+      org.quartz.dataSource.quartzDataSource.user: ${QUARTZ_DB_USER}
+      org.quartz.dataSource.quartzDataSource.password: ${QUARTZ_DB_PASSWORD}
+      #
+      org.quartz.dataSource.quartzDataSource.maximumPoolSize: 10
+      org.quartz.dataSource.quartzDataSource.connectionTestQuery: SELECT 1
+      org.quartz.dataSource.quartzDataSource.validationTimeout: 5000
+      org.quartz.dataSource.quartzDataSource.idleTimeout: 0
+      # Logging Trigger History
+      org.quartz.plugin.triggHistory.class: org.quartz.plugins.history.LoggingTriggerHistoryPlugin
+      org.quartz.plugin.triggHistory.triggerFiredMessage: 'Trigger {1}.{0} fired job {6}.{5} at: {4, date, HH:mm:ss MM/dd/yyyy}'
+      org.quartz.plugin.triggHistory.triggerCompleteMessage: 'Trigger {1}.{0} completed firing job {6}.{5} at {4, date, HH:mm:ss MM/dd/yyyy}.'
+
+  #################################################
+  # database
+  #################################################
+  datasource:
+    name: NFTReally-Database
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      pool-name: NFTReally-HikariCP
+
+#################################################
+# AWS {SES, DynamoDB}
+#################################################
+aws:
+  dynamo:
+    region: ap-northeast-2
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+  ses:
+    region: ap-northeast-2
+    access-key: ${AWS_ACCESS_KEY}
+    secret-key: ${AWS_SECRET_KEY}
+
+#################################################
+# actuator
+#################################################
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    quartz:
+      enabled: true
+    health:
+      show-details: when-authorized
+
+#################################################
+# bot
+#################################################
+bot:
+  telegram:
+    token-id: ${TELEGRAM_BOT_TOKEN}
+
+#################################################
+# polling checker
+#################################################
+polling:
+  schedule:
+    send-email-check-time: 60000
+    send-email-event-check-time: 60000
+
+#################################################
+# security
+#################################################
+security:
+  api-key: ${API_KEY:}
+
+#################################################
+# mybatis mapper
+#################################################
+mybatis:
+  mapper-locations: classpath:mybatis/*.xml

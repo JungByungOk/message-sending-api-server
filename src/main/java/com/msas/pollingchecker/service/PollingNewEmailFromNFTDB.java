@@ -1,6 +1,6 @@
 package com.msas.pollingchecker.service;
 
-import com.amazonaws.services.simpleemail.model.MessageTag;
+import com.msas.ses.dto.MessageTagDto;
 import com.google.gson.Gson;
 import com.msas.pollingchecker.model.NewEmailEntity;
 import com.msas.pollingchecker.repository.SESMariaDBRepository;
@@ -14,6 +14,7 @@ import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -31,6 +32,7 @@ public class PollingNewEmailFromNFTDB {
 
     private final ScheduleServiceImpl scheduleService;
 
+    @Transactional
     @Scheduled(fixedRateString = "${polling.schedule.send-email-check-time:10000}", initialDelay = 20000)
     public void checkNewEmailTask() {
 
@@ -53,6 +55,14 @@ public class PollingNewEmailFromNFTDB {
         //------------------------------------------
         newEmailEntities.forEach(newEmailEntity -> {
 
+            if (newEmailEntity.getNewEmailDetailEntities() == null || newEmailEntity.getNewEmailDetailEntities().isEmpty()) {
+                log.warn("@RDBMS Checking - Skipping email_send_seq={} with empty detail list", newEmailEntity.getEmail_send_seq());
+                return;
+            }
+
+            // 먼저 상태를 SQ로 변경하여 다음 폴링에서 재조회 방지
+            UpdateSendEmailStatus(newEmailEntity);
+
             RequestTemplatedEmailScheduleJobDTO dto = convertNewEmailEntity2RequestTemplatedEmailScheduleJobDTO(newEmailEntity);
 
             try {
@@ -60,10 +70,6 @@ public class PollingNewEmailFromNFTDB {
             } catch (SchedulerException e) {
                 throw new RuntimeException(e);
             }
-
-            // 이메일 대기 상태 변경 이벤트 발생 -> 이벤트 수신기에서 상태 변경 처리
-            //-------------------------------------------------------
-            UpdateSendEmailStatus(newEmailEntity);
 
         });
 
@@ -104,13 +110,8 @@ public class PollingNewEmailFromNFTDB {
         String from = newEmailEntity.getNewEmailDetailEntities().get(0).getSend_email_addr();
 
         // List<Tag>
-        List<MessageTag> tags = new ArrayList<>();
-        MessageTag messageTag = new MessageTag();
-        {
-            messageTag.setName("customTag");
-            messageTag.setValue(String.valueOf(newEmailEntity.getEmail_send_seq()));
-        }
-        tags.add(messageTag);
+        List<MessageTagDto> tags = new ArrayList<>();
+        tags.add(new MessageTagDto("customTag", String.valueOf(newEmailEntity.getEmail_send_seq())));
 
         // DTO
         RequestTemplatedEmailScheduleJobDTO templatedEmailScheduleDto = new RequestTemplatedEmailScheduleJobDTO();

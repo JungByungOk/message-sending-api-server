@@ -1,204 +1,184 @@
 package com.msas.ses.service;
 
-import com.amazonaws.services.simpleemail.AmazonSimpleEmailService;
-import com.amazonaws.services.simpleemail.model.*;
 import com.google.gson.Gson;
-import com.msas.ses.dto.RequestBasicEmailDto;
-import com.msas.ses.dto.RequestDeleteTemplateDto;
-import com.msas.ses.dto.RequestTemplateDto;
-import com.msas.ses.dto.RequestTemplatedEmailDto;
+import com.msas.ses.dto.*;
 import com.msas.ses.exception.AwsSesClientException;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.services.ses.SesClient;
+import software.amazon.awssdk.services.ses.model.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class SESMailService {
     private static final String CHAR_SET = "UTF-8";
 
-    private final AmazonSimpleEmailService amazonSimpleEmailService;
-
-    @Autowired
-    public SESMailService(AmazonSimpleEmailService amazonSimpleEmailService) {
-        this.amazonSimpleEmailService = amazonSimpleEmailService;
-    }
+    private final SesClient sesClient;
 
     /**
      * AWS SES 의 SendEmail API 를 이용하여 기본 메일 전송 메서드
      */
     public String sendEmail(RequestBasicEmailDto requestBasicEmailDto) {
-
-        SendEmailResult sendEmailResult;
-
         try {
-            // The time for request/response round trip to aws in milliseconds
-            int requestTimeout = 3000;
+            SendEmailRequest request = SendEmailRequest.builder()
+                    .source(requestBasicEmailDto.getFrom())
+                    .destination(Destination.builder()
+                            .toAddresses(requestBasicEmailDto.getTo())
+                            .build())
+                    .message(Message.builder()
+                            .body(Body.builder()
+                                    .html(Content.builder()
+                                            .charset(CHAR_SET)
+                                            .data(requestBasicEmailDto.getBody())
+                                            .build())
+                                    .build())
+                            .subject(Content.builder()
+                                    .charset(CHAR_SET)
+                                    .data(requestBasicEmailDto.getSubject())
+                                    .build())
+                            .build())
+                    .tags(toSdkMessageTags(requestBasicEmailDto.getTags()))
+                    .overrideConfiguration(c -> c.apiCallTimeout(java.time.Duration.ofMillis(3000)))
+                    .build();
 
-            SendEmailRequest request = new SendEmailRequest()
-                    .withSource(requestBasicEmailDto.getFrom())
-                    .withDestination(
-                            new Destination().withToAddresses(requestBasicEmailDto.getTo()))
-                    .withMessage(new Message()
-                            .withBody(new Body()
-                                    .withHtml(new Content()
-                                            .withCharset(CHAR_SET)
-                                            .withData(requestBasicEmailDto.getBody())))
-                            .withSubject(new Content()
-                                    .withCharset(CHAR_SET)
-                                    .withData(requestBasicEmailDto.getSubject())))
-                    .withSdkRequestTimeout(requestTimeout);
+            SendEmailResponse response = sesClient.sendEmail(request);
+            String emailMessageId = response.messageId();
+            log.info("SESMailService - Email has been sent. (messageId: {})", emailMessageId);
+            return emailMessageId;
 
-            request.setTags(requestBasicEmailDto.getTags());
-
-            sendEmailResult = amazonSimpleEmailService.sendEmail(request);
-
-        } catch (AmazonSimpleEmailServiceException ex) {
+        } catch (SesException ex) {
             log.error("SESMailService - Email sending failed.", ex);
-            throw new AwsSesClientException("Email sending failed.", ex); // to GlobalControllerAdvice
+            throw new AwsSesClientException("Email sending failed.", ex);
         }
-
-        String emailMessageId = sendEmailResult.getMessageId();
-        log.info("SESMailService - Email has been sent. (messageId: {})", emailMessageId);
-
-        return emailMessageId;
     }
 
     public String createTemplateEmail(RequestTemplateDto requestTemplateDto) {
-
-        CreateTemplateResult createTemplateResult;
-
         try {
-            Template template = new Template()
-                    .withTemplateName(requestTemplateDto.getTemplateName())
-                    .withSubjectPart(requestTemplateDto.getSubjectPart())
-                    .withHtmlPart(requestTemplateDto.getHtmlPart())
-                    .withTextPart(requestTemplateDto.getTextPart());
+            Template template = Template.builder()
+                    .templateName(requestTemplateDto.getTemplateName())
+                    .subjectPart(requestTemplateDto.getSubjectPart())
+                    .htmlPart(requestTemplateDto.getHtmlPart())
+                    .textPart(requestTemplateDto.getTextPart())
+                    .build();
 
-            CreateTemplateRequest request = new CreateTemplateRequest().withTemplate(template);
+            CreateTemplateResponse response = sesClient.createTemplate(
+                    CreateTemplateRequest.builder().template(template).build());
 
-            createTemplateResult = amazonSimpleEmailService.createTemplate(request);
+            String awsRequestId = response.responseMetadata() != null ? response.responseMetadata().requestId() : "unknown";
+            log.info("SESMailService - A template has been registered. (AWS_REQUEST_ID: {})", awsRequestId);
+            return awsRequestId;
 
-        } catch (AmazonSimpleEmailServiceException ex) {
+        } catch (SesException ex) {
             log.error("SESMailService - Template registration failed.", ex);
-            throw new AwsSesClientException("SESMailService - Template registration failed.", ex); // to GlobalControllerAdvice
+            throw new AwsSesClientException("SESMailService - Template registration failed.", ex);
         }
-
-        String awsRequestId = createTemplateResult.getSdkResponseMetadata().getRequestId();
-        log.info("SESMailService - A template has been registered. (AWS_REQUEST_ID: {})", awsRequestId);
-
-        return awsRequestId;
     }
 
     public String sendTemplatedEmail(RequestTemplatedEmailDto requestTemplatedEmailDto) {
-
-        SendTemplatedEmailResult sendTemplatedEmailResult;
-
         try {
-            Destination destination = new Destination();
-            {
-                destination.setToAddresses(requestTemplatedEmailDto.getTo());
-                destination.setCcAddresses(requestTemplatedEmailDto.getCc());
-                destination.setBccAddresses(requestTemplatedEmailDto.getBcc());
-            }
+            Destination destination = Destination.builder()
+                    .toAddresses(requestTemplatedEmailDto.getTo())
+                    .ccAddresses(requestTemplatedEmailDto.getCc())
+                    .bccAddresses(requestTemplatedEmailDto.getBcc())
+                    .build();
 
-            SendTemplatedEmailRequest emailRequest = new SendTemplatedEmailRequest();
-            {
-                emailRequest.setTemplate(requestTemplatedEmailDto.getTemplateName());
-                emailRequest.setDestination(destination);
-                emailRequest.setSource(requestTemplatedEmailDto.getFrom());
-                emailRequest.setTemplateData(new Gson().toJson(requestTemplatedEmailDto.getTemplateData()));
-                emailRequest.setTags(requestTemplatedEmailDto.getTags());   // custom tag: 발송 단위 별로 이벤트 로그 추적 정보
-            }
+            SendTemplatedEmailRequest emailRequest = SendTemplatedEmailRequest.builder()
+                    .template(requestTemplatedEmailDto.getTemplateName())
+                    .destination(destination)
+                    .source(requestTemplatedEmailDto.getFrom())
+                    .templateData(new Gson().toJson(requestTemplatedEmailDto.getTemplateData()))
+                    .tags(toSdkMessageTags(requestTemplatedEmailDto.getTags()))
+                    .build();
 
-            sendTemplatedEmailResult = amazonSimpleEmailService.sendTemplatedEmail(emailRequest);
-        } catch (AmazonSimpleEmailServiceException ex) {
+            SendTemplatedEmailResponse response = sesClient.sendTemplatedEmail(emailRequest);
+            String messageId = response.messageId();
+            log.info("SESMailService - Template mail sending was successful. (MessageId: {})", messageId);
+            return messageId;
+
+        } catch (SesException ex) {
             log.error("SESMailService - Failed to send template mail.", ex);
-            throw new AwsSesClientException("SESMailService - Failed to send template mail.", ex); // to GlobalControllerAdvice
+            throw new AwsSesClientException("SESMailService - Failed to send template mail.", ex);
         }
-
-        String messageId = sendTemplatedEmailResult.getMessageId();
-        log.info("SESMailService - Template mail sending was successful. (MessageId: {})", messageId);
-
-        return messageId;
     }
 
     public String updateTemplateEmail(RequestTemplateDto requestTemplateDto) {
-        UpdateTemplateResult updateTemplateResult;
-
         try {
-            Template template = new Template()
-                    .withTemplateName(requestTemplateDto.getTemplateName())
-                    .withSubjectPart(requestTemplateDto.getSubjectPart())
-                    .withHtmlPart(requestTemplateDto.getHtmlPart())
-                    .withTextPart(requestTemplateDto.getTextPart());
+            Template template = Template.builder()
+                    .templateName(requestTemplateDto.getTemplateName())
+                    .subjectPart(requestTemplateDto.getSubjectPart())
+                    .htmlPart(requestTemplateDto.getHtmlPart())
+                    .textPart(requestTemplateDto.getTextPart())
+                    .build();
 
-            UpdateTemplateRequest updateTemplateRequest = new UpdateTemplateRequest();
-            updateTemplateRequest.setTemplate(template);
+            UpdateTemplateResponse response = sesClient.updateTemplate(
+                    UpdateTemplateRequest.builder().template(template).build());
 
-            updateTemplateResult = amazonSimpleEmailService.updateTemplate(updateTemplateRequest);
-        } catch (AmazonSimpleEmailServiceException ex) {
+            String awsRequestId = response.responseMetadata() != null ? response.responseMetadata().requestId() : "unknown";
+            log.info("SESMailService - Template modification was successful. (AWS_REQUEST_ID: {})", awsRequestId);
+            return awsRequestId;
+
+        } catch (SesException ex) {
             log.error("SESMailService - Template modification failed.", ex);
-            throw new AwsSesClientException("Template modification failed.", ex); // to GlobalControllerAdvice
+            throw new AwsSesClientException("Template modification failed.", ex);
         }
-
-        String awsRequestId = updateTemplateResult.getSdkResponseMetadata().getRequestId();
-        log.info("SESMailService - Template modification was successful. (AWS_REQUEST_ID: {})", awsRequestId);
-
-        return awsRequestId;
     }
 
     public String deleteTemplate(RequestDeleteTemplateDto requestDeleteTemplateDto) {
-        DeleteTemplateResult deleteTemplateResult;
-
         try {
-            DeleteTemplateRequest deleteTemplateRequest = new DeleteTemplateRequest();
-            deleteTemplateRequest.setTemplateName(requestDeleteTemplateDto.getTemplateName());
+            DeleteTemplateResponse response = sesClient.deleteTemplate(
+                    DeleteTemplateRequest.builder()
+                            .templateName(requestDeleteTemplateDto.getTemplateName())
+                            .build());
 
-            deleteTemplateResult = amazonSimpleEmailService.deleteTemplate(deleteTemplateRequest);
-        } catch (AmazonSimpleEmailServiceException ex) {
+            String awsRequestId = response.responseMetadata() != null ? response.responseMetadata().requestId() : "unknown";
+            log.info("SESMailService - Template deletion successful. (AWS_REQUEST_ID: {})", awsRequestId);
+            return awsRequestId;
+
+        } catch (SesException ex) {
             log.error("SESMailService - Failed to delete template.", ex);
-            throw new AwsSesClientException("SESMailService - Failed to delete template.", ex); // to GlobalControllerAdvice
+            throw new AwsSesClientException("SESMailService - Failed to delete template.", ex);
         }
-
-        String awsRequestId = deleteTemplateResult.getSdkResponseMetadata().getRequestId();
-        log.info("SESMailService - Template deletion successful. (AWS_REQUEST_ID: {})", awsRequestId);
-
-        return awsRequestId;
-
     }
 
     public List<TemplateMetadata> listTemplates() {
-
-        ListTemplatesResult listTemplatesResult;
         List<TemplateMetadata> listTotalTemplates = new ArrayList<>();
+        String nextToken = null;
 
         try {
-
             do {
+                ListTemplatesRequest request = ListTemplatesRequest.builder()
+                        .maxItems(10)
+                        .nextToken(nextToken)
+                        .build();
 
-                ListTemplatesRequest listTemplatesRequest = new ListTemplatesRequest();
-                listTemplatesRequest.setMaxItems(10); // 최대 10개 까지
+                ListTemplatesResponse response = sesClient.listTemplates(request);
+                listTotalTemplates.addAll(response.templatesMetadata());
+                nextToken = response.nextToken();
 
-                listTemplatesResult = amazonSimpleEmailService.listTemplates(listTemplatesRequest);
+            } while (nextToken != null);
 
-                listTotalTemplates.addAll(listTemplatesResult.getTemplatesMetadata()); // 전체 목록 취합
-
-            } while (listTemplatesResult.getNextToken() != null);
-
-        } catch (AmazonSimpleEmailServiceException ex) {
+        } catch (SesException ex) {
             log.debug("SESMailService - Failed to get template list.", ex);
-            throw new AwsSesClientException("Failed to get template list.", ex); // to GlobalControllerAdvice
+            throw new AwsSesClientException("Failed to get template list.", ex);
         }
 
-        int templateCount = listTotalTemplates.size();
-        log.debug("SESMailService - To get template list was successful. (Number of registered templates : {})", templateCount);
-
+        log.debug("SESMailService - To get template list was successful. (Number of registered templates : {})", listTotalTemplates.size());
         return listTotalTemplates;
-
     }
 
+    /**
+     * MessageTagDto → SDK v2 MessageTag 변환
+     */
+    private List<MessageTag> toSdkMessageTags(List<MessageTagDto> tags) {
+        if (tags == null) return null;
+        return tags.stream()
+                .map(t -> MessageTag.builder().name(t.getName()).value(t.getValue()).build())
+                .collect(Collectors.toList());
+    }
 }

@@ -1,11 +1,10 @@
 package com.msas.ses.dto;
 
-import com.amazonaws.services.simpleemail.model.MessageTag;
 import lombok.Data;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotEmpty;
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 @Data
@@ -29,5 +28,5 @@ public class RequestBasicEmailDto {
 
     @NotNull
     @NotEmpty(message = "Email tags (campaign name or event name) cannot be Null")
-    List<MessageTag> tags;
+    List<MessageTagDto> tags;
 }

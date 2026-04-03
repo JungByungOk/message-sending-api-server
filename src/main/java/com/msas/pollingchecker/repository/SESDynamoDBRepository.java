@@ -1,9 +1,5 @@
 package com.msas.pollingchecker.repository;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.model.*;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,29 +7,30 @@ import com.msas.pollingchecker.model.SESEventsEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
+import software.amazon.awssdk.services.dynamodb.model.*;
 
 import java.util.*;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Repository
 @RequiredArgsConstructor
 public class SESDynamoDBRepository {
 
-    private final AmazonDynamoDB amazonDynamoDB;
+    private final DynamoDbClient dynamoDbClient;
 
-    public Optional<List<SESEventsEntity>> getItems()
-    {
+    public Optional<List<SESEventsEntity>> getItems() {
         List<SESEventsEntity> sesEventsEntityList = null;
 
         try {
-            // Create ExecuteStatementRequest
-            ExecuteStatementRequest executeStatementRequest = new ExecuteStatementRequest();
-            executeStatementRequest.setLimit(300); // 300개씩 fetch
-            executeStatementRequest.setStatement("select * from SESEvents;");
-            ExecuteStatementResult executeStatementResult = amazonDynamoDB.executeStatement(executeStatementRequest);
+            ExecuteStatementRequest request = ExecuteStatementRequest.builder()
+                    .limit(300)
+                    .statement("select * from SESEvents;")
+                    .build();
 
-            sesEventsEntityList = toList(executeStatementResult);
+            ExecuteStatementResponse response = dynamoDbClient.executeStatement(request);
+            sesEventsEntityList = toList(response);
 
         } catch (Exception e) {
             handleExecuteStatementErrors(e);
@@ -42,18 +39,17 @@ public class SESDynamoDBRepository {
         return Optional.ofNullable(sesEventsEntityList);
     }
 
-    public Optional<List<SESEventsEntity>> getItemsByCumstomTag(String CustomTag) {
-
+    public Optional<List<SESEventsEntity>> getItemsByCustomTag(String customTag) {
         List<SESEventsEntity> sesEventsEntityList = null;
 
         try {
-            // Create ExecuteStatementRequest
-            ExecuteStatementRequest executeStatementRequest = new ExecuteStatementRequest();
-            executeStatementRequest.setStatement(String.format("select * from SESEvents where CustomTag='%s';", CustomTag));
+            ExecuteStatementRequest request = ExecuteStatementRequest.builder()
+                    .statement("select * from SESEvents where CustomTag=?;")
+                    .parameters(AttributeValue.builder().s(customTag).build())
+                    .build();
 
-            ExecuteStatementResult executeStatementResult = amazonDynamoDB.executeStatement(executeStatementRequest);
-
-            sesEventsEntityList = toList(executeStatementResult);
+            ExecuteStatementResponse response = dynamoDbClient.executeStatement(request);
+            sesEventsEntityList = toList(response);
 
         } catch (Exception e) {
             handleExecuteStatementErrors(e);
@@ -62,19 +58,20 @@ public class SESDynamoDBRepository {
         return Optional.ofNullable(sesEventsEntityList);
     }
 
-    public int deleteItemBySESMessageIdAndSnsPublishTime(String SESMessageId, String SnsPublishTime)
-    {
+    public int deleteItemBySESMessageIdAndSnsPublishTime(String sesMessageId, String snsPublishTime) {
         int result = 0;
 
         try {
-            // Create ExecuteStatementRequest
-            ExecuteStatementRequest executeStatementRequest = new ExecuteStatementRequest();
-            executeStatementRequest.setStatement(
-                    String.format("delete from SESEvents where SESMessageId='%s' and SnsPublishTime='%s' RETURNING ALL OLD *;", SESMessageId, SnsPublishTime)
-            );
+            ExecuteStatementRequest request = ExecuteStatementRequest.builder()
+                    .statement("delete from SESEvents where SESMessageId=? and SnsPublishTime=? RETURNING ALL OLD *;")
+                    .parameters(
+                            AttributeValue.builder().s(sesMessageId).build(),
+                            AttributeValue.builder().s(snsPublishTime).build()
+                    )
+                    .build();
 
-            ExecuteStatementResult executeStatementResult = amazonDynamoDB.executeStatement(executeStatementRequest);
-            result = executeStatementResult.getItems().size();
+            ExecuteStatementResponse response = dynamoDbClient.executeStatement(request);
+            result = response.items().size();
 
         } catch (Exception e) {
             handleExecuteStatementErrors(e);
@@ -83,103 +80,53 @@ public class SESDynamoDBRepository {
         return result;
     }
 
-    private List<SESEventsEntity> toList(ExecuteStatementResult executeStatementResult)
-    {
-        List<SESEventsEntity> sesEventsEntityList = new ArrayList<>();
-
-        // Handle executeStatementResult
-        executeStatementResult.getItems().forEach(new Consumer<Map<String, AttributeValue>>() {
-            @Override
-            public void accept(Map<String, AttributeValue> stringAttributeValueMap) {
-
-                SESEventsEntity sesEventsEntity = SESEventsEntity.builder()
-                        // partition-key
-                        .sesMessageId(Optional.ofNullable(stringAttributeValueMap.get("SESMessageId")).map(AttributeValue::getS).orElse(""))
-                        // sort-key
-                        .snsPublishTime(Optional.ofNullable(stringAttributeValueMap.get("SnsPublishTime")).map(AttributeValue::getS).orElse(""))
-                        .destinationEmail(Optional.ofNullable(stringAttributeValueMap.get("DestinationEmail")).map(AttributeValue::getS).orElse(""))
-                        .eventType(Optional.ofNullable(stringAttributeValueMap.get("EventType")).map(AttributeValue::getS).orElse(""))
-                        //.message(Optional.ofNullable(stringAttributeValueMap.get("Message")).map(AttributeValue::getM).map(p->new GsonBuilder().create().toJson(p)).orElse(""))   //gson->warning
-                        .message(Optional.ofNullable(stringAttributeValueMap.get("Message")).map(AttributeValue::getM).map(p->convertAttributeValueMap2JsonString(p)).orElse(""))     //jackson->ok
-                        .customTag(Optional.ofNullable(stringAttributeValueMap.get("CustomTag")).map(AttributeValue::getS).orElse(""))
-                        .build();
-
-                Map<String, AttributeValue> attributeValueMap = Optional.ofNullable(stringAttributeValueMap.get("Message")).map(AttributeValue::getM).orElse(new HashMap<>());
-
-                sesEventsEntityList.add(sesEventsEntity);
-            }
-        });
-
-        return sesEventsEntityList;
+    private List<SESEventsEntity> toList(ExecuteStatementResponse response) {
+        return response.items().stream().map(item -> SESEventsEntity.builder()
+                .sesMessageId(getStringValue(item, "SESMessageId"))
+                .snsPublishTime(getStringValue(item, "SnsPublishTime"))
+                .destinationEmail(getStringValue(item, "DestinationEmail"))
+                .eventType(getStringValue(item, "EventType"))
+                .message(Optional.ofNullable(item.get("Message"))
+                        .filter(av -> av.m() != null)
+                        .map(av -> convertAttributeValueMap2JsonString(av.m()))
+                        .orElse(""))
+                .customTag(getStringValue(item, "CustomTag"))
+                .build()
+        ).collect(Collectors.toList());
     }
 
-    /**
-     * DynamoDB AttributeValue 를 Json Serialize
-     * Gson -> error 발생
-     *      WARNING: An illegal reflective access operation has occurred
-     *      WARNING: Illegal reflective access by com.google.gson.internal.reflect.ReflectionHelper (file:/C:/Users/jbo25/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.10/dd9b193aef96e973d5a11ab13cd17430c2e4306b/gson-2.10.jar) to field java.nio.ByteBuffer.hb
-     *      WARNING: Please consider reporting this to the maintainers of com.google.gson.internal.reflect.ReflectionHelper
-     *      WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
-     *      WARNING: All illegal access operations will be denied in a future release
-     * Jackson -> 정상
-     */
-    private String convertAttributeValueMap2JsonString(Map<String, AttributeValue> attributeValueMap)
-    {
-        String strJson = "";
+    private String getStringValue(Map<String, AttributeValue> item, String key) {
+        return Optional.ofNullable(item.get(key))
+                .map(AttributeValue::s)
+                .orElse("");
+    }
+
+    private String convertAttributeValueMap2JsonString(Map<String, AttributeValue> attributeValueMap) {
         ObjectMapper mapper = new ObjectMapper();
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
         try {
-            strJson = mapper.writeValueAsString(attributeValueMap);
+            return mapper.writeValueAsString(attributeValueMap);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-        return strJson;
     }
 
-    // Handles errors during ExecuteStatement execution. Use recommendations in error messages below to add error handling specific to
-    // your application use-case.
-    private static void handleExecuteStatementErrors(Exception exception) {
-        try {
-            throw exception;
-        } catch (ConditionalCheckFailedException ccfe) {
+    private void handleExecuteStatementErrors(Exception exception) {
+        if (exception instanceof ConditionalCheckFailedException ccfe) {
             log.error("Condition check specified in the operation failed, review and update the condition " +
-                    "check before retrying. Error: " + ccfe.getErrorMessage());
-        } catch (TransactionConflictException tce) {
-            log.error(("Operation was rejected because there is an ongoing transaction for the item, generally " +
-                    "safe to retry with exponential back-off. Error: " + tce.getErrorMessage()));
-        } catch (ItemCollectionSizeLimitExceededException icslee) {
-            log.error(("An item collection is too large, you\'re using Local Secondary Index and exceeded " +
-                    "size limit of items per partition key. Consider using Global Secondary Index instead. Error: " + icslee.getErrorMessage()));
-        } catch (Exception e) {
-            handleCommonErrors(e);
+                    "check before retrying. Error: {}", ccfe.getMessage());
+        } else if (exception instanceof TransactionConflictException tce) {
+            log.error("Operation was rejected because there is an ongoing transaction for the item, generally " +
+                    "safe to retry with exponential back-off. Error: {}", tce.getMessage());
+        } else if (exception instanceof ProvisionedThroughputExceededException ptee) {
+            log.error("Request rate is too high. Consider reducing frequency of requests or increasing provisioned capacity. Error: {}",
+                    ptee.getMessage());
+        } else if (exception instanceof ResourceNotFoundException rnfe) {
+            log.error("One of the tables was not found, verify table exists before retrying. Error: {}", rnfe.getMessage());
+        } else if (exception instanceof DynamoDbException dde) {
+            log.error("DynamoDB error occurred. Error: {}", dde.getMessage());
+        } else {
+            log.error("An exception occurred. Error: {}", exception.getMessage());
         }
     }
-
-    private static void handleCommonErrors(Exception exception) {
-        try {
-            throw exception;
-        } catch (InternalServerErrorException isee) {
-            log.error(("Internal Server Error, generally safe to retry with exponential back-off. Error: " + isee.getErrorMessage()));
-        } catch (RequestLimitExceededException rlee) {
-            log.error(("Throughput exceeds the current throughput limit for your account, increase account level throughput before " +
-                    "retrying. Error: " + rlee.getErrorMessage()));
-        } catch (ProvisionedThroughputExceededException ptee) {
-            log.error(("Request rate is too high. If you're using a custom retry strategy make sure to retry with exponential back-off. " +
-                    "Otherwise consider reducing frequency of requests or increasing provisioned capacity for your table or secondary index. Error: " +
-                    ptee.getErrorMessage()));
-        } catch (ResourceNotFoundException rnfe) {
-            log.error(("One of the tables was not found, verify table exists before retrying. Error: " + rnfe.getErrorMessage()));
-        } catch (AmazonServiceException ase) {
-            log.error(("An AmazonServiceException occurred, indicates that the request was correctly transmitted to the DynamoDB " +
-                    "service, but for some reason, the service was not able to process it, and returned an error response instead. Investigate and " +
-                    "configure retry strategy. Error type: " + ase.getErrorType() + ". Error message: " + ase.getErrorMessage()));
-        } catch (AmazonClientException ace) {
-            log.error(("An AmazonClientException occurred, indicates that the client was unable to get a response from DynamoDB " +
-                    "service, or the client was unable to parse the response from the service. Investigate and configure retry strategy. "+
-                    "Error: " + ace.getMessage()));
-        } catch (Exception e) {
-            System.out.println("An exception occurred, investigate and configure retry strategy. Error: " + e.getMessage());
-        }
-    }
-
 }

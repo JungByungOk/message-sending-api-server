@@ -1,6 +1,6 @@
 package com.msas.ses.controller;
 
-import com.amazonaws.services.simpleemail.model.TemplateMetadata;
+import software.amazon.awssdk.services.ses.model.TemplateMetadata;
 import com.msas.ses.dto.*;
 import com.msas.ses.service.SESMailService;
 import lombok.RequiredArgsConstructor;
@@ -8,7 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.util.List;
 
 /**

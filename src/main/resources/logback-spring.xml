@@ -1,14 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="30 seconds">
 
-    <property name="LOGS_TRACE" value="./nte/logs/trace" />
-    <property name="LOGS_ERROR" value="./nte/logs/error" />
-    <property name="LOGS_ACCESS" value="./nte/logs/access" />
+    <!-- Log paths per profile -->
+    <springProfile name="local | dev58">
+        <property name="LOGS_TRACE" value="./nte/logs/trace" />
+        <property name="LOGS_ERROR" value="./nte/logs/error" />
+        <property name="LOGS_ACCESS" value="./nte/logs/access" />
+    </springProfile>
+    <springProfile name="dev | prod">
+        <property name="LOGS_TRACE" value="/svc/nte/logs/trace" />
+        <property name="LOGS_ERROR" value="/svc/nte/logs/error" />
+        <property name="LOGS_ACCESS" value="/svc/nte/logs/access" />
+    </springProfile>
 
     <!-- use Spring default values -->
     <include resource="logback/logback-defaults.xml"/>
 
-    <!-- APPENDER -->
+    <!-- CONSOLE APPENDER -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>${CONSOLE_LOG_PATTERN}</pattern>
@@ -16,33 +24,23 @@
         </encoder>
     </appender>
 
-    <!-- File Appender -->
-    <appender name="ROLLING_FILE_TRACE"
-              class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <!-- TRACE FILE APPENDER -->
+    <appender name="ROLLING_FILE_TRACE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOGS_TRACE}/nte.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
         </encoder>
-
-        <rollingPolicy
-                class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- rollover daily and when the file reaches 10 MegaBytes -->
-            <fileNamePattern>${LOGS_TRACE}/archived/nte-%d{yyyy-MM-dd}.%i.log
-            </fileNamePattern>
-            <!--로그 파일 분할-->
-            <timeBasedFileNamingAndTriggeringPolicy
-                    class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOGS_TRACE}/archived/nte-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
                 <maxFileSize>50MB</maxFileSize>
             </timeBasedFileNamingAndTriggeringPolicy>
-            <!--7일간만 보관-->
             <maxHistory>7</maxHistory>
-            <!--전체 로그 파일 용량-->
             <totalSizeCap>1GB</totalSizeCap>
         </rollingPolicy>
     </appender>
 
-    <!-- AsyncAppender -->
     <appender name="ASYNC_ROLLING_FILE_TRACE" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="ROLLING_FILE_TRACE" />
         <queueSize>256</queueSize>
@@ -52,33 +50,23 @@
         <neverBlock>true</neverBlock>
     </appender>
 
-    <!-- File Appender -->
-    <appender name="ROLLING_FILE_ACCESS"
-              class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <!-- ACCESS FILE APPENDER -->
+    <appender name="ROLLING_FILE_ACCESS" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOGS_ACCESS}/nte.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
         </encoder>
-
-        <rollingPolicy
-                class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- rollover daily and when the file reaches 10 MegaBytes -->
-            <fileNamePattern>${LOGS_ACCESS}/archived/nte-%d{yyyy-MM-dd}.%i.log
-            </fileNamePattern>
-            <!--로그 파일 분할-->
-            <timeBasedFileNamingAndTriggeringPolicy
-                    class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOGS_ACCESS}/archived/nte-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
                 <maxFileSize>50MB</maxFileSize>
             </timeBasedFileNamingAndTriggeringPolicy>
-            <!--7일간만 보관-->
             <maxHistory>7</maxHistory>
-            <!--전체 로그 파일 용량-->
             <totalSizeCap>1GB</totalSizeCap>
         </rollingPolicy>
     </appender>
 
-    <!-- AsyncAppender -->
     <appender name="ASYNC_ROLLING_FILE_ACCESS" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="ROLLING_FILE_ACCESS" />
         <queueSize>256</queueSize>
@@ -88,40 +76,27 @@
         <neverBlock>true</neverBlock>
     </appender>
 
-    <!-- File Appender -->
-    <appender name="ROLLING_FILE_ERROR"
-              class="ch.qos.logback.core.rolling.RollingFileAppender">
-
+    <!-- ERROR FILE APPENDER -->
+    <appender name="ROLLING_FILE_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
             <onMismatch>DENY</onMismatch>
         </filter>
-
         <file>${LOGS_ERROR}/nte.log</file>
-
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
         </encoder>
-
-        <rollingPolicy
-                class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <!-- rollover daily and when the file reaches 10 MegaBytes -->
-            <fileNamePattern>${LOGS_ERROR}/archived/nte-%d{yyyy-MM-dd}.%i.log
-            </fileNamePattern>
-            <!--로그 파일 분할-->
-            <timeBasedFileNamingAndTriggeringPolicy
-                    class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOGS_ERROR}/archived/nte-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
                 <maxFileSize>50MB</maxFileSize>
             </timeBasedFileNamingAndTriggeringPolicy>
-            <!--7일간만 보관-->
             <maxHistory>7</maxHistory>
-            <!--전체 로그 파일 용량-->
             <totalSizeCap>1GB</totalSizeCap>
         </rollingPolicy>
     </appender>
 
-    <!-- AsyncAppender -->
     <appender name="ASYNC_ROLLING_FILE_ERROR" class="ch.qos.logback.classic.AsyncAppender">
         <appender-ref ref="ROLLING_FILE_ERROR" />
         <queueSize>256</queueSize>
@@ -153,7 +128,7 @@
     <logger name="com.msas.scheduler" level="DEBUG"/>
     <logger name="com.msas.ses" level="DEBUG"/>
 
-    <!-- LOGGER -->
+    <!-- ROOT LOGGER -->
     <root level="INFO">
         <appender-ref ref="STDOUT"/>
         <appender-ref ref="ASYNC_ROLLING_FILE_TRACE"/>

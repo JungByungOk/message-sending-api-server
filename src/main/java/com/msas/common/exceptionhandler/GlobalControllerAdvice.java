@@ -1,7 +1,6 @@
 package com.msas.common.exceptionhandler;
 
-import com.amazonaws.Response;
-import com.amazonaws.services.simpleemail.model.AmazonSimpleEmailServiceException;
+import software.amazon.awssdk.services.ses.model.SesException;
 import com.msas.telegram.service.TelegramBotService;
 import com.pengrad.telegrambot.TelegramException;
 import lombok.extern.slf4j.Slf4j;
@@ -44,14 +43,14 @@ public class GlobalControllerAdvice {
      * "serviceName": "AmazonSimpleEmailService"
      * }
      */
-    @ExceptionHandler(AmazonSimpleEmailServiceException.class)
-    public ResponseEntity<ResponseErrorDTO> handleAmazonSimpleEmailServiceExceptions(AmazonSimpleEmailServiceException ex) {
+    @ExceptionHandler(SesException.class)
+    public ResponseEntity<ResponseErrorDTO> handleSesExceptions(SesException ex) {
 
         ResponseErrorDTO responseErrorDTO = ResponseErrorDTO.builder()
-                .serviceName(ex.getServiceName())
-                .errorCode(ex.getErrorCode())
-                .errorType(ex.getErrorType().name())
-                .errorMessage(ex.getErrorMessage())
+                .serviceName("AmazonSimpleEmailService")
+                .errorCode(ex.awsErrorDetails() != null ? ex.awsErrorDetails().errorCode() : "Unknown")
+                .errorType(ex.awsErrorDetails() != null ? ex.awsErrorDetails().sdkHttpResponse().statusCode() + "" : "Unknown")
+                .errorMessage(ex.getMessage())
                 .build();
 
         return new ResponseEntity<>(responseErrorDTO, HttpStatus.INTERNAL_SERVER_ERROR);

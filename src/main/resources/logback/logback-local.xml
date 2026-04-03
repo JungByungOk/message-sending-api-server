@@ -134,9 +134,8 @@
     <!-- TELEGRAM APPENDER -->
     <appender name="TELEGRAM" class="org.nftreally.TelegramAppender">
         <minInterval>1000</minInterval>
-        <botToken>5710353844:AAFJeWE2TxtH05yIeSycwQ4Cj71Gm6qzodA</botToken>
-        <!-- <chatId>-1001863623553</chatId> -->
-        <chatId>-1001867481964</chatId>
+        <botToken>${TELEGRAM_BOT_TOKEN}</botToken>
+        <chatId>${TELEGRAM_CHAT_ID}</chatId>
         <Layout class="ch.qos.logback.classic.PatternLayout">
             <Pattern>[%d{HH:mm:ss.SSS}] [%-5level] [%logger{%-36.36t}] - %msg%n</Pattern>
         </Layout>

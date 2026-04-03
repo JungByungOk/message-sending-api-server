@@ -9,7 +9,7 @@
         SET send_sts_cd          = #{send_sts_cd},
             stm_last_upd_dt      = now(),
             stm_last_upd_user_id = #{stm_last_upd_user_id}
-        WHERE email_send_dtl_seq = ${email_send_dtl_seq}
+        WHERE email_send_dtl_seq = #{email_send_dtl_seq}
 
     </update>
 
@@ -22,7 +22,7 @@
             ses_msg_id           = #{ses_msg_id},
             stm_last_upd_dt      = now(),
             stm_last_upd_user_id = #{stm_last_upd_user_id}
-        WHERE email_send_dtl_seq = ${email_send_dtl_seq}
+        WHERE email_send_dtl_seq = #{email_send_dtl_seq}
 
     </update>
 
@@ -80,6 +80,7 @@
         WHERE b.SEND_STS_CD = 'SR'
           and a.STM_FIR_REG_DT > date_add(now(), interval -1 week)
         LIMIT 0, 280
+        FOR UPDATE
     </select>
 
     <select id="getNewEmail" resultType="map">
