@@ -193,73 +193,6 @@ GET /ses/templates
 
 ---
 
-## 2. Telegram - 메시지 발송
-
-### 2.1 메시지 발송
-
-```
-POST /telegram/message
-```
-
-**Request Body**
-```json
-{
-  "channelName": "NFTReally.Notification",
-  "message": "알림 메시지 내용"
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| channelName | String | N | 채널명 (빈 값이면 기본 채널) |
-| message | String | N | 발송할 메시지 내용 |
-
-**Response** `200 OK`
-```json
-{
-  "message_id": 123,
-  "chat": { "id": -100123456789, "title": "채널명" },
-  "text": "알림 메시지 내용",
-  "date": 1700000000
-}
-```
-
----
-
-### 2.2 봇 정보 조회
-
-```
-GET /telegram/info
-```
-
-**Response** `200 OK`
-```json
-{
-  "id": 123456789,
-  "is_bot": true,
-  "first_name": "BotName",
-  "username": "bot_username"
-}
-```
-
----
-
-### 2.3 채널 ID 목록 조회
-
-```
-GET /telegram/ids
-```
-
-**Response** `200 OK`
-```json
-{
-  "NFTReally.Notification": -100123456789,
-  "NFTReally.BackEnd": -100987654321
-}
-```
-
----
-
 ## 3. Scheduler - 예약 발송
 
 ### 3.1 예약 작업 생성
@@ -473,13 +406,13 @@ DELETE /scheduler/job/all
 ### 4.1 신규 이메일 폴링
 
 - **주기**: 60초
-- **동작**: MariaDB에서 발송 대기 상태(`SR`)인 이메일을 최대 280건 조회 후 Quartz 스케줄러에 자동 등록
+- **동작**: PostgreSQL에서 발송 대기 상태(`SR`)인 이메일을 최대 280건 조회 후 Quartz 스케줄러에 자동 등록
 - **조회 범위**: 현재 시점으로부터 1주일 이내 데이터
 
 ### 4.2 발송 결과 폴링
 
 - **주기**: 60초
-- **동작**: AWS DynamoDB에서 SES 이벤트를 최대 300건 조회 후 MariaDB에 최종 상태 업데이트
+- **동작**: AWS DynamoDB에서 SES 이벤트를 최대 300건 조회 후 PostgreSQL에 최종 상태 업데이트
 - **이벤트 유형**: Delivery (발송 완료), Bounce (반송), Complaint (수신 거부)
 
 ---
@@ -522,16 +455,15 @@ DELETE /scheduler/job/all
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `DB_URL` | MariaDB JDBC URL | Y |
-| `DB_USERNAME` | MariaDB 사용자명 | Y |
-| `DB_PASSWORD` | MariaDB 비밀번호 | Y |
-| `QUARTZ_DB_URL` | Quartz용 MariaDB URL | Y |
+| `DB_URL` | PostgreSQL JDBC URL | Y |
+| `DB_USERNAME` | PostgreSQL 사용자명 | Y |
+| `DB_PASSWORD` | PostgreSQL 비밀번호 | Y |
+| `QUARTZ_DB_URL` | Quartz용 PostgreSQL URL | Y |
 | `QUARTZ_DB_USER` | Quartz용 사용자명 | Y |
 | `QUARTZ_DB_PASSWORD` | Quartz용 비밀번호 | Y |
-| `AWS_ACCESS_KEY` | AWS Access Key | Y |
-| `AWS_SECRET_KEY` | AWS Secret Key | Y |
-| `TELEGRAM_BOT_TOKEN` | Telegram Bot Token | Y |
-| `TELEGRAM_CHAT_ID` | Telegram Chat ID | N |
+| `AWS_ACCESS_KEY` | AWS Access Key | Y (dev: `test`) |
+| `AWS_SECRET_KEY` | AWS Secret Key | Y (dev: `test`) |
+| `AWS_ENDPOINT` | AWS Endpoint Override (LocalStack) | N (dev: `http://localhost:4566`) |
 | `API_KEY` | API 인증 키 | N (미설정 시 인증 비활성화) |
 
 ### 6.2 Application Properties

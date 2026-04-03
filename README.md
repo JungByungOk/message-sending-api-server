@@ -1,6 +1,6 @@
 # Message Sending API Server (NTE)
 
-멀티채널 메시지 발송 API 서버 - AWS SES 이메일, Telegram, Slack 메시지를 통합 관리하는 Spring Boot 기반 알림 서버
+멀티채널 메시지 발송 API 서버 - AWS SES 이메일, Slack 메시지를 통합 관리하는 Spring Boot 기반 알림 서버
 
 ## Project Structure
 
@@ -34,13 +34,14 @@ message-sending-api-server/
 |----------|-----------|
 | Framework | Spring Boot 3.4.1 |
 | Language | Java 17 |
-| Database | MariaDB 11, AWS DynamoDB |
+| Database | PostgreSQL 17, AWS DynamoDB |
 | ORM | MyBatis 3.0.4 |
 | Scheduler | Quartz (DB 기반) |
 | Cloud | AWS SES (SDK v2), AWS DynamoDB (SDK v2) |
-| Messaging | Telegram Bot API 7.11.0 |
 | Security | Spring Security (API Key 인증) |
+| API Docs | SpringDoc OpenAPI (Swagger UI) |
 | Build | Gradle, Docker (Multi-stage) |
+| Dev Tools | LocalStack (AWS Mock) |
 | Etc | Guava (RateLimiter), Gson, Lombok |
 
 ## Architecture
@@ -49,13 +50,13 @@ message-sending-api-server/
 ┌─────────────────────────────────────────────────────────┐
 │                    API Server (NTE)                      │
 │                     Port: 7092                           │
-├──────────┬──────────────┬────────────┬──────────────────┤
-│  SES     │  Telegram    │  Scheduler │  Polling Checker │
-│  Module  │  Module      │  Module    │  Module          │
-├──────────┴──────────────┴────────────┴──────────────────┤
+├──────────┬────────────┬────────────┬───────────────────┤
+│  SES     │  Tenant    │  Scheduler │  Polling Checker  │
+│  Module  │  Module    │  Module    │  Module           │
+├──────────┴────────────┴────────────┴───────────────────┤
 │              Spring Security (API Key)                   │
 ├─────────────────────────────────────────────────────────┤
-│  MariaDB (이메일/스케줄러)  │  DynamoDB (SES 이벤트)     │
+│  PostgreSQL (이메일/스케줄러)  │  DynamoDB (SES 이벤트)  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -72,13 +73,16 @@ message-sending-api-server/
 | `DELETE` | `/ses/template` | 이메일 템플릿 삭제 |
 | `GET` | `/ses/templates` | 템플릿 목록 조회 |
 
-### Telegram - 메시지 발송
+### Tenant - 테넌트 관리
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/telegram/message` | 채널별 메시지 발송 |
-| `GET` | `/telegram/info` | 봇 정보 조회 |
-| `GET` | `/telegram/ids` | 등록된 채널 ID 조회 |
+| `POST` | `/tenant` | 테넌트 등록 |
+| `GET` | `/tenant/{tenantId}` | 테넌트 조회 |
+| `GET` | `/tenant/list` | 테넌트 목록 조회 |
+| `PATCH` | `/tenant/{tenantId}` | 테넌트 수정 |
+| `DELETE` | `/tenant/{tenantId}` | 테넌트 비활성화 |
+| `POST` | `/tenant/{tenantId}/regenerate-key` | API Key 재발급 |
 
 ### Scheduler - 예약 발송
 
@@ -101,22 +105,23 @@ message-sending-api-server/
 - 메시지 태그 (캠페인/이벤트) 추적
 - 첨부파일 지원
 
+### Tenant 관리 (멀티테넌트)
+- 고객사별 테넌트 CRUD 관리
+- 테넌트별 API Key 발급/재발급
+- 도메인 등록 및 인증 상태 관리
+- 일/월 발송 쿼터 설정
+
 ### Quartz 스케줄러
-- DB 기반 예약 발송 (MariaDB)
+- DB 기반 예약 발송 (PostgreSQL)
 - 작업 상태 관리 (RUNNING, SCHEDULED, PAUSED, COMPLETE)
 - 작업 일시정지/재개/중지
 - Thread Pool: 10 threads
 
 ### Polling Checker
-- **신규 이메일 폴링**: MariaDB에서 60초 주기로 대기 이메일 확인 (최대 280건/회)
+- **신규 이메일 폴링**: PostgreSQL에서 60초 주기로 대기 이메일 확인 (최대 280건/회)
 - **발송 결과 폴링**: DynamoDB에서 60초 주기로 SES 이벤트 확인 (최대 300건/회)
 - Delivery, Bounce, Complaint 이벤트 추적
 - Blacklist 이메일 주소 필터링
-
-### Telegram
-- 멀티채널 메시지 발송
-- 채널명 기반 발송 (채널 ID 자동 매핑)
-- Long Polling 방식 업데이트 수신
 
 ### 보안
 - API Key 기반 인증
@@ -126,38 +131,53 @@ message-sending-api-server/
 ## Getting Started
 
 ### Prerequisites
-- Java 17+
-- MariaDB 11+
-- AWS 계정 (SES, DynamoDB)
-- Telegram Bot Token (선택)
+- Java 17 (빌드/실행용, JDK 25 환경에서는 JDK 17 지정 필요)
+- PostgreSQL 17+
+- Docker (LocalStack, PostgreSQL)
 
 ### Docker 실행
 
 ```bash
 cd backend
 
-# 환경변수 설정
-export AWS_ACCESS_KEY=your-access-key
-export AWS_SECRET_KEY=your-secret-key
-export TELEGRAM_BOT_TOKEN=your-bot-token
-export TELEGRAM_CHAT_ID=your-chat-id
-export API_KEY=your-api-key
+# PostgreSQL + LocalStack 실행
+docker-compose up -d postgres localstack
 
-# Docker Compose 실행
-docker-compose up -d
+# DynamoDB 테이블 생성 (최초 1회)
+docker exec -i nte-localstack awslocal dynamodb create-table \
+  --table-name SESEvents \
+  --attribute-definitions AttributeName=SESMessageId,AttributeType=S AttributeName=SnsPublishTime,AttributeType=S \
+  --key-schema AttributeName=SESMessageId,KeyType=HASH AttributeName=SnsPublishTime,KeyType=RANGE \
+  --billing-mode PAY_PER_REQUEST --region ap-northeast-2
+
+# PostgreSQL 테이블 생성 (최초 1회)
+docker exec -i nte-postgres psql -U nft -d nft < src/main/resources/sql/V1__init_tables.sql
+docker exec -i nte-postgres psql -U nft -d nft < src/main/resources/sql/quartz_tables_postgres.sql
 ```
 
-### 로컬 빌드
+### 로컬 빌드 (Windows)
 
 ```bash
 cd backend
+start.bat dev      # 빌드 + 실행 (dev 프로필)
+start.bat prod     # 빌드 + 실행 (prod 프로필)
+```
 
-# 빌드
+### 로컬 빌드 (Linux/Mac)
+
+```bash
+cd backend
 ./gradlew bootJar
-
-# 실행
 java -Dspring.profiles.active=dev -jar build/libs/nte.jar
 ```
+
+### 주요 URL
+
+| URL | Description |
+|-----|-------------|
+| http://localhost:7092/swagger-ui/index.html | Swagger UI |
+| http://localhost:7092/v3/api-docs | OpenAPI Docs |
+| http://localhost:7092/actuator/health | Health Check |
 
 ## Deployment
 
@@ -171,7 +191,6 @@ java -Dspring.profiles.active=dev -jar build/libs/nte.jar
 - **외부 설정**: `/svc/nte/config/nte-config.yml` 파일로 내부 Properties 오버라이드 가능
   - Database 접속 정보
   - AWS 인증 정보
-  - Telegram 봇 설정
 
 ## Backend Structure
 
@@ -181,9 +200,11 @@ backend/src/main/java/com/msas/
 │   ├── exceptionhandler/    # 글로벌 예외 처리
 │   ├── httplog/             # HTTP 요청/응답 로깅
 │   ├── security/            # API Key 인증
+│   ├── swagger/             # Swagger 설정
+│   ├── tenant/              # TenantContext (ThreadLocal)
 │   └── utils/               # 유틸리티
+├── tenant/                  # 테넌트 관리 모듈
 ├── ses/                     # AWS SES 이메일 모듈
-├── telegram/                # Telegram 봇 모듈
 ├── scheduler/               # Quartz 스케줄러 모듈
 └── pollingchecker/          # 이메일 상태 폴링 모듈
 ```
@@ -192,5 +213,5 @@ backend/src/main/java/com/msas/
 
 - [AWS SES SDK Spring Boot](https://github.com/Rajithkonara/aws-ses-sdk-spring-boot)
 - [Quartz Scheduler Documentation](http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials)
-- [Telegram Bot API](https://core.telegram.org/bots/api)
-- [Java Telegram Bot API](https://github.com/pengrad/java-telegram-bot-api)
+- [SpringDoc OpenAPI](https://springdoc.org/)
+- [LocalStack](https://docs.localstack.cloud/)

@@ -73,7 +73,6 @@ Backend와 Frontend에서 공통으로 적용되는 기능 명세입니다.
 | prod | INFO | Console + File |
 
 ### Logback Appender
-- Telegram Appender: 에러 발생 시 Telegram 채널로 알림 발송
 - Slack Appender: (예정)
 
 ---
@@ -138,7 +137,7 @@ SR (발송 대기)
 
 | 항목 | 기본값 | 설명 |
 |------|--------|------|
-| 신규 이메일 폴링 주기 | 60,000ms (1분) | MariaDB 대기 이메일 조회 |
+| 신규 이메일 폴링 주기 | 60,000ms (1분) | PostgreSQL 대기 이메일 조회 |
 | 신규 이메일 조회 건수 | 280건 | 1회 폴링당 최대 처리 건수 |
 | 발송 결과 폴링 주기 | 60,000ms (1분) | DynamoDB SES 이벤트 조회 |
 | 발송 결과 조회 건수 | 300건 | 1회 폴링당 최대 처리 건수 |

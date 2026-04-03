@@ -324,7 +324,6 @@ backend/src/main/java/com/msas/
 |   |-- controller/
 |   +-- service/
 |-- gateway/                 # API Gateway 클라이언트 [NEW]
-|-- telegram/
 |-- scheduler/
 +-- pollingchecker/          # (UPDATED - tenant_id 적용)
 ```

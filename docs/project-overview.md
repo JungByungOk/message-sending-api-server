@@ -6,7 +6,7 @@
 
 ### 목적
 
-다양한 채널(이메일, Telegram, Slack)을 통한 메시지 발송을 하나의 API 서버에서 통합 관리합니다.
+다양한 채널(이메일, Slack)을 통한 메시지 발송을 하나의 API 서버에서 통합 관리하며, 멀티테넌트 SaaS 아키텍처를 지원합니다.
 
 ### 시스템 구성
 
@@ -19,15 +19,15 @@
 │                    Backend (Spring Boot)                        │
 │                        Port: 7092                              │
 │                                                                │
-│  ┌──────────┐ ┌───────────┐ ┌───────────┐ ┌────────────────┐ │
-│  │ SES      │ │ Telegram  │ │ Scheduler │ │ Polling        │ │
-│  │ Module   │ │ Module    │ │ Module    │ │ Checker        │ │
-│  └────┬─────┘ └─────┬─────┘ └─────┬─────┘ └───────┬────────┘ │
-└───────┼─────────────┼─────────────┼───────────────┼───────────┘
-        │             │             │               │
-   ┌────▼────┐  ┌─────▼─────┐ ┌────▼─────┐  ┌──────▼──────┐
-   │ AWS SES │  │ Telegram  │ │ MariaDB  │  │ AWS         │
-   │         │  │ Bot API   │ │ (Quartz) │  │ DynamoDB    │
+│  ┌──────────┐ ┌──────────┐ ┌───────────┐ ┌────────────────┐  │
+│  │ SES      │ │ Tenant   │ │ Scheduler │ │ Polling        │  │
+│  │ Module   │ │ Module   │ │ Module    │ │ Checker        │  │
+│  └────┬─────┘ └────┬─────┘ └─────┬─────┘ └───────┬────────┘  │
+└───────┼────────────┼─────────────┼───────────────┼────────────┘
+        │            │             │               │
+   ┌────▼────┐  ┌────▼──────┐ ┌───▼──────┐  ┌─────▼───────┐
+   │ AWS SES │  │PostgreSQL │ │PostgreSQL│  │ AWS         │
+   │         │  │ (Tenant)  │ │ (Quartz) │  │ DynamoDB    │
    └─────────┘  └───────────┘ └──────────┘  └─────────────┘
 ```
 
@@ -36,9 +36,9 @@
 | Module | Description | 외부 연동 |
 |--------|-------------|-----------|
 | SES Module | 이메일 발송 및 템플릿 관리 | AWS SES |
-| Telegram Module | 멀티채널 Telegram 메시지 발송 | Telegram Bot API |
-| Scheduler Module | Quartz 기반 예약 발송 관리 | MariaDB |
-| Polling Checker | 발송 대기 이메일 자동 처리 및 결과 추적 | MariaDB, AWS DynamoDB |
+| Tenant Module | 멀티테넌트 고객사 관리, API Key 발급 | PostgreSQL |
+| Scheduler Module | Quartz 기반 예약 발송 관리 | PostgreSQL |
+| Polling Checker | 발송 대기 이메일 자동 처리 및 결과 추적 | PostgreSQL, AWS DynamoDB |
 
 ### 기술 스택
 
@@ -46,13 +46,14 @@
 |-------|-----------|
 | Backend | Spring Boot 3.4.1, Java 17 |
 | Frontend | (예정) |
-| Database | MariaDB 11, AWS DynamoDB |
+| Database | PostgreSQL 17, AWS DynamoDB |
 | ORM | MyBatis 3.0.4 |
 | Scheduler | Quartz (DB Store) |
 | Cloud | AWS SES SDK v2, AWS DynamoDB SDK v2 |
-| Messaging | Telegram Bot API 7.11.0 |
+| API Docs | SpringDoc OpenAPI (Swagger UI) |
 | Security | Spring Security (API Key) |
 | Build | Gradle, Docker (Multi-stage) |
+| Dev Tools | LocalStack (AWS Mock) |
 | Monitoring | Spring Actuator |
 
 ### 데이터 흐름
@@ -60,13 +61,13 @@
 #### 이메일 발송 흐름
 
 ```
-1. [외부 시스템] → MariaDB에 이메일 데이터 INSERT (상태: SR)
+1. [외부 시스템] → PostgreSQL에 이메일 데이터 INSERT (상태: SR)
 2. [Polling Checker] → 60초 주기로 SR 상태 이메일 조회 (최대 280건)
 3. [Polling Checker] → Quartz 스케줄러에 발송 작업 등록 (상태: SS)
 4. [Scheduler] → AWS SES API로 이메일 발송 (상태: SE)
 5. [AWS SES] → SNS → Lambda → DynamoDB에 이벤트 기록
 6. [Polling Checker] → 60초 주기로 DynamoDB 이벤트 조회 (최대 300건)
-7. [Polling Checker] → MariaDB에 최종 상태 업데이트 (SD/SB/SC)
+7. [Polling Checker] → PostgreSQL에 최종 상태 업데이트 (SD/SB/SC)
 ```
 
 #### 직접 API 발송 흐름
