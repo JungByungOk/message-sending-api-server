@@ -1,8 +1,6 @@
 package com.msas.common.exceptionhandler;
 
 import software.amazon.awssdk.services.ses.model.SesException;
-import com.msas.telegram.service.TelegramBotService;
-import com.pengrad.telegrambot.TelegramException;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.SchedulerException;
 import org.springframework.http.HttpStatus;
@@ -38,7 +36,7 @@ public class GlobalControllerAdvice {
      * AWS SES 예외 처리 및 에러 응답
      * {
      * "errorType": "Client",
-     * "errorMessage": "Email address is not verified. The following identities failed the check in region AP-NORTHEAST-2: no1-reply@nftreally.io",
+     * "errorMessage": "Email address is not verified. The following identities failed the check in region AP-NORTHEAST-2: no1-reply@joins.com",
      * "errorCode": "MessageRejected",
      * "serviceName": "AmazonSimpleEmailService"
      * }
@@ -61,18 +59,6 @@ public class GlobalControllerAdvice {
 
         ResponseErrorDTO responseErrorDTO = ResponseErrorDTO.builder()
                 .serviceName("Scheduler(Quartz)")
-                .errorType(ex.getClass().getTypeName())
-                .errorMessage(ex.getMessage())
-                .build();
-
-        return new ResponseEntity<>(responseErrorDTO, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @ExceptionHandler(TelegramException.class)
-    public ResponseEntity<ResponseErrorDTO> handleTelegramServiceExceptions(TelegramException ex) {
-
-        ResponseErrorDTO responseErrorDTO = ResponseErrorDTO.builder()
-                .serviceName("TelegramBot")
                 .errorType(ex.getClass().getTypeName())
                 .errorMessage(ex.getMessage())
                 .build();

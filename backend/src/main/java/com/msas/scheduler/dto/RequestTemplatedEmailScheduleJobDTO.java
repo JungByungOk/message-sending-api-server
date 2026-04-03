@@ -18,7 +18,7 @@ Sample
     "description": "스케쥴 작업 등록 테스트",
     "startDateAt": "2023-10-30T14:15:00",
     "templateName": "TEST-Template-Welcome",
-    "from": "no-reply@nftreally.io",
+    "from": "no-reply@joins.com",
     "templatedEmailList": [
         {
             "to": [

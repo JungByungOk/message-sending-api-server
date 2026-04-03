@@ -100,7 +100,7 @@ class MariaDBTest {
         // when
         try {
 
-            result = sesMariaDBRepository.InsertBlacklistEmail("test1@nftreally.io", "BOUNCE", serverName);
+            result = sesMariaDBRepository.InsertBlacklistEmail("test1@joins.com", "BOUNCE", serverName);
 
         }
         catch(DuplicateKeyException e)

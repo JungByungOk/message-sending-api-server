@@ -14,14 +14,6 @@ aws:
     secret-key: ${AWS_SECRET_KEY}
 
 #################################################
-# bot
-#################################################
-bot:
-  telegram:
-    token-id: ${TELEGRAM_BOT_TOKEN}
-    channel-names: NFTReally.Dev.BackEnd
-
-#################################################
 # polling checker
 #################################################
 polling:
