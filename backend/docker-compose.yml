@@ -9,42 +9,60 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=local
       # Database
-      - DB_URL=jdbc:mariadb://mariadb:3306/nft
+      - DB_URL=jdbc:postgresql://postgres:5432/nft
       - DB_USERNAME=nft
       - DB_PASSWORD=nft
-      - QUARTZ_DB_URL=jdbc:mariadb://mariadb:3306/nft
+      - QUARTZ_DB_URL=jdbc:postgresql://postgres:5432/nft
       - QUARTZ_DB_USER=nft
       - QUARTZ_DB_PASSWORD=nft
       # AWS
-      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
-      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
-      # Telegram
-      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
-      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
+      - AWS_ACCESS_KEY=test
+      - AWS_SECRET_KEY=test
+      - AWS_ENDPOINT=http://localstack:4566
       # Security
       - API_KEY=${API_KEY}
     depends_on:
-      mariadb:
+      postgres:
+        condition: service_healthy
+      localstack:
         condition: service_healthy
     restart: unless-stopped
 
-  mariadb:
-    image: mariadb:11
-    container_name: nte-mariadb
+  localstack:
+    image: localstack/localstack:4.4
+    container_name: nte-localstack
     ports:
-      - "3306:3306"
+      - "4566:4566"
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=nft
-      - MYSQL_USER=nft
-      - MYSQL_PASSWORD=nft
+      - SERVICES=ses,dynamodb,sqs,sns
+      - DEFAULT_REGION=ap-northeast-2
+      - LOCALSTACK_ACKNOWLEDGE_ACCOUNT_REQUIREMENT=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
-      - mariadb-data:/var/lib/mysql
+      - localstack-data:/var/lib/localstack
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:17
+    container_name: nte-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=nft
+      - POSTGRES_USER=nft
+      - POSTGRES_PASSWORD=nft
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nft -d nft"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
-  mariadb-data:
+  postgres-data:
+  localstack-data:

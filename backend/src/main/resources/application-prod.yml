@@ -4,6 +4,3 @@ spring:
   config:
     import: optional:/svc/nte/config/nte-config-prod.yml
 
-bot:
-  telegram:
-    channel-names: NFTReally.Notification, NFTReally.BackEnd, NFTReally.NTE, NFTReally.NTC, NFTReally.NTS, NFTReally.NBS, NFTReally.NBA, NFTReally.Deploy

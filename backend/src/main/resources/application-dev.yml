@@ -3,6 +3,29 @@
 spring:
   config:
     import: optional:/svc/nte/config/nte-config-dev.yml
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/nft}
+    username: ${DB_USERNAME:nft}
+    password: ${DB_PASSWORD:nft}
+  quartz:
+    jdbc:
+      initialize-schema: always
+    properties:
+      org.quartz.dataSource.quartzDataSource.URL: ${QUARTZ_DB_URL:jdbc:postgresql://localhost:5432/nft}
+      org.quartz.dataSource.quartzDataSource.user: ${QUARTZ_DB_USER:nft}
+      org.quartz.dataSource.quartzDataSource.password: ${QUARTZ_DB_PASSWORD:nft}
+
+aws:
+  endpoint: ${AWS_ENDPOINT:http://localhost:4566}
+  dynamo:
+    access-key: ${AWS_ACCESS_KEY:test}
+    secret-key: ${AWS_SECRET_KEY:test}
+  ses:
+    access-key: ${AWS_ACCESS_KEY:test}
+    secret-key: ${AWS_SECRET_KEY:test}
+
+security:
+  api-key: ${API_KEY:}
 
 management:
   endpoints:
@@ -12,7 +35,3 @@ management:
   endpoint:
     health:
       show-details: always
-
-bot:
-  telegram:
-    channel-names: NFTReally.Dev.BackEnd

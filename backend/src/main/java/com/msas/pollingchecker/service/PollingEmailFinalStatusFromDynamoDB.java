@@ -10,7 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 
 import java.util.Comparator;
 import java.util.List;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 @Slf4j
+@ConditionalOnBean(DynamoDbClient.class)
 public class PollingEmailFinalStatusFromDynamoDB {
 
     private final SESDynamoDBRepository sesEventsDynamoDBRepository;

@@ -5,6 +5,7 @@ import com.msas.ses.dto.*;
 import com.msas.ses.exception.AwsSesClientException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.ses.SesClient;
 import software.amazon.awssdk.services.ses.model.*;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
+@ConditionalOnBean(SesClient.class)
 public class SESMailService {
     private static final String CHAR_SET = "UTF-8";
 

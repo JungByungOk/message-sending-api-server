@@ -9,6 +9,3 @@ management:
     health:
       show-details: always
 
-bot:
-  telegram:
-    channel-names: NFTReally.Notification, NFTReally.BackEnd, NFTReally.NTE, NFTReally.NTC, NFTReally.NTS, NFTReally.NBS, NFTReally.NBA

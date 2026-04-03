@@ -37,10 +37,10 @@ spring:
       # Database Store
       org.quartz.jobStore.class: org.quartz.impl.jdbcjobstore.JobStoreTX
       org.quartz.dataSource.quartzDataSource.provider: hikaricp
-      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
       org.quartz.jobStore.dataSource: quartzDataSource
       #
-      org.quartz.dataSource.quartzDataSource.driver: org.mariadb.jdbc.Driver
+      org.quartz.dataSource.quartzDataSource.driver: org.postgresql.Driver
       org.quartz.dataSource.quartzDataSource.URL: ${QUARTZ_DB_URL}
       org.quartz.dataSource.quartzDataSource.user: ${QUARTZ_DB_USER}
       org.quartz.dataSource.quartzDataSource.password: ${QUARTZ_DB_PASSWORD}
@@ -58,14 +58,14 @@ spring:
   # database
   #################################################
   datasource:
-    name: NFTReally-Database
-    driver-class-name: org.mariadb.jdbc.Driver
+    name: Joins-Database
+    driver-class-name: org.postgresql.Driver
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 10
-      pool-name: NFTReally-HikariCP
+      pool-name: Joins-HikariCP
 
 #################################################
 # AWS {SES, DynamoDB}
@@ -93,13 +93,6 @@ management:
       enabled: true
     health:
       show-details: when-authorized
-
-#################################################
-# bot
-#################################################
-bot:
-  telegram:
-    token-id: ${TELEGRAM_BOT_TOKEN}
 
 #################################################
 # polling checker

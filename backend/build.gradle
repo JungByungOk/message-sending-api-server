@@ -20,12 +20,8 @@ repositories {
 
 dependencies {
 
-    // nftreally-logback for test
-    implementation files('libs/nftreally-logback.jar')
-
-    // TelegramBot
-    // https://mvnrepository.com/artifact/com.github.pengrad/java-telegram-bot-api
-    implementation 'com.github.pengrad:java-telegram-bot-api:7.11.0'
+    // JetBrains Annotations
+    implementation 'org.jetbrains:annotations:26.0.1'
 
     // AWS SDK v2 BOM
     implementation platform('software.amazon.awssdk:bom:2.29.0')
@@ -44,9 +40,8 @@ dependencies {
     // Guava (RateLimiter)
     implementation 'com.google.guava:guava:33.3.1-jre'
 
-    // MariaDB JDBC
-    // https://mvnrepository.com/artifact/org.mariadb.jdbc/mariadb-java-client
-    implementation group: 'org.mariadb.jdbc', name: 'mariadb-java-client', version: '3.4.1'
+    // PostgreSQL JDBC
+    implementation 'org.postgresql:postgresql'
 
     // Mybatis
     // https://mvnrepository.com/artifact/org.mybatis.spring.boot/mybatis-spring-boot-starter
@@ -58,6 +53,9 @@ dependencies {
 
     // Spring Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // Apache HttpClient 5 (Spring Boot 3.4 HTTP client)
+    implementation 'org.apache.httpcomponents.client5:httpclient5'
 
     // default
     implementation 'org.springframework.boot:spring-boot-starter-quartz'

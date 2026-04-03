@@ -18,26 +18,26 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        boolean useApiKey = apiKey != null && !apiKey.isBlank();
+
         http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // Actuator health/info는 인증 없이 허용
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        // Swagger UI 인증 없이 허용
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        // SES Feedback (AWS SNS 콜백)은 인증 없이 허용
-                        .requestMatchers("/ses/feedback/**").permitAll()
-                        // API Key가 설정되지 않은 경우 전체 허용 (하위 호환)
-                        .anyRequest().authenticated()
-                );
+                        .requestMatchers("/ses/feedback/**").permitAll();
 
-        if (apiKey != null && !apiKey.isBlank()) {
+                    if (useApiKey) {
+                        auth.anyRequest().authenticated();
+                    } else {
+                        auth.anyRequest().permitAll();
+                    }
+                });
+
+        if (useApiKey) {
             http.addFilterBefore(new ApiKeyAuthenticationFilter(apiKey),
                     UsernamePasswordAuthenticationFilter.class);
-        } else {
-            // API Key 미설정 시 전체 허용
-            http.authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         }
 
         return http.build();
