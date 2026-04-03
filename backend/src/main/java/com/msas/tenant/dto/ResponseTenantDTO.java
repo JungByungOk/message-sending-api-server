@@ -1,0 +1,21 @@
+package com.msas.tenant.dto;
+
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+@Data
+public class ResponseTenantDTO {
+
+    private String tenantId;
+    private String tenantName;
+    private String domain;
+    private String apiKey;
+    private String configSetName;
+    private String verificationStatus;
+    private Integer quotaDaily;
+    private Integer quotaMonthly;
+    private String status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+}

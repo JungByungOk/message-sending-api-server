@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.msas.tenant.repository.TenantRepository">
+
+    <resultMap id="TenantEntityResultMap" type="com.msas.tenant.entity.TenantEntity">
+        <id     property="tenantId"           column="tenant_id"/>
+        <result property="tenantName"         column="tenant_name"/>
+        <result property="domain"             column="domain"/>
+        <result property="apiKey"             column="api_key"/>
+        <result property="configSetName"      column="config_set_name"/>
+        <result property="verificationStatus" column="verification_status"/>
+        <result property="quotaDaily"         column="quota_daily"/>
+        <result property="quotaMonthly"       column="quota_monthly"/>
+        <result property="status"             column="status"/>
+        <result property="createdAt"          column="created_at"/>
+        <result property="updatedAt"          column="updated_at"/>
+    </resultMap>
+
+    <insert id="insertTenant" parameterType="com.msas.tenant.entity.TenantEntity">
+        INSERT INTO TENANT_REGISTRY
+        (
+            tenant_id,
+            tenant_name,
+            domain,
+            api_key,
+            config_set_name,
+            verification_status,
+            quota_daily,
+            quota_monthly,
+            status,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            #{tenantId},
+            #{tenantName},
+            #{domain},
+            #{apiKey},
+            #{configSetName},
+            #{verificationStatus},
+            #{quotaDaily},
+            #{quotaMonthly},
+            #{status},
+            #{createdAt},
+            #{updatedAt}
+        )
+    </insert>
+
+    <select id="selectTenantById" parameterType="String" resultMap="TenantEntityResultMap">
+        SELECT
+            tenant_id,
+            tenant_name,
+            domain,
+            api_key,
+            config_set_name,
+            verification_status,
+            quota_daily,
+            quota_monthly,
+            status,
+            created_at,
+            updated_at
+        FROM TENANT_REGISTRY
+        WHERE tenant_id = #{tenantId}
+    </select>
+
+    <select id="selectTenantByApiKey" parameterType="String" resultMap="TenantEntityResultMap">
+        SELECT
+            tenant_id,
+            tenant_name,
+            domain,
+            api_key,
+            config_set_name,
+            verification_status,
+            quota_daily,
+            quota_monthly,
+            status,
+            created_at,
+            updated_at
+        FROM TENANT_REGISTRY
+        WHERE api_key = #{apiKey}
+    </select>
+
+    <select id="selectTenantByDomain" parameterType="String" resultMap="TenantEntityResultMap">
+        SELECT
+            tenant_id,
+            tenant_name,
+            domain,
+            api_key,
+            config_set_name,
+            verification_status,
+            quota_daily,
+            quota_monthly,
+            status,
+            created_at,
+            updated_at
+        FROM TENANT_REGISTRY
+        WHERE domain = #{domain}
+    </select>
+
+    <select id="selectTenantList" resultMap="TenantEntityResultMap">
+        SELECT
+            tenant_id,
+            tenant_name,
+            domain,
+            api_key,
+            config_set_name,
+            verification_status,
+            quota_daily,
+            quota_monthly,
+            status,
+            created_at,
+            updated_at
+        FROM TENANT_REGISTRY
+        <where>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="selectTenantCount" resultType="int">
+        SELECT COUNT(*)
+        FROM TENANT_REGISTRY
+        <where>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <update id="updateTenant" parameterType="com.msas.tenant.entity.TenantEntity">
+        UPDATE TENANT_REGISTRY
+        <set>
+            <if test="tenantName != null">tenant_name = #{tenantName},</if>
+            <if test="quotaDaily != null">quota_daily = #{quotaDaily},</if>
+            <if test="quotaMonthly != null">quota_monthly = #{quotaMonthly},</if>
+            updated_at = #{updatedAt}
+        </set>
+        WHERE tenant_id = #{tenantId}
+    </update>
+
+    <update id="updateTenantStatus">
+        UPDATE TENANT_REGISTRY
+        SET
+            status     = #{status},
+            updated_at = NOW()
+        WHERE tenant_id = #{tenantId}
+    </update>
+
+    <update id="updateVerificationStatus">
+        UPDATE TENANT_REGISTRY
+        SET
+            verification_status = #{verificationStatus},
+            updated_at          = NOW()
+        WHERE tenant_id = #{tenantId}
+    </update>
+
+    <update id="updateApiKey">
+        UPDATE TENANT_REGISTRY
+        SET
+            api_key    = #{apiKey},
+            updated_at = NOW()
+        WHERE tenant_id = #{tenantId}
+    </update>
+
+</mapper>
