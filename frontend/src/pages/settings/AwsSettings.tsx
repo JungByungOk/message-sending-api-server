@@ -258,21 +258,25 @@ export default function AwsSettingsPage() {
                 />
               )}
 
-              <Form.Item
-                label="Callback URL"
-                name="callbackUrl"
-                help="Lambda가 이벤트를 전송할 ESM 엔드포인트"
-              >
-                <Input placeholder="https://esm-server/ses/callback/event" />
-              </Form.Item>
+              {deliveryMode === 'callback' && (
+                <>
+                  <Form.Item
+                    label="Callback URL"
+                    name="callbackUrl"
+                    help="Lambda가 이벤트를 전송할 ESM 엔드포인트"
+                  >
+                    <Input placeholder="https://esm-server/ses/callback/event" />
+                  </Form.Item>
 
-              <Form.Item
-                label="Callback Secret"
-                name="callbackSecret"
-                help={settings?.callbackSecretMasked ? `현재: ${settings.callbackSecretMasked}` : '요청 무결성 검증용 시크릿'}
-              >
-                <Input.Password placeholder="비워두면 기존 값 유지" />
-              </Form.Item>
+                  <Form.Item
+                    label="Callback Secret"
+                    name="callbackSecret"
+                    help={settings?.callbackSecretMasked ? `현재: ${settings.callbackSecretMasked}` : '요청 무결성 검증용 시크릿'}
+                  >
+                    <Input.Password placeholder="비워두면 기존 값 유지" />
+                  </Form.Item>
+                </>
+              )}
 
               <Form.Item label="보정 폴링 주기" name="pollingInterval">
                 <Select options={POLLING_OPTIONS} />
