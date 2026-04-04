@@ -21,17 +21,20 @@ import {
 import {
   ApiOutlined,
   ArrowLeftOutlined,
+  DeleteOutlined,
   EditOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
   KeyOutlined,
+  MailOutlined,
+  PlusOutlined,
   ReloadOutlined,
   SafetyOutlined,
   SettingOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useTenant, useUpdateTenant, useRegenerateApiKey } from '@/hooks/useTenants';
+import { useTenant, useUpdateTenant, useRegenerateApiKey, useSenders, useAddSender, useRemoveSender } from '@/hooks/useTenants';
 import type { UpdateTenantRequest } from '@/types/tenant';
 import StatusTag from '@/components/StatusTag';
 import PageHeader from '@/components/PageHeader';
@@ -46,8 +49,13 @@ export default function TenantDetail() {
   const { mutate: regenerate, isPending: isRegenerating } = useRegenerateApiKey();
 
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [senderModalOpen, setSenderModalOpen] = useState(false);
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [form] = Form.useForm<UpdateTenantRequest>();
+  const [senderForm] = Form.useForm();
+  const { data: senders, isLoading: isSendersLoading } = useSenders(id);
+  const { mutate: addSender, isPending: isAddingSender } = useAddSender();
+  const { mutate: removeSender } = useRemoveSender();
 
   const handleEditOpen = () => {
     if (!tenant) return;
@@ -376,6 +384,104 @@ export default function TenantDetail() {
         </div>
       ),
     },
+    {
+      key: 'senders',
+      label: (
+        <Space size={6}>
+          <MailOutlined />
+          발신자 관리
+        </Space>
+      ),
+      children: (
+        <div style={{ padding: '8px 0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div>
+              <Title level={5} style={{ margin: 0 }}>등록된 발신자</Title>
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                @{tenant.domain} 도메인의 이메일만 등록 가능합니다.
+              </Text>
+            </div>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                senderForm.resetFields();
+                setSenderModalOpen(true);
+              }}
+              style={{ borderRadius: 8 }}
+            >
+              발신자 추가
+            </Button>
+          </div>
+
+          {isSendersLoading ? (
+            <Skeleton active />
+          ) : !senders || senders.length === 0 ? (
+            <Card style={{ borderRadius: 10, border: '1px solid #e5e8ed', background: '#fafbfc', textAlign: 'center', padding: 32 }}>
+              <MailOutlined style={{ fontSize: 32, color: '#d1d5db', marginBottom: 8 }} />
+              <div>
+                <Text type="secondary">등록된 발신자가 없습니다.</Text>
+              </div>
+              <div style={{ marginTop: 4 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>발신자를 추가하면 이메일 발송 시 선택할 수 있습니다.</Text>
+              </div>
+            </Card>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {senders.map((sender) => (
+                <Card
+                  key={sender.id}
+                  size="small"
+                  style={{ borderRadius: 8, border: '1px solid #e5e8ed' }}
+                  bodyStyle={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: 8,
+                      background: 'rgba(22,119,255,0.08)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <MailOutlined style={{ color: '#1677ff' }} />
+                    </div>
+                    <div>
+                      <Text strong style={{ fontSize: 14 }}>{sender.email}</Text>
+                      {sender.displayName && (
+                        <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
+                          {sender.displayName}
+                        </Text>
+                      )}
+                    </div>
+                    {sender.isDefault && (
+                      <span style={{
+                        fontSize: 11, fontWeight: 600, color: '#1677ff',
+                        background: 'rgba(22,119,255,0.08)', padding: '2px 8px',
+                        borderRadius: 4, border: '1px solid rgba(22,119,255,0.2)',
+                      }}>
+                        기본
+                      </span>
+                    )}
+                  </div>
+                  <Popconfirm
+                    title="발신자 삭제"
+                    description={`${sender.email}을 삭제하시겠습니까?`}
+                    onConfirm={() => {
+                      removeSender({ tenantId: id, email: sender.email }, {
+                        onSuccess: () => void message.success('발신자가 삭제되었습니다.'),
+                      });
+                    }}
+                    okText="삭제"
+                    cancelText="취소"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button type="text" danger icon={<DeleteOutlined />} size="small" />
+                  </Popconfirm>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -488,6 +594,82 @@ export default function TenantDetail() {
               parser={(val) => Number((val ?? '').replace(/,/g, '')) as number}
               addonAfter="건"
             />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 발신자 추가 모달 */}
+      <Modal
+        title={
+          <Space>
+            <div style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'rgba(22,119,255,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <MailOutlined style={{ color: '#1677ff' }} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>발신자 추가</div>
+              <div style={{ fontSize: 13, color: '#9ca3af', fontWeight: 400 }}>
+                @{tenant.domain} 도메인만 허용됩니다.
+              </div>
+            </div>
+          </Space>
+        }
+        open={senderModalOpen}
+        onCancel={() => setSenderModalOpen(false)}
+        onOk={() => senderForm.submit()}
+        okText="등록"
+        cancelText="취소"
+        confirmLoading={isAddingSender}
+        width={480}
+      >
+        <Form
+          form={senderForm}
+          layout="vertical"
+          onFinish={(values: { email: string; displayName?: string; isDefault?: boolean }) => {
+            addSender(
+              { tenantId: id, sender: values },
+              {
+                onSuccess: () => {
+                  void message.success('발신자가 등록되었습니다.');
+                  setSenderModalOpen(false);
+                  senderForm.resetFields();
+                },
+              },
+            );
+          }}
+          style={{ marginTop: 16 }}
+          requiredMark={false}
+        >
+          <Form.Item
+            name="email"
+            label={<Text style={{ fontWeight: 500 }}>발신자 이메일</Text>}
+            rules={[
+              { required: true, message: '이메일을 입력하세요.' },
+              { type: 'email', message: '올바른 이메일 형식이 아닙니다.' },
+              {
+                validator: (_, value) => {
+                  if (value && !value.endsWith(`@${tenant.domain}`)) {
+                    return Promise.reject(`@${tenant.domain} 도메인만 허용됩니다.`);
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <Input
+              placeholder={`예: no-reply@${tenant.domain}`}
+              prefix={<MailOutlined style={{ color: '#9ca3af' }} />}
+              size="large"
+            />
+          </Form.Item>
+          <Form.Item
+            name="displayName"
+            label={<Text style={{ fontWeight: 500 }}>표시 이름 (선택)</Text>}
+          >
+            <Input placeholder="예: MyCompany 고객센터" size="large" />
           </Form.Item>
         </Form>
       </Modal>
