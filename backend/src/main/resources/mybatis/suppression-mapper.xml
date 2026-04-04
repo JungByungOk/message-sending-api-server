@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.msas.suppression.SuppressionRepository">
+
+    <resultMap id="SuppressionEntityResultMap" type="com.msas.suppression.SuppressionEntity">
+        <id     property="id"        column="id"/>
+        <result property="tenantId"  column="tenant_id"/>
+        <result property="email"     column="email"/>
+        <result property="reason"    column="reason"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="findByTenantId" resultMap="SuppressionEntityResultMap">
+        SELECT id, tenant_id, email, reason, created_at
+        FROM SUPPRESSION_LIST
+        WHERE tenant_id = #{tenantId}
+        ORDER BY created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="findByTenantIdAndEmail" resultMap="SuppressionEntityResultMap">
+        SELECT id, tenant_id, email, reason, created_at
+        FROM SUPPRESSION_LIST
+        WHERE tenant_id = #{tenantId}
+          AND email = #{email}
+        LIMIT 1
+    </select>
+
+    <select id="countByTenantId" resultType="int">
+        SELECT COUNT(*)
+        FROM SUPPRESSION_LIST
+        WHERE tenant_id = #{tenantId}
+    </select>
+
+    <insert id="insert" parameterType="com.msas.suppression.SuppressionEntity">
+        INSERT INTO SUPPRESSION_LIST (tenant_id, email, reason, created_at)
+        VALUES (#{tenantId}, #{email}, #{reason}, #{createdAt})
+    </insert>
+
+    <delete id="deleteByTenantIdAndEmail">
+        DELETE FROM SUPPRESSION_LIST
+        WHERE tenant_id = #{tenantId}
+          AND email = #{email}
+    </delete>
+
+</mapper>

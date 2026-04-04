@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class TenantService {
 
     private static final int API_KEY_BYTES = 24;
-    private static final String API_KEY_PREFIX = "nte_";
+    private static final String API_KEY_PREFIX = "sk-";
     private static final String STATUS_ACTIVE = "ACTIVE";
     private static final String STATUS_INACTIVE = "INACTIVE";
     private static final String VERIFICATION_PENDING = "PENDING";
@@ -31,15 +31,20 @@ public class TenantService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     public ResponseTenantDTO createTenant(RequestCreateTenantDTO request) {
+        TenantEntity existingName = tenantRepository.selectTenantByName(request.getTenantName());
+        if (existingName != null) {
+            throw new IllegalArgumentException("DUPLICATE_TENANT_NAME:" + request.getTenantName());
+        }
+
         TenantEntity existing = tenantRepository.selectTenantByDomain(request.getDomain());
         if (existing != null) {
-            throw new IllegalArgumentException("Domain already registered: " + request.getDomain());
+            throw new IllegalArgumentException("DUPLICATE_DOMAIN:" + request.getDomain());
         }
 
         LocalDateTime now = LocalDateTime.now();
 
         TenantEntity entity = new TenantEntity();
-        entity.setTenantId(UUID.randomUUID().toString());
+        entity.setTenantId("ems-" + UUID.randomUUID().toString());
         entity.setTenantName(request.getTenantName());
         entity.setDomain(request.getDomain());
         entity.setApiKey(generateApiKey());
@@ -111,6 +116,18 @@ public class TenantService {
         log.info("TenantService - Tenant deactivated. (tenantId: {})", tenantId);
     }
 
+    public void activateTenant(String tenantId) {
+        TenantEntity entity = tenantRepository.selectTenantById(tenantId);
+        if (entity == null) {
+            throw new IllegalArgumentException("Tenant not found: " + tenantId);
+        }
+        if (!STATUS_INACTIVE.equals(entity.getStatus())) {
+            throw new IllegalArgumentException("Only inactive tenants can be activated. Current status: " + entity.getStatus());
+        }
+        tenantRepository.updateTenantStatus(tenantId, STATUS_ACTIVE);
+        log.info("TenantService - Tenant activated. (tenantId: {})", tenantId);
+    }
+
     public ResponseTenantDTO regenerateApiKey(String tenantId) {
         TenantEntity entity = tenantRepository.selectTenantById(tenantId);
         if (entity == null) {
@@ -121,10 +138,22 @@ public class TenantService {
         entity.setApiKey(newApiKey);
         entity.setUpdatedAt(LocalDateTime.now());
 
-        tenantRepository.updateTenant(entity);
+        tenantRepository.updateApiKey(tenantId, newApiKey);
         log.info("TenantService - API key regenerated. (tenantId: {})", tenantId);
 
         return toResponseDTO(entity);
+    }
+
+    public void deleteTenant(String tenantId) {
+        TenantEntity entity = tenantRepository.selectTenantById(tenantId);
+        if (entity == null) {
+            throw new IllegalArgumentException("Tenant not found: " + tenantId);
+        }
+        if (!STATUS_INACTIVE.equals(entity.getStatus())) {
+            throw new IllegalArgumentException("Only inactive tenants can be deleted. Current status: " + entity.getStatus());
+        }
+        tenantRepository.deleteTenant(tenantId);
+        log.info("TenantService - Tenant permanently deleted. (tenantId: {})", tenantId);
     }
 
     public TenantEntity getTenantByApiKey(String apiKey) {

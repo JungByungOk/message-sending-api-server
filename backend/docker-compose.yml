@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  nte:
+  ems:
     build: .
-    container_name: nte-api
+    container_name: ems-api
     ports:
       - "7092:7092"
     environment:
@@ -30,7 +30,7 @@ services:
 
   localstack:
     image: localstack/localstack:4.4
-    container_name: nte-localstack
+    container_name: ems-localstack
     ports:
       - "4566:4566"
     environment:
@@ -48,7 +48,7 @@ services:
 
   postgres:
     image: postgres:17
-    container_name: nte-postgres
+    container_name: ems-postgres
     ports:
       - "5432:5432"
     environment:

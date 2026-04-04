@@ -17,6 +17,8 @@ public interface TenantRepository {
 
     TenantEntity selectTenantByDomain(String domain);
 
+    TenantEntity selectTenantByName(String tenantName);
+
     List<TenantEntity> selectTenantList(
             @Param("status") String status,
             @Param("offset") int offset,
@@ -36,4 +38,15 @@ public interface TenantRepository {
             @Param("tenantId") String tenantId,
             @Param("verificationStatus") String verificationStatus
     );
+
+    int countEmailsSentToday(@Param("tenantId") String tenantId);
+
+    int countEmailsSentThisMonth(@Param("tenantId") String tenantId);
+
+    void updateApiKey(
+            @Param("tenantId") String tenantId,
+            @Param("apiKey") String apiKey
+    );
+
+    void deleteTenant(@Param("tenantId") String tenantId);
 }

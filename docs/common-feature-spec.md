@@ -11,12 +11,18 @@ Backend와 Frontend에서 공통으로 적용되는 기능 명세입니다.
 - **Header**: `Authorization: {API_KEY}`
 - **미설정 시**: API Key가 환경변수에 설정되지 않으면 인증 비활성화
 
+### 테넌트 API Key 인증
+- 멀티테넌트 환경에서는 각 테넌트별 API Key로 인증
+- 인증 성공 시 `TenantContext`에 테넌트 정보가 자동 설정됨
+- `TenantContextFilter`가 요청 완료 후 ThreadLocal을 정리
+
 ### Public Endpoints (인증 불필요)
 | Endpoint | Description |
 |----------|-------------|
 | `GET /actuator/health` | 서버 상태 확인 |
 | `GET /actuator/info` | 서버 정보 조회 |
 | `POST /ses/feedback/**` | AWS SNS 콜백 수신 |
+| `POST /ses/callback/**` | SES 이벤트 콜백 수신 |
 
 ---
 
@@ -152,7 +158,51 @@ SR (발송 대기)
 
 ---
 
-## 10. Graceful Shutdown
+## 10. 수신 거부 관리 (Suppression)
+
+### 자동 등록
+- SES Callback에서 BOUNCE/COMPLAINT 이벤트 수신 시 자동으로 수신 거부 목록에 추가
+- 이미 등록된 이메일은 중복 추가하지 않음
+
+### 수신 거부 사유
+| Reason | Description |
+|--------|-------------|
+| `BOUNCE` | 반송 (잘못된 주소 등) |
+| `COMPLAINT` | 수신자가 스팸 신고 |
+
+### 테이블
+- `SUPPRESSION_LIST` (tenant_id + email UNIQUE 제약)
+
+---
+
+## 11. 테넌트 할당량 (Quota)
+
+- 테넌트별 일별/월별 이메일 발송 한도 설정 가능
+- `QuotaService`에서 실시간 사용량 조회 및 초과 여부 확인
+- 미설정 시 무제한 (Integer.MAX_VALUE)
+
+---
+
+## 12. 테넌트 온보딩 워크플로우
+
+### 온보딩 단계
+| Step | Name | 완료 조건 |
+|------|------|-----------|
+| 1 | 테넌트 생성 | 테넌트 레코드 생성 |
+| 2 | 도메인 인증 | SES 도메인 인증 SUCCESS |
+| 3 | ConfigSet 구성 | ConfigSet 이름 설정됨 |
+| 4 | 테넌트 활성화 | 상태 ACTIVE |
+
+### 테넌트 상태
+| Status | Description |
+|--------|-------------|
+| `PENDING` | 온보딩 진행 중 |
+| `ACTIVE` | 활성 (이메일 발송 가능) |
+| `INACTIVE` | 비활성화 |
+
+---
+
+## 13. Graceful Shutdown
 
 - 서버 종료 시 진행 중인 작업 완료 후 종료
 - Shutdown timeout: 30초

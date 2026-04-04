@@ -2,5 +2,5 @@
 
 spring:
   config:
-    import: optional:/svc/nte/config/nte-config-prod.yml
+    import: optional:/svc/ems/config/ems-config-prod.yml
 

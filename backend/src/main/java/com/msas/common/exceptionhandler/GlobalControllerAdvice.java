@@ -66,4 +66,10 @@ public class GlobalControllerAdvice {
         return new ResponseEntity<>(responseErrorDTO, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.warn("Bad request: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+    }
+
 }

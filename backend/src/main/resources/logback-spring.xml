@@ -3,14 +3,14 @@
 
     <!-- Log paths per profile -->
     <springProfile name="local | dev58">
-        <property name="LOGS_TRACE" value="./nte/logs/trace" />
-        <property name="LOGS_ERROR" value="./nte/logs/error" />
-        <property name="LOGS_ACCESS" value="./nte/logs/access" />
+        <property name="LOGS_TRACE" value="./ems/logs/trace" />
+        <property name="LOGS_ERROR" value="./ems/logs/error" />
+        <property name="LOGS_ACCESS" value="./ems/logs/access" />
     </springProfile>
     <springProfile name="dev | prod">
-        <property name="LOGS_TRACE" value="/svc/nte/logs/trace" />
-        <property name="LOGS_ERROR" value="/svc/nte/logs/error" />
-        <property name="LOGS_ACCESS" value="/svc/nte/logs/access" />
+        <property name="LOGS_TRACE" value="/svc/ems/logs/trace" />
+        <property name="LOGS_ERROR" value="/svc/ems/logs/error" />
+        <property name="LOGS_ACCESS" value="/svc/ems/logs/access" />
     </springProfile>
 
     <!-- use Spring default values -->
@@ -26,13 +26,13 @@
 
     <!-- TRACE FILE APPENDER -->
     <appender name="ROLLING_FILE_TRACE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS_TRACE}/nte.log</file>
+        <file>${LOGS_TRACE}/ems.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOGS_TRACE}/archived/nte-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOGS_TRACE}/archived/ems-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>50MB</maxFileSize>
             <maxHistory>7</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>
@@ -50,13 +50,13 @@
 
     <!-- ACCESS FILE APPENDER -->
     <appender name="ROLLING_FILE_ACCESS" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS_ACCESS}/nte.log</file>
+        <file>${LOGS_ACCESS}/ems.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOGS_ACCESS}/archived/nte-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOGS_ACCESS}/archived/ems-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>50MB</maxFileSize>
             <maxHistory>7</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>
@@ -78,13 +78,13 @@
             <level>ERROR</level>
             <onMismatch>DENY</onMismatch>
         </filter>
-        <file>${LOGS_ERROR}/nte.log</file>
+        <file>${LOGS_ERROR}/ems.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOGS_ERROR}/archived/nte-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOGS_ERROR}/archived/ems-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>50MB</maxFileSize>
             <maxHistory>7</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>

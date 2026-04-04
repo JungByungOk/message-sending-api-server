@@ -12,9 +12,9 @@
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│                        Client / Frontend                       │
+│              Client / Frontend (React 19 + Vite)               │
 └──────────────────────────┬────────────────────────────────────┘
-                           │ REST API (API Key Auth)
+                           │ REST API (Tenant API Key Auth)
 ┌──────────────────────────▼────────────────────────────────────┐
 │                    Backend (Spring Boot)                        │
 │                        Port: 7092                              │
@@ -23,11 +23,15 @@
 │  │ SES      │ │ Tenant   │ │ Scheduler │ │ Polling        │  │
 │  │ Module   │ │ Module   │ │ Module    │ │ Checker        │  │
 │  └────┬─────┘ └────┬─────┘ └─────┬─────┘ └───────┬────────┘  │
+│  ┌──────────┐ ┌──────────┐ ┌───────────┐ ┌────────────────┐  │
+│  │ Callback │ │Onboarding│ │Suppression│ │ SES Identity   │  │
+│  │ Module   │ │ Module   │ │ Module    │ │ / ConfigSet    │  │
+│  └────┬─────┘ └────┬─────┘ └─────┬─────┘ └───────┬────────┘  │
 └───────┼────────────┼─────────────┼───────────────┼────────────┘
         │            │             │               │
    ┌────▼────┐  ┌────▼──────┐ ┌───▼──────┐  ┌─────▼───────┐
    │ AWS SES │  │PostgreSQL │ │PostgreSQL│  │ AWS         │
-   │         │  │ (Tenant)  │ │ (Quartz) │  │ DynamoDB    │
+   │ (v2 SDK)│  │ (Tenant)  │ │ (Quartz) │  │ DynamoDB    │
    └─────────┘  └───────────┘ └──────────┘  └─────────────┘
 ```
 
@@ -35,17 +39,22 @@
 
 | Module | Description | 외부 연동 |
 |--------|-------------|-----------|
-| SES Module | 이메일 발송 및 템플릿 관리 | AWS SES |
-| Tenant Module | 멀티테넌트 고객사 관리, API Key 발급 | PostgreSQL |
+| SES Module | 이메일 발송 및 템플릿 관리 | AWS SES v2 |
+| Tenant Module | 멀티테넌트 고객사 관리, API Key 발급, 할당량 관리 | PostgreSQL |
 | Scheduler Module | Quartz 기반 예약 발송 관리 | PostgreSQL |
 | Polling Checker | 발송 대기 이메일 자동 처리 및 결과 추적 | PostgreSQL, AWS DynamoDB |
+| Callback Module | SES 이벤트 콜백 수신 및 상태 업데이트 | - |
+| Onboarding Module | 테넌트 온보딩 워크플로우 (생성→도메인 인증→활성화) | AWS SES v2 |
+| Suppression Module | 수신 거부(Bounce/Complaint) 목록 관리 | PostgreSQL |
+| SES Identity | SES 도메인 아이덴티티 등록 및 DKIM 관리 | AWS SES v2 |
+| SES ConfigSet | 테넌트별 SES 구성 세트 관리 | AWS SES v2 |
 
 ### 기술 스택
 
 | Layer | Technology |
 |-------|-----------|
 | Backend | Spring Boot 3.4.1, Java 17 |
-| Frontend | (예정) |
+| Frontend | React 19, Vite 7, TypeScript 5.9 |
 | Database | PostgreSQL 17, AWS DynamoDB |
 | ORM | MyBatis 3.0.4 |
 | Scheduler | Quartz (DB Store) |

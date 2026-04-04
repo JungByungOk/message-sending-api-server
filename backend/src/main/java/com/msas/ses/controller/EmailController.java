@@ -4,9 +4,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import com.msas.ses.service.SESMailService;
+import software.amazon.awssdk.services.ses.SesClient;
 import software.amazon.awssdk.services.ses.model.TemplateMetadata;
 import com.msas.ses.dto.*;
-import com.msas.ses.service.SESMailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/ses")
 @RequiredArgsConstructor
-@ConditionalOnBean(SESMailService.class)
+@ConditionalOnBean(SesClient.class)
 public class EmailController {
 
     private final SESMailService sesMailService;

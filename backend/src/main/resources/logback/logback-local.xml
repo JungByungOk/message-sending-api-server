@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="30 seconds">
 
-    <property name="LOGS_TRACE" value="./nte/logs/trace" />
-    <property name="LOGS_ERROR" value="./nte/logs/error" />
-    <property name="LOGS_ACCESS" value="./nte/logs/access" />
+    <property name="LOGS_TRACE" value="./ems/logs/trace" />
+    <property name="LOGS_ERROR" value="./ems/logs/error" />
+    <property name="LOGS_ACCESS" value="./ems/logs/access" />
 
     <!-- use Spring default values -->
     <include resource="logback/logback-defaults.xml"/>
@@ -19,7 +19,7 @@
     <!-- File Appender -->
     <appender name="ROLLING_FILE_TRACE"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS_TRACE}/nte.log</file>
+        <file>${LOGS_TRACE}/ems.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
@@ -28,7 +28,7 @@
         <rollingPolicy
                 class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- rollover daily and when the file reaches 10 MegaBytes -->
-            <fileNamePattern>${LOGS_TRACE}/archived/nte-%d{yyyy-MM-dd}.%i.log
+            <fileNamePattern>${LOGS_TRACE}/archived/ems-%d{yyyy-MM-dd}.%i.log
             </fileNamePattern>
             <!--로그 파일 분할-->
             <!--7일간만 보관-->
@@ -51,7 +51,7 @@
     <!-- File Appender -->
     <appender name="ROLLING_FILE_ACCESS"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS_ACCESS}/nte.log</file>
+        <file>${LOGS_ACCESS}/ems.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
@@ -60,7 +60,7 @@
         <rollingPolicy
                 class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- rollover daily and when the file reaches 10 MegaBytes -->
-            <fileNamePattern>${LOGS_ACCESS}/archived/nte-%d{yyyy-MM-dd}.%i.log
+            <fileNamePattern>${LOGS_ACCESS}/archived/ems-%d{yyyy-MM-dd}.%i.log
             </fileNamePattern>
             <!--로그 파일 분할-->
             <!--7일간만 보관-->
@@ -89,7 +89,7 @@
             <onMismatch>DENY</onMismatch>
         </filter>
 
-        <file>${LOGS_ERROR}/nte.log</file>
+        <file>${LOGS_ERROR}/ems.log</file>
 
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
@@ -99,7 +99,7 @@
         <rollingPolicy
                 class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- rollover daily and when the file reaches 10 MegaBytes -->
-            <fileNamePattern>${LOGS_ERROR}/archived/nte-%d{yyyy-MM-dd}.%i.log
+            <fileNamePattern>${LOGS_ERROR}/archived/ems-%d{yyyy-MM-dd}.%i.log
             </fileNamePattern>
             <!--로그 파일 분할-->
             <!--7일간만 보관-->

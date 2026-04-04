@@ -17,7 +17,7 @@ public class OpenApiConfig {
 
         return new OpenAPI()
                 .info(new Info()
-                        .title("NTE - Message Sending API")
+                        .title("EMS - Message Sending API")
                         .description("멀티채널 메시지 발송 API 서버 (AWS SES, Scheduler)")
                         .version("1.0.0"))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))

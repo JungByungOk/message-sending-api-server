@@ -1,5 +1,8 @@
 package com.msas.common.security;
 
+import com.msas.common.tenant.TenantContext;
+import com.msas.tenant.entity.TenantEntity;
+import com.msas.tenant.repository.TenantRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,27 +17,62 @@ import java.util.List;
 
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final String API_KEY_HEADER = "X-API-KEY";
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final String DEFAULT_TENANT_ID = "default";
 
-    private final String apiKey;
+    private final String legacyApiKey;
+    private final TenantRepository tenantRepository;
 
-    public ApiKeyAuthenticationFilter(String apiKey) {
-        this.apiKey = apiKey;
+    public ApiKeyAuthenticationFilter(String legacyApiKey, TenantRepository tenantRepository) {
+        this.legacyApiKey = legacyApiKey;
+        this.tenantRepository = tenantRepository;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String requestApiKey = request.getHeader(API_KEY_HEADER);
+        String authHeader = request.getHeader(AUTHORIZATION_HEADER);
+        String requestApiKey = null;
 
-        if (apiKey.equals(requestApiKey)) {
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken("api-client", null,
-                            List.of(new SimpleGrantedAuthority("ROLE_API")));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+        if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
+            requestApiKey = authHeader.substring(BEARER_PREFIX.length()).trim();
+        } else if (authHeader != null) {
+            requestApiKey = authHeader.trim();
         }
 
+        if (requestApiKey == null || requestApiKey.isBlank()) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "API 키가 필요합니다.");
+            return;
+        }
+
+        // 1. 멀티 테넌트 DB 조회
+        TenantEntity tenant = tenantRepository.selectTenantByApiKey(requestApiKey);
+        if (tenant != null) {
+            TenantContext.setTenantId(tenant.getTenantId());
+            authenticate(response, filterChain, request, tenant.getTenantId());
+            return;
+        }
+
+        // 2. 레거시 단일 API 키 매칭
+        if (legacyApiKey != null && legacyApiKey.equals(requestApiKey)) {
+            TenantContext.setTenantId(DEFAULT_TENANT_ID);
+            authenticate(response, filterChain, request, DEFAULT_TENANT_ID);
+            return;
+        }
+
+        // 3. 인증 실패
+        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "유효하지 않은 API 키입니다.");
+    }
+
+    private void authenticate(HttpServletResponse response, FilterChain filterChain,
+                               HttpServletRequest request, String principal)
+            throws ServletException, IOException {
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(principal, null,
+                        List.of(new SimpleGrantedAuthority("ROLE_API")));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         filterChain.doFilter(request, response);
     }
 }

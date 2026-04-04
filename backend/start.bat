@@ -11,7 +11,7 @@ if "%PROFILE%"=="" (
 )
 
 echo ================================================
-echo  NTE Server Starting - Profile: %PROFILE%
+echo  ESM Server Starting - Profile: %PROFILE%
 echo  JAVA_HOME: %JAVA_HOME%
 echo ================================================
 

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true" scanPeriod="30 seconds">
 
-    <property name="LOGS_TRACE" value="/svc/nte/logs/trace" />
-    <property name="LOGS_ERROR" value="/svc/nte/logs/error" />
-    <property name="LOGS_ACCESS" value="/svc/nte/logs/access" />
+    <property name="LOGS_TRACE" value="/svc/ems/logs/trace" />
+    <property name="LOGS_ERROR" value="/svc/ems/logs/error" />
+    <property name="LOGS_ACCESS" value="/svc/ems/logs/access" />
 
     <!-- use Spring default values -->
     <include resource="logback/logback-defaults.xml"/>
@@ -19,14 +19,14 @@
     <!-- File Appender -->
     <appender name="ROLLING_FILE_TRACE"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS_TRACE}/nte.log</file>
+        <file>${LOGS_TRACE}/ems.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
         </encoder>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOGS_TRACE}/archived/nte-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOGS_TRACE}/archived/ems-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>50MB</maxFileSize>
             <maxHistory>7</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>
@@ -46,14 +46,14 @@
     <!-- File Appender -->
     <appender name="ROLLING_FILE_ACCESS"
               class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS_ACCESS}/nte.log</file>
+        <file>${LOGS_ACCESS}/ems.log</file>
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
             <charset>${FILE_LOG_CHARSET}</charset>
         </encoder>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOGS_ACCESS}/archived/nte-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOGS_ACCESS}/archived/ems-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>50MB</maxFileSize>
             <maxHistory>7</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>
@@ -79,7 +79,7 @@
             <onMismatch>DENY</onMismatch>
         </filter>
 
-        <file>${LOGS_ERROR}/nte.log</file>
+        <file>${LOGS_ERROR}/ems.log</file>
 
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
@@ -87,7 +87,7 @@
         </encoder>
 
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOGS_ERROR}/archived/nte-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <fileNamePattern>${LOGS_ERROR}/archived/ems-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>50MB</maxFileSize>
             <maxHistory>7</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>

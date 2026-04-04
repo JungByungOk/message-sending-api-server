@@ -21,6 +21,7 @@ Header: Authorization: {API_KEY}
 - `GET /actuator/health`
 - `GET /actuator/info`
 - `POST /ses/feedback/**` (AWS SNS Callback)
+- `POST /ses/callback/**` (SES 이벤트 콜백)
 
 ---
 
@@ -190,6 +191,177 @@ GET /ses/templates
   }
 ]
 ```
+
+---
+
+## 2. Tenant - 테넌트 관리
+
+### 2.1 테넌트 생성
+
+```
+POST /tenant
+```
+
+**Request Body**
+```json
+{
+  "tenantName": "MyCompany",
+  "domain": "mycompany.com"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| tenantName | String | Y | 테넌트 이름 |
+| domain | String | Y | 이메일 발송 도메인 |
+
+**Response** `201 Created`
+```json
+{
+  "tenantId": "uuid",
+  "tenantName": "MyCompany",
+  "domain": "mycompany.com",
+  "apiKey": "generated-api-key",
+  "status": "PENDING",
+  "createdAt": "2024-01-01T00:00:00"
+}
+```
+
+---
+
+### 2.2 테넌트 조회
+
+```
+GET /tenant/{tenantId}
+```
+
+**Response** `200 OK`: 2.1 Response와 동일
+
+---
+
+### 2.3 테넌트 목록 조회
+
+```
+GET /tenant/list?status={status}&page={page}&size={size}
+```
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| status | String | N | - | 상태 필터 (ACTIVE, INACTIVE, PENDING) |
+| page | int | N | 0 | 페이지 번호 |
+| size | int | N | 20 | 페이지 크기 |
+
+**Response** `200 OK`
+```json
+{
+  "totalCount": 10,
+  "tenants": [...]
+}
+```
+
+---
+
+### 2.4 테넌트 수정
+
+```
+PATCH /tenant/{tenantId}
+```
+
+**Request Body**
+```json
+{
+  "tenantName": "Updated Name",
+  "quotaDaily": 1000,
+  "quotaMonthly": 30000
+}
+```
+
+**Response** `200 OK`: 2.1 Response와 동일
+
+---
+
+### 2.5 테넌트 비활성화
+
+```
+DELETE /tenant/{tenantId}
+```
+
+**Response** `204 No Content`
+
+---
+
+### 2.6 테넌트 영구 삭제
+
+```
+DELETE /tenant/{tenantId}/permanent
+```
+
+비활성 상태의 테넌트만 영구 삭제 가능합니다.
+
+**Response** `204 No Content`
+
+---
+
+### 2.7 테넌트 활성화
+
+```
+POST /tenant/{tenantId}/activate
+```
+
+**Response** `200 OK`
+
+---
+
+### 2.8 API 키 재발급
+
+```
+POST /tenant/{tenantId}/regenerate-key
+```
+
+**Response** `200 OK`: 2.1 Response와 동일 (새 API Key 포함)
+
+---
+
+### 2.9 할당량 사용 현황 조회
+
+```
+GET /tenant/{tenantId}/quota
+```
+
+**Response** `200 OK`
+```json
+{
+  "tenantId": "uuid",
+  "daily": {
+    "limit": 1000,
+    "used": 150,
+    "remaining": 850
+  },
+  "monthly": {
+    "limit": 30000,
+    "used": 5000,
+    "remaining": 25000
+  }
+}
+```
+
+---
+
+### 2.10 할당량 수정
+
+```
+PATCH /tenant/{tenantId}/quota
+```
+
+**Request Body**
+```json
+{
+  "quotaDaily": 2000,
+  "quotaMonthly": 60000
+}
+```
+
+**Response** `200 OK`: 2.1 Response와 동일
 
 ---
 
@@ -417,17 +589,311 @@ DELETE /scheduler/job/all
 
 ---
 
-## 5. Database Schema
+## 5. SES Callback - 이벤트 콜백
 
-### 5.1 주요 테이블
+### 5.1 SES 이벤트 처리
+
+```
+POST /ses/callback/event
+```
+
+**인증 불필요** (Public Endpoint)
+
+**Request Body**
+```json
+{
+  "tenantId": "uuid",
+  "messageId": "aws-ses-message-id",
+  "eventType": "DELIVERY",
+  "timestamp": "2024-01-01T00:00:00",
+  "recipients": ["user@example.com"],
+  "details": {}
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| tenantId | String | Y | 테넌트 ID |
+| messageId | String | Y | SES 메시지 ID |
+| eventType | String | Y | 이벤트 유형 (DELIVERY, BOUNCE, COMPLAINT) |
+| timestamp | LocalDateTime | N | 이벤트 발생 시간 |
+| recipients | List\<String\> | N | 수신자 이메일 목록 |
+| details | Map | N | 추가 상세 정보 |
+
+**Response** `200 OK`
+```json
+{
+  "result": true,
+  "processed": 1
+}
+```
+
+BOUNCE/COMPLAINT 이벤트 시 해당 수신자를 자동으로 수신 거부 목록에 추가합니다.
+
+---
+
+### 5.2 콜백 상태 확인
+
+```
+GET /ses/callback/health
+```
+
+**Response** `200 OK`
+```json
+{
+  "status": "UP",
+  "lastEventTime": "2024-01-01T00:00:00"
+}
+```
+
+---
+
+## 6. Onboarding - 테넌트 온보딩
+
+### 6.1 온보딩 시작
+
+```
+POST /onboarding/start
+```
+
+테넌트를 생성하고 SES 도메인 아이덴티티를 등록합니다.
+
+**Request Body**
+```json
+{
+  "tenantName": "MyCompany",
+  "domain": "mycompany.com",
+  "contactEmail": "admin@mycompany.com"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| tenantName | String | Y | 테넌트 이름 |
+| domain | String | Y | 이메일 발송 도메인 |
+| contactEmail | String | N | 담당자 이메일 |
+
+**Response** `201 Created`
+```json
+{
+  "tenant": { "tenantId": "uuid", "tenantName": "MyCompany", ... },
+  "dkimRecords": {
+    "domain": "mycompany.com",
+    "verificationStatus": "PENDING",
+    "dkimRecords": [
+      { "name": "token._domainkey.mycompany.com", "type": "CNAME", "value": "token.dkim.amazonses.com" }
+    ]
+  }
+}
+```
+
+---
+
+### 6.2 온보딩 상태 조회
+
+```
+GET /onboarding/{tenantId}/status
+```
+
+**Response** `200 OK`
+```json
+{
+  "tenantId": "uuid",
+  "domain": "mycompany.com",
+  "steps": [
+    { "step": 1, "name": "테넌트 생성", "status": "COMPLETED" },
+    { "step": 2, "name": "도메인 인증", "status": "WAITING" },
+    { "step": 3, "name": "ConfigSet 구성", "status": "PENDING" },
+    { "step": 4, "name": "테넌트 활성화", "status": "PENDING" }
+  ],
+  "verificationStatus": "PENDING",
+  "tenantStatus": "PENDING"
+}
+```
+
+온보딩 Step Status: `COMPLETED`, `WAITING`, `PENDING`
+
+---
+
+### 6.3 DKIM 레코드 조회
+
+```
+GET /onboarding/{tenantId}/dkim
+```
+
+**Response** `200 OK`
+```json
+{
+  "domain": "mycompany.com",
+  "verificationStatus": "SUCCESS",
+  "dkimRecords": [
+    { "name": "token._domainkey.mycompany.com", "type": "CNAME", "value": "token.dkim.amazonses.com" }
+  ]
+}
+```
+
+---
+
+### 6.4 테넌트 수동 활성화
+
+```
+POST /onboarding/{tenantId}/activate
+```
+
+ConfigSet을 생성하고 테넌트 상태를 ACTIVE로 변경합니다.
+
+**Response** `200 OK`: Tenant 응답 DTO
+
+---
+
+## 7. SES Identity - 도메인 아이덴티티 관리
+
+> SES v2 클라이언트가 설정된 환경에서만 활성화됩니다.
+
+### 7.1 도메인 아이덴티티 생성
+
+```
+POST /ses/identity
+```
+
+**Request Body**
+```json
+{
+  "domain": "mycompany.com"
+}
+```
+
+**Response** `200 OK`: DKIM Records DTO (6.3 응답과 동일)
+
+---
+
+### 7.2 도메인 인증 상태 조회
+
+```
+GET /ses/identity/{domain}
+```
+
+**Response** `200 OK`: DKIM Records DTO
+
+---
+
+### 7.3 도메인 아이덴티티 삭제
+
+```
+DELETE /ses/identity/{domain}
+```
+
+**Response** `204 No Content`
+
+---
+
+## 8. SES ConfigSet - 구성 세트 관리
+
+> SES v2 클라이언트가 설정된 환경에서만 활성화됩니다.
+
+### 8.1 ConfigSet 생성
+
+```
+POST /ses/config-set
+```
+
+**Request Body**
+```json
+{
+  "tenantId": "uuid"
+}
+```
+
+**Response** `201 Created`
+```json
+{
+  "configSetName": "tenant-uuid"
+}
+```
+
+---
+
+### 8.2 ConfigSet 조회
+
+```
+GET /ses/config-set/{tenantId}
+```
+
+**Response** `200 OK`
+```json
+{
+  "configSetName": "tenant-uuid",
+  "tenantId": "uuid"
+}
+```
+
+---
+
+### 8.3 ConfigSet 삭제
+
+```
+DELETE /ses/config-set/{tenantId}
+```
+
+**Response** `204 No Content`
+
+---
+
+## 9. Suppression - 수신 거부 목록
+
+### 9.1 수신 거부 목록 조회
+
+```
+GET /suppression/tenant/{tenantId}?page={page}&size={size}
+```
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| page | int | N | 0 | 페이지 번호 |
+| size | int | N | 20 | 페이지 크기 |
+
+**Response** `200 OK`
+```json
+{
+  "totalCount": 5,
+  "suppressions": [
+    {
+      "id": 1,
+      "tenantId": "uuid",
+      "email": "bounced@example.com",
+      "reason": "BOUNCE",
+      "createdAt": "2024-01-01T00:00:00"
+    }
+  ]
+}
+```
+
+Suppression Reason: `BOUNCE`, `COMPLAINT`
+
+---
+
+### 9.2 수신 거부 제거
+
+```
+DELETE /suppression/tenant/{tenantId}/{email}
+```
+
+**Response** `204 No Content`
+
+---
+
+## 10. Database Schema
+
+### 10.1 주요 테이블
 
 | Table | Description |
 |-------|-------------|
 | `ADM_EMAIL_SEND_MST` | 이메일 발송 마스터 (캠페인 단위) |
 | `ADM_EMAIL_SEND_DTL` | 이메일 발송 상세 (수신자 단위) |
 | `ADM_EMAIL_ATTCH_FILE_LST` | 첨부파일 목록 |
+| `SUPPRESSION_LIST` | 수신 거부 목록 (Bounce/Complaint) |
 
-### 5.2 이메일 상태 코드
+### 10.2 이메일 상태 코드
 
 | Code | Description |
 |------|-------------|
@@ -439,7 +905,7 @@ DELETE /scheduler/job/all
 | `SC` | 수신 거부 (Complaint) |
 | `SF` | 발송 실패 (Fail) |
 
-### 5.3 발송 구분 코드 (EnumEmailSendDivisionCode)
+### 10.3 발송 구분 코드 (EnumEmailSendDivisionCode)
 
 | Code | Description |
 |------|-------------|
@@ -449,9 +915,9 @@ DELETE /scheduler/job/all
 
 ---
 
-## 6. Configuration
+## 11. Configuration
 
-### 6.1 Environment Variables
+### 11.1 Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
@@ -466,7 +932,7 @@ DELETE /scheduler/job/all
 | `AWS_ENDPOINT` | AWS Endpoint Override (LocalStack) | N (dev: `http://localhost:4566`) |
 | `API_KEY` | API 인증 키 | N (미설정 시 인증 비활성화) |
 
-### 6.2 Application Properties
+### 11.2 Application Properties
 
 | Property | Default | Description |
 |----------|---------|-------------|
@@ -478,7 +944,7 @@ DELETE /scheduler/job/all
 | `polling.schedule.send-email-event-check-time` | `60000` | 발송 결과 폴링 주기 (ms) |
 | `spring.quartz.threadPool.threadCount` | `10` | Quartz 스레드 풀 크기 |
 
-### 6.3 Profiles
+### 11.3 Profiles
 
 | Profile | Description |
 |---------|-------------|
@@ -488,7 +954,7 @@ DELETE /scheduler/job/all
 
 ---
 
-## 7. Error Response
+## 12. Error Response
 
 모든 에러는 공통 형식으로 반환됩니다.
 

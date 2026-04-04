@@ -27,6 +27,8 @@ dependencies {
     implementation platform('software.amazon.awssdk:bom:2.29.0')
     // AWS SDK v2 for SES
     implementation 'software.amazon.awssdk:ses'
+    // AWS SDK v2 for SES v2
+    implementation 'software.amazon.awssdk:sesv2'
     // AWS SDK v2 for DynamoDB
     implementation 'software.amazon.awssdk:dynamodb'
 

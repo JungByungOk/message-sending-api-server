@@ -99,6 +99,14 @@
         WHERE domain = #{domain}
     </select>
 
+    <select id="selectTenantByName" parameterType="String" resultMap="TenantEntityResultMap">
+        SELECT
+            tenant_id, tenant_name, domain, api_key, config_set_name,
+            verification_status, quota_daily, quota_monthly, status, created_at, updated_at
+        FROM TENANT_REGISTRY
+        WHERE tenant_name = #{tenantName}
+    </select>
+
     <select id="selectTenantList" resultMap="TenantEntityResultMap">
         SELECT
             tenant_id,
@@ -166,5 +174,28 @@
             updated_at = NOW()
         WHERE tenant_id = #{tenantId}
     </update>
+
+    <select id="countEmailsSentToday" resultType="int">
+        SELECT COUNT(*)
+        FROM ADM_EMAIL_SEND_DTL
+        WHERE tenant_id = #{tenantId}
+          AND send_sts_cd IN ('SD', 'SB', 'SC', 'SM')
+          AND stm_fir_reg_dt >= CURRENT_DATE
+          AND stm_fir_reg_dt &lt; CURRENT_DATE + INTERVAL '1 day'
+    </select>
+
+    <select id="countEmailsSentThisMonth" resultType="int">
+        SELECT COUNT(*)
+        FROM ADM_EMAIL_SEND_DTL
+        WHERE tenant_id = #{tenantId}
+          AND send_sts_cd IN ('SD', 'SB', 'SC', 'SM')
+          AND stm_fir_reg_dt >= DATE_TRUNC('month', CURRENT_DATE)
+          AND stm_fir_reg_dt &lt; DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+    </select>
+
+    <delete id="deleteTenant">
+        DELETE FROM TENANT_REGISTRY
+        WHERE tenant_id = #{tenantId}
+    </delete>
 
 </mapper>
