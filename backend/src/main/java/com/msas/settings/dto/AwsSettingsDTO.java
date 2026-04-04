@@ -14,6 +14,7 @@ public class AwsSettingsDTO {
     private String gatewaySendPath;
     private String gatewayResultsPath;
     private String gatewayConfigPath;
+    private String gatewayTenantSetupPath;
     // Callback
     private String callbackUrl;
     private String callbackSecret;

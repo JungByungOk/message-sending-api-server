@@ -311,8 +311,9 @@ backend/src/main/java/com/msas/
 ├── callback/                # SES 이벤트 콜백 모듈
 ├── onboarding/              # 테넌트 온보딩 워크플로우
 ├── suppression/             # 수신 거부 목록 관리
+├── settings/                # 시스템 설정 모듈 (API Gateway, SSM 동기화)
 ├── scheduler/               # Quartz 스케줄러 모듈
-└── pollingchecker/          # 이메일 상태 폴링 모듈
+└── pollingchecker/          # 이메일 상태 폴링 모듈 (레거시)
 ```
 
 ## Reference

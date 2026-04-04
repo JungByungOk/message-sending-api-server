@@ -650,13 +650,15 @@ GET /ses/callback/health
 
 ## 6. Onboarding - 테넌트 온보딩
 
+> 온보딩 시 ESM은 API Gateway `POST /tenant-setup`을 호출하여 AWS 리소스(SES Identity, ConfigSet, DynamoDB ems-tenant-config)를 자동 구성합니다.
+
 ### 6.1 온보딩 시작
 
 ```
 POST /onboarding/start
 ```
 
-테넌트를 생성하고 SES 도메인 아이덴티티를 등록합니다.
+테넌트를 생성하고 API Gateway를 통해 SES 도메인 아이덴티티를 등록합니다.
 
 **Request Body**
 ```json
@@ -968,6 +970,7 @@ PUT /settings/aws
 | gatewaySendPath | String | N | 발송 경로 (기본: `/send-email`) |
 | gatewayResultsPath | String | N | 조회 경로 (기본: `/results`) |
 | gatewayConfigPath | String | N | 설정 경로 (기본: `/config`) |
+| gatewayTenantSetupPath | String | N | 온보딩 경로 (기본: `/tenant-setup`) |
 | callbackUrl | String | N | Lambda → ESM 콜백 URL |
 | callbackSecret | String | N | 콜백 무결성 검증 시크릿 |
 | deliveryMode | String | Y | `callback` 또는 `polling` |

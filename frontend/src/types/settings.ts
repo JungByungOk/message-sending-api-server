@@ -9,6 +9,7 @@ export interface AwsSettings {
   gatewaySendPath: string;
   gatewayResultsPath: string;
   gatewayConfigPath: string;
+  gatewayTenantSetupPath: string;
   // Callback
   callbackUrl: string;
   callbackSecret: string;
@@ -28,6 +29,7 @@ export interface AwsSettingsResponse {
   gatewaySendPath: string;
   gatewayResultsPath: string;
   gatewayConfigPath: string;
+  gatewayTenantSetupPath: string;
   gatewayConfigured: boolean;
   // Callback
   callbackUrl: string;

@@ -79,6 +79,7 @@ export default function AwsSettingsPage() {
         gatewaySendPath: settings.gatewaySendPath || '/send-email',
         gatewayResultsPath: settings.gatewayResultsPath || '/results',
         gatewayConfigPath: settings.gatewayConfigPath || '/config',
+        gatewayTenantSetupPath: settings.gatewayTenantSetupPath || '/tenant-setup',
         callbackUrl: settings.callbackUrl || '',
         callbackSecret: '',
         deliveryMode: (settings.deliveryMode as 'callback' | 'polling') || 'callback',
@@ -158,19 +159,24 @@ export default function AwsSettingsPage() {
               </Form.Item>
 
               <Row gutter={12}>
-                <Col span={8}>
-                  <Form.Item label="발송 경로" name="gatewaySendPath">
+                <Col span={6}>
+                  <Form.Item label="발송" name="gatewaySendPath">
                     <Input placeholder="/send-email" />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
-                  <Form.Item label="조회 경로" name="gatewayResultsPath">
+                <Col span={6}>
+                  <Form.Item label="조회" name="gatewayResultsPath">
                     <Input placeholder="/results" />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
-                  <Form.Item label="설정 경로" name="gatewayConfigPath">
+                <Col span={6}>
+                  <Form.Item label="설정" name="gatewayConfigPath">
                     <Input placeholder="/config" />
+                  </Form.Item>
+                </Col>
+                <Col span={6}>
+                  <Form.Item label="온보딩" name="gatewayTenantSetupPath">
+                    <Input placeholder="/tenant-setup" />
                   </Form.Item>
                 </Col>
               </Row>

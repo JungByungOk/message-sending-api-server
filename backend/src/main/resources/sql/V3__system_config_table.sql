@@ -16,7 +16,8 @@ INSERT INTO SYSTEM_CONFIG (CONFIG_KEY, CONFIG_VALUE, DESCRIPTION, ENCRYPTED) VAL
 ('gateway.secret-key', '', 'IAM Secret Key', TRUE),
 ('gateway.send-path', '/send-email', '이메일 발송 경로', FALSE),
 ('gateway.results-path', '/results', '발송 결과 조회 경로', FALSE),
-('gateway.config-path', '/config', 'SSM 설정 동기화 경로', FALSE)
+('gateway.config-path', '/config', 'SSM 설정 동기화 경로', FALSE),
+('gateway.tenant-setup-path', '/tenant-setup', '테넌트 온보딩 경로', FALSE)
 ON CONFLICT (CONFIG_KEY) DO NOTHING;
 
 -- Callback 설정

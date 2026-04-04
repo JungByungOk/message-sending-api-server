@@ -59,6 +59,7 @@ public class SettingsService {
         dto.setGatewaySendPath(configs.getOrDefault("gateway.send-path", "/send-email"));
         dto.setGatewayResultsPath(configs.getOrDefault("gateway.results-path", "/results"));
         dto.setGatewayConfigPath(configs.getOrDefault("gateway.config-path", "/config"));
+        dto.setGatewayTenantSetupPath(configs.getOrDefault("gateway.tenant-setup-path", "/tenant-setup"));
         dto.setGatewayConfigured(isNotBlank(configs.get("gateway.endpoint")));
         // Callback
         dto.setCallbackUrl(configs.getOrDefault("callback.url", ""));
@@ -86,6 +87,7 @@ public class SettingsService {
         saveConfig("gateway.send-path", settings.getGatewaySendPath(), "이메일 발송 경로", false);
         saveConfig("gateway.results-path", settings.getGatewayResultsPath(), "발송 결과 조회 경로", false);
         saveConfig("gateway.config-path", settings.getGatewayConfigPath(), "SSM 설정 동기화 경로", false);
+        saveConfig("gateway.tenant-setup-path", settings.getGatewayTenantSetupPath(), "테넌트 온보딩 경로", false);
         saveConfig("callback.url", settings.getCallbackUrl(), "Callback URL", false);
         saveConfig("callback.secret", settings.getCallbackSecret(), "Callback Secret", true);
         saveConfig("delivery.mode", settings.getDeliveryMode(), "수신 모드", false);
