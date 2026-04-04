@@ -2,7 +2,7 @@
 
 ## ESM (Email Sending Management)
 
-멀티채널 메시지 발송 통합 플랫폼
+멀티테넌트 이메일 발송 관리 플랫폼
 
 ### 목적
 

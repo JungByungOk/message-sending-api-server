@@ -1,6 +1,6 @@
 # Joins ESM
 
-멀티채널 메시지 발송 API 서버 - AWS SES 이메일, Slack 메시지를 통합 관리하는 Spring Boot 기반 알림 서버
+멀티테넌트 이메일 발송 관리 플랫폼 - AWS SES 기반 이메일 발송, 테넌트 온보딩, 수신 거부 관리를 제공하는 Spring Boot + React 풀스택 SaaS 서버
 
 ## Project Structure
 
