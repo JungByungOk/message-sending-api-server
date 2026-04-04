@@ -114,8 +114,7 @@ public class SettingsService {
                     .connectTimeout(Duration.ofSeconds(10))
                     .build();
 
-            String testUrl = settings.getGatewayEndpoint().replaceAll("/$", "")
-                    + (isNotBlank(settings.getGatewayResultsPath()) ? settings.getGatewayResultsPath() : "/results");
+            String testUrl = settings.getGatewayEndpoint().replaceAll("/$", "");
 
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(testUrl))
