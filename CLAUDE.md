@@ -1,4 +1,4 @@
-# Project: Message Sending API Server (NTE)
+# Project: Message Sending API Server (ESM)
 
 ## 프로젝트 구조
 

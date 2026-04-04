@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Application Name**: NTE (Notification & Template Engine)
+**Application Name**: ESM (Email Sending Management)
 **Base URL**: `http://{host}:7092`
 **Authentication**: API Key (Header 기반)
 **Framework**: Spring Boot 3.4.1 / Java 17

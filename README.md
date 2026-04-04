@@ -1,4 +1,4 @@
-# Message Sending API Server (NTE)
+# Joins ESM
 
 멀티채널 메시지 발송 API 서버 - AWS SES 이메일, Slack 메시지를 통합 관리하는 Spring Boot 기반 알림 서버
 
@@ -12,7 +12,7 @@ message-sending-api-server/
 │   ├── Dockerfile
 │   ├── docker-compose.yml
 │   └── ...
-├── frontend/               # (예정) 관리 대시보드
+├── frontend/               # React 19 어드민 대시보드 (Vite + TypeScript)
 ├── docs/                   # 프로젝트 문서
 │   ├── backend-spec.md     # Backend API 명세서
 │   └── backend-development-plan.md  # 멀티테넌트 전환 개발 계획
@@ -65,13 +65,20 @@ message-sending-api-server/
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    API Server (NTE)                      │
-│                     Port: 7092                           │
+│           Frontend (React 19 + Vite + TypeScript)        │
+└────────────────────────┬────────────────────────────────┘
+                         │ REST API
+┌────────────────────────▼────────────────────────────────┐
+│                    API Server (ESM)                       │
+│                     Port: 7092                            │
 ├──────────┬────────────┬────────────┬───────────────────┤
 │  SES     │  Tenant    │  Scheduler │  Polling Checker  │
 │  Module  │  Module    │  Module    │  Module           │
+├──────────┼────────────┼────────────┼───────────────────┤
+│ Callback │ Onboarding │Suppression │ SES Identity/     │
+│ Module   │ Module     │ Module     │ ConfigSet         │
 ├──────────┴────────────┴────────────┴───────────────────┤
-│              Spring Security (API Key)                   │
+│         Spring Security (Tenant API Key Auth)            │
 ├─────────────────────────────────────────────────────────┤
 │  PostgreSQL (이메일/스케줄러)  │  DynamoDB (SES 이벤트)  │
 └─────────────────────────────────────────────────────────┘
@@ -99,7 +106,50 @@ message-sending-api-server/
 | `GET` | `/tenant/list` | 테넌트 목록 조회 |
 | `PATCH` | `/tenant/{tenantId}` | 테넌트 수정 |
 | `DELETE` | `/tenant/{tenantId}` | 테넌트 비활성화 |
+| `DELETE` | `/tenant/{tenantId}/permanent` | 테넌트 영구 삭제 |
+| `POST` | `/tenant/{tenantId}/activate` | 테넌트 활성화 |
 | `POST` | `/tenant/{tenantId}/regenerate-key` | API Key 재발급 |
+| `GET` | `/tenant/{tenantId}/quota` | 할당량 사용 현황 |
+| `PATCH` | `/tenant/{tenantId}/quota` | 할당량 수정 |
+
+### Onboarding - 테넌트 온보딩
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/onboarding/start` | 온보딩 시작 |
+| `GET` | `/onboarding/{tenantId}/status` | 온보딩 상태 조회 |
+| `GET` | `/onboarding/{tenantId}/dkim` | DKIM 레코드 조회 |
+| `POST` | `/onboarding/{tenantId}/activate` | 테넌트 수동 활성화 |
+
+### SES Callback - 이벤트 콜백
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/ses/callback/event` | SES 이벤트 처리 |
+| `GET` | `/ses/callback/health` | 콜백 상태 확인 |
+
+### SES Identity - 도메인 아이덴티티
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/ses/identity` | 도메인 아이덴티티 생성 |
+| `GET` | `/ses/identity/{domain}` | 도메인 인증 상태 조회 |
+| `DELETE` | `/ses/identity/{domain}` | 도메인 아이덴티티 삭제 |
+
+### SES ConfigSet - 구성 세트
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/ses/config-set` | ConfigSet 생성 |
+| `GET` | `/ses/config-set/{tenantId}` | ConfigSet 조회 |
+| `DELETE` | `/ses/config-set/{tenantId}` | ConfigSet 삭제 |
+
+### Suppression - 수신 거부
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/suppression/tenant/{tenantId}` | 수신 거부 목록 조회 |
+| `DELETE` | `/suppression/tenant/{tenantId}/{email}` | 수신 거부 제거 |
 
 ### Scheduler - 예약 발송
 
@@ -216,12 +266,18 @@ backend/src/main/java/com/msas/
 ├── common/
 │   ├── exceptionhandler/    # 글로벌 예외 처리
 │   ├── httplog/             # HTTP 요청/응답 로깅
-│   ├── security/            # API Key 인증
+│   ├── security/            # API Key 인증, TenantContextFilter
 │   ├── swagger/             # Swagger 설정
 │   ├── tenant/              # TenantContext (ThreadLocal)
 │   └── utils/               # 유틸리티
-├── tenant/                  # 테넌트 관리 모듈
+├── tenant/                  # 테넌트 관리 모듈 (할당량 포함)
 ├── ses/                     # AWS SES 이메일 모듈
+│   ├── configset/           # SES ConfigSet 관리
+│   ├── configuration/       # SES v2 클라이언트 설정
+│   └── identity/            # SES 도메인 아이덴티티 관리
+├── callback/                # SES 이벤트 콜백 모듈
+├── onboarding/              # 테넌트 온보딩 워크플로우
+├── suppression/             # 수신 거부 목록 관리
 ├── scheduler/               # Quartz 스케줄러 모듈
 └── pollingchecker/          # 이메일 상태 폴링 모듈
 ```

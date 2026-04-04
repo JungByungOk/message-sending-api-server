@@ -1,6 +1,6 @@
 # Project Overview
 
-## NTE (Notification & Template Engine)
+## ESM (Email Sending Management)
 
 멀티채널 메시지 발송 통합 플랫폼
 
