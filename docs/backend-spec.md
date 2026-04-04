@@ -882,9 +882,81 @@ DELETE /suppression/tenant/{tenantId}/{email}
 
 ---
 
-## 10. Database Schema
+## 10. Settings - 시스템 설정
 
-### 10.1 주요 테이블
+### 10.1 AWS 설정 조회
+
+```
+GET /settings/aws
+```
+
+**Response** `200 OK`
+```json
+{
+  "sesRegion": "ap-northeast-2",
+  "sesAccessKey": "AKIA...",
+  "sesSecretKeyMasked": "abcd****",
+  "sesConfigured": true,
+  "dynamoRegion": "ap-northeast-2",
+  "dynamoAccessKey": "AKIA...",
+  "dynamoSecretKeyMasked": "abcd****",
+  "dynamoConfigured": true,
+  "endpoint": "",
+  "source": "database",
+  "updatedAt": "2024-01-01T00:00:00"
+}
+```
+
+---
+
+### 10.2 AWS 설정 저장
+
+```
+PUT /settings/aws
+```
+
+**Request Body**
+```json
+{
+  "sesRegion": "ap-northeast-2",
+  "sesAccessKey": "AKIA...",
+  "sesSecretKey": "secret...",
+  "dynamoRegion": "ap-northeast-2",
+  "dynamoAccessKey": "AKIA...",
+  "dynamoSecretKey": "secret...",
+  "endpoint": ""
+}
+```
+
+저장 후 AWS 클라이언트(SES, SES v2, DynamoDB)가 자동으로 재생성됩니다.
+
+**Response** `200 OK`: 10.1 응답과 동일
+
+---
+
+### 10.3 AWS 연결 테스트
+
+```
+POST /settings/aws/test
+```
+
+**Request Body**: 10.2와 동일
+
+**Response** `200 OK`
+```json
+{
+  "sesConnected": true,
+  "sesMessage": "SES 연결 성공",
+  "dynamoConnected": true,
+  "dynamoMessage": "DynamoDB 연결 성공"
+}
+```
+
+---
+
+## 11. Database Schema
+
+### 11.1 주요 테이블
 
 | Table | Description |
 |-------|-------------|
@@ -892,8 +964,9 @@ DELETE /suppression/tenant/{tenantId}/{email}
 | `ADM_EMAIL_SEND_DTL` | 이메일 발송 상세 (수신자 단위) |
 | `ADM_EMAIL_ATTCH_FILE_LST` | 첨부파일 목록 |
 | `SUPPRESSION_LIST` | 수신 거부 목록 (Bounce/Complaint) |
+| `SYSTEM_CONFIG` | 시스템 설정 (AWS 연결 정보 등) |
 
-### 10.2 이메일 상태 코드
+### 11.2 이메일 상태 코드
 
 | Code | Description |
 |------|-------------|
@@ -905,7 +978,7 @@ DELETE /suppression/tenant/{tenantId}/{email}
 | `SC` | 수신 거부 (Complaint) |
 | `SF` | 발송 실패 (Fail) |
 
-### 10.3 발송 구분 코드 (EnumEmailSendDivisionCode)
+### 11.3 발송 구분 코드 (EnumEmailSendDivisionCode)
 
 | Code | Description |
 |------|-------------|
@@ -915,9 +988,9 @@ DELETE /suppression/tenant/{tenantId}/{email}
 
 ---
 
-## 11. Configuration
+## 12. Configuration
 
-### 11.1 Environment Variables
+### 12.1 Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
@@ -932,7 +1005,7 @@ DELETE /suppression/tenant/{tenantId}/{email}
 | `AWS_ENDPOINT` | AWS Endpoint Override (LocalStack) | N (dev: `http://localhost:4566`) |
 | `API_KEY` | API 인증 키 | N (미설정 시 인증 비활성화) |
 
-### 11.2 Application Properties
+### 12.2 Application Properties
 
 | Property | Default | Description |
 |----------|---------|-------------|
@@ -944,7 +1017,7 @@ DELETE /suppression/tenant/{tenantId}/{email}
 | `polling.schedule.send-email-event-check-time` | `60000` | 발송 결과 폴링 주기 (ms) |
 | `spring.quartz.threadPool.threadCount` | `10` | Quartz 스레드 풀 크기 |
 
-### 11.3 Profiles
+### 12.3 Profiles
 
 | Profile | Description |
 |---------|-------------|
@@ -954,7 +1027,7 @@ DELETE /suppression/tenant/{tenantId}/{email}
 
 ---
 
-## 12. Error Response
+## 13. Error Response
 
 모든 에러는 공통 형식으로 반환됩니다.
 

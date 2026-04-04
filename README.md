@@ -151,6 +151,14 @@ message-sending-api-server/
 | `GET` | `/suppression/tenant/{tenantId}` | 수신 거부 목록 조회 |
 | `DELETE` | `/suppression/tenant/{tenantId}/{email}` | 수신 거부 제거 |
 
+### Settings - 시스템 설정
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/settings/aws` | AWS 설정 조회 |
+| `PUT` | `/settings/aws` | AWS 설정 저장 |
+| `POST` | `/settings/aws/test` | AWS 연결 테스트 |
+
 ### Scheduler - 예약 발송
 
 | Method | Endpoint | Description |

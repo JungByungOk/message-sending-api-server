@@ -48,6 +48,7 @@
 | Suppression Module | 수신 거부(Bounce/Complaint) 목록 관리 | PostgreSQL |
 | SES Identity | SES 도메인 아이덴티티 등록 및 DKIM 관리 | AWS SES v2 |
 | SES ConfigSet | 테넌트별 SES 구성 세트 관리 | AWS SES v2 |
+| Settings Module | 시스템 설정 관리 (AWS 연결 정보 등) | PostgreSQL |
 
 ### 기술 스택
 

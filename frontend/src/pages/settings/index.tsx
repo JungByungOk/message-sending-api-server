@@ -6,6 +6,7 @@ import {
   SaveOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/stores/auth';
+import AwsSettingsPage from './AwsSettings';
 import ThemeSettingsPage from './ThemeSettings';
 
 const { Title, Text } = Typography;
@@ -82,6 +83,10 @@ export default function SettingsPage() {
       </Text>
 
       <ApiKeySettings />
+
+      <Divider />
+
+      <AwsSettingsPage />
 
       <Divider />
 
