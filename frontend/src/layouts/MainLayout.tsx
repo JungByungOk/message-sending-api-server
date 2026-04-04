@@ -32,7 +32,7 @@ const menuItems = [
     children: [
       {
         path: '/email/send',
-        name: '이메일 발송',
+        name: '이메일 발송 테스트',
         icon: <MailOutlined />,
       },
       {
@@ -42,7 +42,7 @@ const menuItems = [
       },
       {
         path: '/scheduler',
-        name: '스케줄러',
+        name: '스케줄러 등록 현황',
         icon: <ClockCircleOutlined />,
       },
     ],

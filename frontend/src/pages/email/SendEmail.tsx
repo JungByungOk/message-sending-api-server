@@ -731,9 +731,9 @@ export default function SendEmailPage() {
   return (
     <div style={{ padding: 24 }}>
       <PageHeader
-        title="이메일 발송"
-        subtitle="직접 이메일을 작성하거나 템플릿을 사용하여 발송합니다."
-        breadcrumbs={[{ title: '홈', href: '/' }, { title: '이메일 발송' }]}
+        title="이메일 발송 테스트"
+        subtitle="직접 이메일을 작성하거나 템플릿을 사용하여 발송 테스트를 합니다."
+        breadcrumbs={[{ title: '홈', href: '/' }, { title: '이메일 발송 테스트' }]}
       />
 
       <Card style={{ borderRadius: 12, border: '1px solid #e5e8ed' }} bodyStyle={{ padding: 0 }}>

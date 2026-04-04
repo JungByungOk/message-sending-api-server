@@ -263,7 +263,7 @@ export default function DashboardPage() {
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
-                { label: '새 이메일 발송', path: '/email/send', color: '#1677ff', bg: 'rgba(22,119,255,0.08)', icon: <MailOutlined /> },
+                { label: '이메일 발송 테스트', path: '/email/send', color: '#1677ff', bg: 'rgba(22,119,255,0.08)', icon: <MailOutlined /> },
                 { label: '테넌트 생성', path: '/tenant/create', color: '#12b76a', bg: 'rgba(18,183,106,0.08)', icon: <TeamOutlined /> },
                 { label: '온보딩 시작', path: '/onboarding', color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', icon: <PlusOutlined /> },
               ].map((item) => (

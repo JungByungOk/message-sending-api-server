@@ -243,9 +243,9 @@ export default function SchedulerPage() {
   return (
     <div style={{ padding: 24 }}>
       <PageHeader
-        title="스케줄러"
+        title="스케줄러 등록 현황"
         subtitle="예약된 이메일 발송 작업을 관리합니다."
-        breadcrumbs={[{ title: '홈', href: '/' }, { title: '스케줄러' }]}
+        breadcrumbs={[{ title: '홈', href: '/' }, { title: '스케줄러 등록 현황' }]}
       />
 
       {/* ─── 통계 카드 ─── */}
