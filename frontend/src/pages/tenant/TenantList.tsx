@@ -175,16 +175,7 @@ export default function TenantList() {
                 label: '비활성화',
                 danger: true,
                 disabled: isDeactivating || record.status === 'INACTIVE',
-                onClick: () => {
-                  Modal.confirm({
-                    title: '테넌트 비활성화',
-                    content: '정말 비활성화하시겠습니까?',
-                    okText: '비활성화',
-                    cancelText: '취소',
-                    okButtonProps: { danger: true },
-                    onOk: () => handleDeactivate(record.tenantId),
-                  });
-                },
+                onClick: () => handleDeactivate(record.tenantId),
               },
               {
                 key: 'delete',
