@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import {
+  Alert,
   Badge,
   Button,
   Card,
+  Col,
   Form,
   Input,
   Radio,
+  Row,
   Select,
   Space,
   Spin,
@@ -18,6 +21,8 @@ import {
   CloseCircleOutlined,
   ExperimentOutlined,
   SaveOutlined,
+  SendOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { useAwsSettings, useSaveAwsSettings, useTestAwsConnection } from '@/hooks/useSettings';
 import type { AwsSettings, AwsTestResult } from '@/types/settings';
@@ -34,35 +39,29 @@ const AWS_REGIONS = [
   { value: 'eu-central-1', label: 'Europe (Frankfurt)' },
 ];
 
+const POLLING_OPTIONS = [
+  { value: '60000', label: '1분' },
+  { value: '300000', label: '5분' },
+  { value: '600000', label: '10분' },
+];
+
 function TestResultCard({ result }: { result: AwsTestResult }) {
   return (
-    <Card
-      size="small"
-      style={{
-        marginTop: 16,
-        backgroundColor: result.connected ? '#f6ffed' : '#fff2f0',
-        borderColor: result.connected ? '#b7eb8f' : '#ffccc7',
-      }}
-    >
-      <Space>
-        {result.connected ? (
-          <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 18 }} />
-        ) : (
-          <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: 18 }} />
-        )}
-        <div>
-          <Text strong>{result.connected ? '연결 성공' : '연결 실패'}</Text>
-          <br />
-          <Text type="secondary" style={{ fontSize: 13 }}>{result.message}</Text>
-        </div>
-      </Space>
-    </Card>
+    <Alert
+      type={result.connected ? 'success' : 'error'}
+      showIcon
+      icon={result.connected ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+      message={result.connected ? '연결 성공' : '연결 실패'}
+      description={result.message}
+      style={{ marginTop: 16 }}
+    />
   );
 }
 
 export default function AwsSettingsPage() {
   const [form] = Form.useForm<AwsSettings>();
-  const authType = Form.useWatch('authType', form);
+  const gatewayAuthType = Form.useWatch('gatewayAuthType', form);
+  const deliveryMode = Form.useWatch('deliveryMode', form);
   const { data: settings, isLoading } = useAwsSettings();
   const saveMutation = useSaveAwsSettings();
   const testMutation = useTestAwsConnection();
@@ -71,31 +70,29 @@ export default function AwsSettingsPage() {
   useEffect(() => {
     if (settings) {
       form.setFieldsValue({
-        endpoint: settings.endpoint || '',
-        region: settings.region || 'ap-northeast-2',
-        authType: (settings.authType as 'API_KEY' | 'IAM') || 'API_KEY',
-        apiKey: '',
-        accessKey: settings.accessKey || '',
-        secretKey: '',
+        gatewayEndpoint: settings.gatewayEndpoint || '',
+        gatewayRegion: settings.gatewayRegion || 'ap-northeast-2',
+        gatewayAuthType: (settings.gatewayAuthType as 'API_KEY' | 'IAM') || 'API_KEY',
+        gatewayApiKey: '',
+        gatewayAccessKey: settings.gatewayAccessKey || '',
+        gatewaySecretKey: '',
+        gatewaySendPath: settings.gatewaySendPath || '/send-email',
+        gatewayResultsPath: settings.gatewayResultsPath || '/results',
+        gatewayConfigPath: settings.gatewayConfigPath || '/config',
+        callbackUrl: settings.callbackUrl || '',
+        callbackSecret: '',
+        deliveryMode: (settings.deliveryMode as 'callback' | 'polling') || 'callback',
+        pollingInterval: settings.pollingInterval || '300000',
       });
     }
   }, [settings, form]);
 
-  const getFormValues = (): AwsSettings => {
-    const values = form.getFieldsValue();
-    return {
-      ...values,
-      apiKey: values.apiKey || '',
-      secretKey: values.secretKey || '',
-    };
-  };
-
   const handleSave = async () => {
     try {
       await form.validateFields();
-      const values = getFormValues();
+      const values = form.getFieldsValue();
       await saveMutation.mutateAsync(values);
-      void message.success('API Gateway 설정이 저장되었습니다.');
+      void message.success('설정이 저장되었습니다.');
       setTestResult(null);
     } catch {
       void message.error('설정 저장에 실패했습니다.');
@@ -105,7 +102,7 @@ export default function AwsSettingsPage() {
   const handleTest = async () => {
     try {
       await form.validateFields();
-      const values = getFormValues();
+      const values = form.getFieldsValue();
       const result = await testMutation.mutateAsync(values);
       setTestResult(result);
       if (result.connected) {
@@ -127,74 +124,156 @@ export default function AwsSettingsPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <Title level={4} style={{ margin: 0 }}>
           <ApiOutlined style={{ marginRight: 8 }} />
-          API Gateway 연결 설정
+          AWS 연동 설정
         </Title>
         <Badge
-          status={settings?.configured ? 'success' : 'default'}
-          text={settings?.configured ? '설정됨' : '미설정'}
+          status={settings?.gatewayConfigured ? 'success' : 'default'}
+          text={settings?.gatewayConfigured ? '설정됨' : '미설정'}
         />
       </div>
       <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
-        이메일 발송 요청이 전달되는 AWS API Gateway 연결 정보를 관리합니다.
+        API Gateway 연결, 콜백 수신, 발송 결과 수신 방식을 설정합니다.
       </Text>
 
-      <Form form={form} layout="vertical" requiredMark="optional" initialValues={{ authType: 'API_KEY' }}>
-        {/* Endpoint */}
-        <Card title="Gateway Endpoint" size="small">
-          <Form.Item
-            label="Endpoint URL"
-            name="endpoint"
-            rules={[{ required: true, message: 'Endpoint URL을 입력하세요' }]}
-          >
-            <Input placeholder="https://xxxxxxxxxx.execute-api.ap-northeast-2.amazonaws.com/prod" />
-          </Form.Item>
-          <Form.Item
-            label="Region"
-            name="region"
-            rules={[{ required: true, message: '리전을 선택하세요' }]}
-          >
-            <Select options={AWS_REGIONS} placeholder="리전 선택" />
-          </Form.Item>
-        </Card>
-
-        {/* Authentication */}
-        <Card title="인증 설정" size="small" style={{ marginTop: 16 }}>
-          <Form.Item label="인증 방식" name="authType">
-            <Radio.Group>
-              <Radio.Button value="API_KEY">API Key</Radio.Button>
-              <Radio.Button value="IAM">IAM Signature V4</Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-
-          {authType === 'API_KEY' && (
-            <Form.Item
-              label="API Key"
-              name="apiKey"
-              help={settings?.apiKeyMasked ? `현재: ${settings.apiKeyMasked} (변경 시에만 입력)` : undefined}
+      <Form form={form} layout="vertical" requiredMark="optional">
+        <Row gutter={24}>
+          {/* === API Gateway === */}
+          <Col xs={24} lg={12}>
+            <Card
+              title={<><SendOutlined style={{ marginRight: 8 }} />API Gateway</>}
+              size="small"
+              extra={
+                <Badge
+                  status={settings?.gatewayConfigured ? 'success' : 'error'}
+                  text={settings?.gatewayConfigured ? '연결됨' : '미연결'}
+                />
+              }
             >
-              <Input.Password placeholder="비워두면 기존 값 유지" />
-            </Form.Item>
-          )}
-
-          {authType === 'IAM' && (
-            <>
               <Form.Item
-                label="Access Key"
-                name="accessKey"
-                rules={[{ required: true, message: 'Access Key를 입력하세요' }]}
+                label="Endpoint URL"
+                name="gatewayEndpoint"
+                rules={[{ required: true, message: 'Endpoint를 입력하세요' }]}
               >
-                <Input placeholder="AKIA..." />
+                <Input placeholder="https://xxxxxxxxxx.execute-api.ap-northeast-2.amazonaws.com/prod" />
               </Form.Item>
+
+              <Row gutter={12}>
+                <Col span={8}>
+                  <Form.Item label="발송 경로" name="gatewaySendPath">
+                    <Input placeholder="/send-email" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item label="조회 경로" name="gatewayResultsPath">
+                    <Input placeholder="/results" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item label="설정 경로" name="gatewayConfigPath">
+                    <Input placeholder="/config" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item label="Region" name="gatewayRegion">
+                <Select options={AWS_REGIONS} />
+              </Form.Item>
+
+              <Form.Item label="인증 방식" name="gatewayAuthType">
+                <Radio.Group>
+                  <Radio.Button value="API_KEY">API Key</Radio.Button>
+                  <Radio.Button value="IAM">IAM Signature V4</Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+
+              {gatewayAuthType === 'API_KEY' && (
+                <Form.Item
+                  label="API Key"
+                  name="gatewayApiKey"
+                  help={settings?.gatewayApiKeyMasked ? `현재: ${settings.gatewayApiKeyMasked}` : undefined}
+                >
+                  <Input.Password placeholder="비워두면 기존 값 유지" />
+                </Form.Item>
+              )}
+
+              {gatewayAuthType === 'IAM' && (
+                <>
+                  <Form.Item label="Access Key" name="gatewayAccessKey">
+                    <Input placeholder="AKIA..." />
+                  </Form.Item>
+                  <Form.Item
+                    label="Secret Key"
+                    name="gatewaySecretKey"
+                    help={settings?.gatewaySecretKeyMasked ? `현재: ${settings.gatewaySecretKeyMasked}` : undefined}
+                  >
+                    <Input.Password placeholder="비워두면 기존 값 유지" />
+                  </Form.Item>
+                </>
+              )}
+            </Card>
+          </Col>
+
+          {/* === Callback + Delivery Mode === */}
+          <Col xs={24} lg={12}>
+            <Card
+              title={<><SyncOutlined style={{ marginRight: 8 }} />발송 결과 수신</>}
+              size="small"
+              extra={
+                <Badge
+                  status={settings?.callbackConfigured ? 'success' : 'error'}
+                  text={settings?.callbackConfigured ? '설정됨' : '미설정'}
+                />
+              }
+            >
+              <Form.Item label="수신 모드" name="deliveryMode">
+                <Radio.Group>
+                  <Radio.Button value="callback">Callback (실시간)</Radio.Button>
+                  <Radio.Button value="polling">Polling (폴링만)</Radio.Button>
+                </Radio.Group>
+              </Form.Item>
+
+              {deliveryMode === 'callback' && (
+                <Alert
+                  type="info"
+                  showIcon
+                  message="Callback 모드"
+                  description="Lambda가 실시간으로 이벤트를 전달하고, 보정 폴링도 함께 동작합니다."
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+
+              {deliveryMode === 'polling' && (
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="Polling 모드"
+                  description="콜백 없이 보정 폴링으로만 결과를 수신합니다. 내부 IDC 등 콜백 포트를 열 수 없는 환경에서 사용합니다."
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+
               <Form.Item
-                label="Secret Key"
-                name="secretKey"
-                help={settings?.secretKeyMasked ? `현재: ${settings.secretKeyMasked} (변경 시에만 입력)` : undefined}
+                label="Callback URL"
+                name="callbackUrl"
+                help="Lambda가 이벤트를 전송할 ESM 엔드포인트"
+              >
+                <Input placeholder="https://esm-server/ses/callback/event" />
+              </Form.Item>
+
+              <Form.Item
+                label="Callback Secret"
+                name="callbackSecret"
+                help={settings?.callbackSecretMasked ? `현재: ${settings.callbackSecretMasked}` : '요청 무결성 검증용 시크릿'}
               >
                 <Input.Password placeholder="비워두면 기존 값 유지" />
               </Form.Item>
-            </>
-          )}
-        </Card>
+
+              <Form.Item label="보정 폴링 주기" name="pollingInterval">
+                <Select options={POLLING_OPTIONS} />
+              </Form.Item>
+            </Card>
+          </Col>
+        </Row>
 
         {/* 테스트 결과 */}
         {testResult && <TestResultCard result={testResult} />}

@@ -59,7 +59,7 @@
 | Suppression Module | 수신 거부(Bounce/Complaint) 목록 관리 | PostgreSQL |
 | SES Identity | SES 도메인 아이덴티티 등록 및 DKIM 관리 | API Gateway |
 | SES ConfigSet | 테넌트별 SES 구성 세트 관리 | API Gateway |
-| Settings Module | API Gateway 연결 설정 관리 | PostgreSQL |
+| Settings Module | API Gateway 연결, Callback, 수신 모드 설정 관리 | PostgreSQL, SSM Parameter Store |
 
 ### 기술 스택
 
@@ -82,21 +82,34 @@
 #### 이메일 발송 흐름
 
 ```
-1. [외부 시스템] → PostgreSQL에 이메일 데이터 INSERT (상태: SR)
-2. [Polling Checker] → 60초 주기로 SR 상태 이메일 조회 (최대 280건)
-3. [Polling Checker] → Quartz 스케줄러에 발송 작업 등록 (상태: SS)
-4. [Scheduler] → AWS SES API로 이메일 발송 (상태: SE)
-5. [AWS SES] → SNS → Lambda → DynamoDB에 이벤트 기록
-6. [Polling Checker] → 60초 주기로 DynamoDB 이벤트 조회 (최대 300건)
-7. [Polling Checker] → PostgreSQL에 최종 상태 업데이트 (SD/SB/SC)
+1. [ESM] → API Gateway POST /send-email (발송 요청)
+2. [API Gateway] → SQS (비동기 큐잉)
+3. [Lambda email-sender] → SQS 트리거 → SES 이메일 발송
+4. [Lambda email-sender] → DynamoDB ems-idempotency (중복 발송 방지)
+5. [Lambda email-sender] → DynamoDB ems-tenant-config (테넌트 Config Set 조회)
 ```
 
-#### 직접 API 발송 흐름
+#### 발송 결과 수신 흐름 (2-path)
 
 ```
-1. [Client] → POST /ses/text-mail 또는 /ses/templated-mail
-2. [Backend] → AWS SES API 직접 호출
-3. [Backend] → messageId 반환
+[실시간 - Callback 모드]
+1. [SES] → SNS → Lambda event-processor
+2. [Lambda] → DynamoDB ems-send-results 저장 (항상)
+3. [Lambda] → SSM에서 모드 확인 → ESM /ses/callback/event 호출
+4. [ESM] → X-Callback-Secret 검증 → PostgreSQL 상태 업데이트
+
+[보정 - 항상 동작]
+1. [ESM] → API Gateway GET /results?tenant_id=X&after=T (5~10분 주기)
+2. [Lambda event-query] → DynamoDB ems-send-results GSI Query
+3. [ESM] → 멱등성 처리로 PostgreSQL 상태 업데이트
+```
+
+#### 설정 동기화 흐름
+
+```
+1. [ESM 설정 UI] → PUT /settings/aws (ESM DB 저장)
+2. [ESM] → API Gateway PUT /config (SSM Parameter Store 동기화)
+3. [Lambda event-processor] → SSM 읽기 (캐시 30초) → 모드/콜백 자동 반영
 ```
 
 ### 배포 환경

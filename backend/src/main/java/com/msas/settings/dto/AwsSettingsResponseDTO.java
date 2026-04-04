@@ -6,13 +6,24 @@ import java.time.LocalDateTime;
 
 @Data
 public class AwsSettingsResponseDTO {
-    private String endpoint;
-    private String region;
-    private String authType;       // API_KEY or IAM
-    private String apiKeyMasked;
-    private String accessKey;
-    private String secretKeyMasked;
-    private boolean configured;
-    private String source;         // "database" or "environment"
+    // API Gateway
+    private String gatewayEndpoint;
+    private String gatewayRegion;
+    private String gatewayAuthType;
+    private String gatewayApiKeyMasked;
+    private String gatewayAccessKey;
+    private String gatewaySecretKeyMasked;
+    private String gatewaySendPath;
+    private String gatewayResultsPath;
+    private String gatewayConfigPath;
+    private boolean gatewayConfigured;
+    // Callback
+    private String callbackUrl;
+    private String callbackSecretMasked;
+    private boolean callbackConfigured;
+    // Delivery
+    private String deliveryMode;
+    private String pollingInterval;
+    // Meta
     private LocalDateTime updatedAt;
 }

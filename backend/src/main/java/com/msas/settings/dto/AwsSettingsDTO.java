@@ -4,10 +4,20 @@ import lombok.Data;
 
 @Data
 public class AwsSettingsDTO {
-    private String endpoint;
-    private String region;
-    private String authType;   // API_KEY or IAM
-    private String apiKey;
-    private String accessKey;
-    private String secretKey;
+    // API Gateway
+    private String gatewayEndpoint;
+    private String gatewayRegion;
+    private String gatewayAuthType;   // API_KEY or IAM
+    private String gatewayApiKey;
+    private String gatewayAccessKey;
+    private String gatewaySecretKey;
+    private String gatewaySendPath;
+    private String gatewayResultsPath;
+    private String gatewayConfigPath;
+    // Callback
+    private String callbackUrl;
+    private String callbackSecret;
+    // Delivery
+    private String deliveryMode;      // callback or polling
+    private String pollingInterval;   // ms
 }

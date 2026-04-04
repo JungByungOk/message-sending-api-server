@@ -1,5 +1,6 @@
 package com.msas.common.security;
 
+import com.msas.settings.service.SettingsService;
 import com.msas.tenant.repository.TenantRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -23,9 +24,11 @@ public class SecurityConfig {
     private String apiKey;
 
     private final TenantRepository tenantRepository;
+    private final SettingsService settingsService;
 
-    public SecurityConfig(TenantRepository tenantRepository) {
+    public SecurityConfig(TenantRepository tenantRepository, SettingsService settingsService) {
         this.tenantRepository = tenantRepository;
+        this.settingsService = settingsService;
     }
 
     @Bean
@@ -48,6 +51,9 @@ public class SecurityConfig {
                         auth.anyRequest().permitAll();
                     }
                 });
+
+        // Callback Secret 검증 필터 (항상 등록, secret 미설정 시 검증 건너뜀)
+        http.addFilterBefore(new CallbackSecretFilter(settingsService), UsernamePasswordAuthenticationFilter.class);
 
         if (useApiKey) {
             ApiKeyAuthenticationFilter authFilter = new ApiKeyAuthenticationFilter(apiKey, tenantRepository);

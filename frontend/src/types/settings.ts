@@ -1,21 +1,42 @@
 export interface AwsSettings {
-  endpoint: string;
-  region: string;
-  authType: 'API_KEY' | 'IAM';
-  apiKey: string;
-  accessKey: string;
-  secretKey: string;
+  // API Gateway
+  gatewayEndpoint: string;
+  gatewayRegion: string;
+  gatewayAuthType: 'API_KEY' | 'IAM';
+  gatewayApiKey: string;
+  gatewayAccessKey: string;
+  gatewaySecretKey: string;
+  gatewaySendPath: string;
+  gatewayResultsPath: string;
+  gatewayConfigPath: string;
+  // Callback
+  callbackUrl: string;
+  callbackSecret: string;
+  // Delivery
+  deliveryMode: 'callback' | 'polling';
+  pollingInterval: string;
 }
 
 export interface AwsSettingsResponse {
-  endpoint: string;
-  region: string;
-  authType: string;
-  apiKeyMasked: string;
-  accessKey: string;
-  secretKeyMasked: string;
-  configured: boolean;
-  source: 'database' | 'none';
+  // API Gateway
+  gatewayEndpoint: string;
+  gatewayRegion: string;
+  gatewayAuthType: string;
+  gatewayApiKeyMasked: string;
+  gatewayAccessKey: string;
+  gatewaySecretKeyMasked: string;
+  gatewaySendPath: string;
+  gatewayResultsPath: string;
+  gatewayConfigPath: string;
+  gatewayConfigured: boolean;
+  // Callback
+  callbackUrl: string;
+  callbackSecretMasked: string;
+  callbackConfigured: boolean;
+  // Delivery
+  deliveryMode: string;
+  pollingInterval: string;
+  // Meta
   updatedAt: string | null;
 }
 

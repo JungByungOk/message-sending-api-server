@@ -882,9 +882,27 @@ DELETE /suppression/tenant/{tenantId}/{email}
 
 ---
 
-## 10. Settings - 시스템 설정 (API Gateway 연동)
+## 10. Settings - 시스템 설정
 
-### 10.1 API Gateway 설정 조회
+### 아키텍처 개요
+
+```
+ESM 설정 저장 시:
+  ① ESM DB (SYSTEM_CONFIG) 저장 — 모든 설정
+  ② API Gateway PUT /config 호출 — Callback/모드 설정을 SSM Parameter Store에 동기화
+  → Lambda event-processor가 SSM을 읽어 30초 내 자동 반영
+```
+
+### 설정 분류
+
+| 구분 | 항목 | 저장 위치 |
+|------|------|-----------|
+| AWS 고정값 | Gateway Endpoint, Region, 인증 정보, 경로 | ESM DB |
+| UI → SSM 동기화 | Callback URL, Callback Secret, 수신 모드, 폴링 주기 | ESM DB + SSM (API Gateway 경유) |
+
+---
+
+### 10.1 설정 조회
 
 ```
 GET /settings/aws
@@ -893,46 +911,67 @@ GET /settings/aws
 **Response** `200 OK`
 ```json
 {
-  "endpoint": "https://xxxxxxxxxx.execute-api.ap-northeast-2.amazonaws.com/prod",
-  "region": "ap-northeast-2",
-  "authType": "API_KEY",
-  "apiKeyMasked": "abcd****",
-  "accessKey": "",
-  "secretKeyMasked": "",
-  "configured": true,
-  "source": "database",
+  "gatewayEndpoint": "https://xxx.execute-api.ap-northeast-2.amazonaws.com/prod",
+  "gatewayRegion": "ap-northeast-2",
+  "gatewayAuthType": "API_KEY",
+  "gatewayApiKeyMasked": "abcd****",
+  "gatewayAccessKey": "",
+  "gatewaySecretKeyMasked": "",
+  "gatewaySendPath": "/send-email",
+  "gatewayResultsPath": "/results",
+  "gatewayConfigPath": "/config",
+  "gatewayConfigured": true,
+  "callbackUrl": "https://esm-server/ses/callback/event",
+  "callbackSecretMasked": "abcd****",
+  "callbackConfigured": true,
+  "deliveryMode": "callback",
+  "pollingInterval": "300000",
   "updatedAt": "2024-01-01T00:00:00"
 }
 ```
 
 ---
 
-### 10.2 API Gateway 설정 저장
+### 10.2 설정 저장
 
 ```
 PUT /settings/aws
 ```
 
+저장 시 ESM DB에 저장 + API Gateway `PUT /config`를 호출하여 SSM에 동기화합니다.
+
 **Request Body**
 ```json
 {
-  "endpoint": "https://xxxxxxxxxx.execute-api.ap-northeast-2.amazonaws.com/prod",
-  "region": "ap-northeast-2",
-  "authType": "API_KEY",
-  "apiKey": "your-api-key",
-  "accessKey": "",
-  "secretKey": ""
+  "gatewayEndpoint": "https://xxx.execute-api.ap-northeast-2.amazonaws.com/prod",
+  "gatewayRegion": "ap-northeast-2",
+  "gatewayAuthType": "API_KEY",
+  "gatewayApiKey": "your-api-key",
+  "gatewayAccessKey": "",
+  "gatewaySecretKey": "",
+  "gatewaySendPath": "/send-email",
+  "gatewayResultsPath": "/results",
+  "gatewayConfigPath": "/config",
+  "callbackUrl": "https://esm-server/ses/callback/event",
+  "callbackSecret": "your-secret",
+  "deliveryMode": "callback",
+  "pollingInterval": "300000"
 }
 ```
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| endpoint | String | Y | API Gateway Endpoint URL |
-| region | String | Y | AWS 리전 |
-| authType | String | Y | 인증 방식: `API_KEY` 또는 `IAM` |
-| apiKey | String | N | API Key (authType=API_KEY 시) |
-| accessKey | String | N | IAM Access Key (authType=IAM 시) |
-| secretKey | String | N | IAM Secret Key (authType=IAM 시) |
+| gatewayEndpoint | String | Y | API Gateway Base URL |
+| gatewayRegion | String | Y | AWS 리전 |
+| gatewayAuthType | String | Y | 인증 방식: `API_KEY` 또는 `IAM` |
+| gatewayApiKey | String | N | API Key |
+| gatewaySendPath | String | N | 발송 경로 (기본: `/send-email`) |
+| gatewayResultsPath | String | N | 조회 경로 (기본: `/results`) |
+| gatewayConfigPath | String | N | 설정 경로 (기본: `/config`) |
+| callbackUrl | String | N | Lambda → ESM 콜백 URL |
+| callbackSecret | String | N | 콜백 무결성 검증 시크릿 |
+| deliveryMode | String | Y | `callback` 또는 `polling` |
+| pollingInterval | String | N | 보정 폴링 주기 (ms, 기본: 300000) |
 
 **Response** `200 OK`: 10.1 응답과 동일
 
@@ -954,6 +993,17 @@ POST /settings/aws/test
   "statusCode": 200
 }
 ```
+
+---
+
+### 10.4 발송 결과 수신 모드
+
+| 모드 | Lambda 동작 | ESM 동작 | 사용 상황 |
+|------|------------|---------|-----------|
+| `callback` | DB저장 + ESM 콜백 호출 | 콜백 수신 + 보정 폴링 | 정상 운영 |
+| `polling` | DB저장만 | 보정 폴링만 | ESM 장애, 콜백 포트 미개방 |
+
+모드 전환 시 SSM Parameter Store에 자동 동기화되며, Lambda가 30초 내 반영합니다.
 
 ---
 

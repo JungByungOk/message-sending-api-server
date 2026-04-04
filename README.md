@@ -72,19 +72,41 @@ message-sending-api-server/
 └────────────────────────┬────────────────────────────────┘
                          │ REST API
 ┌────────────────────────▼────────────────────────────────┐
-│                    API Server (ESM)                       │
-│                     Port: 7092                            │
+│                  ESM (Spring Boot 7092)                   │
 ├──────────┬────────────┬────────────┬───────────────────┤
-│  SES     │  Tenant    │  Scheduler │  Polling Checker  │
+│  SES     │  Tenant    │  Callback  │  Settings         │
 │  Module  │  Module    │  Module    │  Module           │
 ├──────────┼────────────┼────────────┼───────────────────┤
-│ Callback │ Onboarding │Suppression │ SES Identity/     │
-│ Module   │ Module     │ Module     │ ConfigSet         │
+│Onboarding│Suppression │  Scheduler │  SES Identity/    │
+│  Module  │  Module    │  Module    │  ConfigSet        │
 ├──────────┴────────────┴────────────┴───────────────────┤
-│         Spring Security (Tenant API Key Auth)            │
-├─────────────────────────────────────────────────────────┤
-│  PostgreSQL (이메일/스케줄러)  │  DynamoDB (SES 이벤트)  │
-└─────────────────────────────────────────────────────────┘
+│    Spring Security (Tenant API Key + Callback Secret)    │
+└────────────────────┬───────────────┬────────────────────┘
+                     │               │
+            ┌────────▼────────┐   ┌──▼──────────┐
+            │   PostgreSQL    │   │ API Gateway  │
+            └─────────────────┘   └──┬───────────┘
+                                     │
+                ┌────────────────────┼────────────────────┐
+                │                    │                    │
+         ┌──────▼──────┐  ┌─────────▼─────────┐  ┌──────▼──────┐
+         │    SQS      │  │  SSM Parameter    │  │  Lambda     │
+         │  (발송 큐)  │  │  Store (설정)     │  │ event-query │
+         └──────┬──────┘  └───────────────────┘  └──────┬──────┘
+                │                                       │
+         ┌──────▼──────┐                         ┌──────▼──────┐
+         │   Lambda    │                         │  DynamoDB   │
+         │email-sender │                         │ send-results│
+         └──────┬──────┘                         └─────────────┘
+                │                                       ▲
+         ┌──────▼──────┐    ┌──────────────┐           │
+         │  Amazon SES │───▶│ SNS → Lambda │───────────┘
+         │             │    │event-processor│
+         └─────────────┘    └──────┬───────┘
+                                   │ callback 모드
+                            ┌──────▼───────┐
+                            │ESM /callback │
+                            └──────────────┘
 ```
 
 ## API Endpoints
