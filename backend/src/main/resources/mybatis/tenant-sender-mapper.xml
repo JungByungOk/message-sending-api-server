@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.msas.tenant.repository.TenantSenderRepository">
+
+    <resultMap id="TenantSenderResultMap" type="com.msas.tenant.entity.TenantSenderEntity">
+        <id     property="id"          column="id"/>
+        <result property="tenantId"    column="tenant_id"/>
+        <result property="email"       column="email"/>
+        <result property="displayName" column="display_name"/>
+        <result property="isDefault"   column="is_default"/>
+        <result property="createdAt"   column="created_at"/>
+    </resultMap>
+
+    <select id="findByTenantId" resultMap="TenantSenderResultMap">
+        SELECT id, tenant_id, email, display_name, is_default, created_at
+        FROM TENANT_SENDER
+        WHERE tenant_id = #{tenantId}
+        ORDER BY is_default DESC, created_at
+    </select>
+
+    <select id="findByTenantIdAndEmail" resultMap="TenantSenderResultMap">
+        SELECT id, tenant_id, email, display_name, is_default, created_at
+        FROM TENANT_SENDER
+        WHERE tenant_id = #{tenantId} AND email = #{email}
+    </select>
+
+    <select id="findDefaultByTenantId" resultMap="TenantSenderResultMap">
+        SELECT id, tenant_id, email, display_name, is_default, created_at
+        FROM TENANT_SENDER
+        WHERE tenant_id = #{tenantId} AND is_default = TRUE
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.msas.tenant.entity.TenantSenderEntity">
+        INSERT INTO TENANT_SENDER (tenant_id, email, display_name, is_default, created_at)
+        VALUES (#{tenantId}, #{email}, #{displayName}, #{isDefault}, CURRENT_TIMESTAMP)
+        ON CONFLICT (tenant_id, email) DO UPDATE SET display_name = #{displayName}, is_default = #{isDefault}
+    </insert>
+
+    <delete id="deleteByTenantIdAndEmail">
+        DELETE FROM TENANT_SENDER
+        WHERE tenant_id = #{tenantId} AND email = #{email}
+    </delete>
+
+</mapper>

@@ -29,3 +29,12 @@ export interface TenantListResponse {
   totalCount: number;
   tenants: Tenant[];
 }
+
+export interface TenantSender {
+  id: number;
+  tenantId: string;
+  email: string;
+  displayName: string | null;
+  isDefault: boolean;
+  createdAt: string;
+}

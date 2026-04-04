@@ -1,5 +1,6 @@
 package com.msas.ses.controller;
 
+import com.msas.tenant.service.SenderValidationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -23,10 +24,12 @@ import java.util.List;
 public class EmailController {
 
     private final SESMailService sesMailService;
+    private final SenderValidationService senderValidationService;
 
     @Operation(summary = "텍스트 이메일 발송", description = "HTML 본문 기반 이메일을 발송합니다.")
     @PostMapping("/text-mail")
     public ResponseEntity<ResponseBasicEmailDTO> sendEmail(@Valid @RequestBody RequestBasicEmailDto requestBasicEmailDTO) {
+        senderValidationService.validateSender(requestBasicEmailDTO.getFrom());
 
         String messageId = sesMailService.sendEmail(requestBasicEmailDTO);
 
@@ -39,6 +42,8 @@ public class EmailController {
     @Operation(summary = "템플릿 이메일 발송", description = "AWS SES 템플릿 기반으로 이메일을 발송합니다. CC/BCC 지원.")
     @PostMapping("/templated-mail")
     public ResponseEntity<ResponseTemplatedEmailDTO> sendTemplatedEmail(@Valid @RequestBody RequestTemplatedEmailDto requestTemplatedEmailDto) {
+        senderValidationService.validateSender(requestTemplatedEmailDto.getFrom());
+
         String messageId = sesMailService.sendTemplatedEmail(requestTemplatedEmailDto);
 
         ResponseTemplatedEmailDTO responseTemplatedEmailDTO = new ResponseTemplatedEmailDTO();

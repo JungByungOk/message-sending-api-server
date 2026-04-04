@@ -5,6 +5,8 @@ import com.msas.tenant.dto.RequestCreateTenantDTO;
 import com.msas.tenant.dto.RequestUpdateTenantDTO;
 import com.msas.tenant.dto.ResponseTenantDTO;
 import com.msas.tenant.dto.ResponseTenantListDTO;
+import com.msas.tenant.entity.TenantSenderEntity;
+import com.msas.tenant.repository.TenantSenderRepository;
 import com.msas.tenant.service.QuotaService;
 import com.msas.tenant.service.TenantService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +17,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @Tag(name = "Tenant", description = "테넌트 관리 API")
 @RestController
 @RequestMapping("/tenant")
@@ -23,6 +28,7 @@ public class TenantController {
 
     private final TenantService tenantService;
     private final QuotaService quotaService;
+    private final TenantSenderRepository tenantSenderRepository;
 
     @Operation(summary = "테넌트 생성", description = "신규 테넌트를 등록합니다.")
     @PostMapping
@@ -99,5 +105,39 @@ public class TenantController {
             @RequestBody RequestUpdateTenantDTO request) {
         ResponseTenantDTO response = tenantService.updateTenant(tenantId, request);
         return ResponseEntity.ok(response);
+    }
+
+    // === 발신자 이메일 관리 ===
+
+    @Operation(summary = "발신자 목록 조회", description = "테넌트에 등록된 발신자 이메일 목록을 조회합니다.")
+    @GetMapping("/{tenantId}/senders")
+    public ResponseEntity<List<TenantSenderEntity>> getSenders(@PathVariable String tenantId) {
+        return ResponseEntity.ok(tenantSenderRepository.findByTenantId(tenantId));
+    }
+
+    @Operation(summary = "발신자 등록", description = "테넌트의 인증된 도메인 기반 발신자 이메일을 등록합니다.")
+    @PostMapping("/{tenantId}/senders")
+    public ResponseEntity<TenantSenderEntity> addSender(
+            @PathVariable String tenantId,
+            @RequestBody TenantSenderEntity sender) {
+        // 도메인 검증: 테넌트 도메인과 일치하는지 확인
+        ResponseTenantDTO tenant = tenantService.getTenant(tenantId);
+        String domain = tenant.getDomain();
+        if (domain != null && !sender.getEmail().endsWith("@" + domain)) {
+            throw new IllegalArgumentException(
+                    "발신자 이메일은 테넌트 도메인(@" + domain + ")만 허용됩니다.");
+        }
+        sender.setTenantId(tenantId);
+        tenantSenderRepository.insert(sender);
+        return new ResponseEntity<>(sender, HttpStatus.CREATED);
+    }
+
+    @Operation(summary = "발신자 삭제", description = "테넌트의 발신자 이메일을 삭제합니다.")
+    @DeleteMapping("/{tenantId}/senders/{email}")
+    public ResponseEntity<Void> removeSender(
+            @PathVariable String tenantId,
+            @PathVariable String email) {
+        tenantSenderRepository.deleteByTenantIdAndEmail(tenantId, email);
+        return ResponseEntity.noContent().build();
     }
 }

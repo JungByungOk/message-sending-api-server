@@ -1,4 +1,4 @@
-import type { CreateTenantRequest, Tenant, TenantListResponse, UpdateTenantRequest } from '@/types/tenant';
+import type { CreateTenantRequest, Tenant, TenantListResponse, TenantSender, UpdateTenantRequest } from '@/types/tenant';
 import type { PageParams } from '@/types/api';
 import apiClient from './client';
 
@@ -45,4 +45,21 @@ export const regenerateApiKey = async (id: string): Promise<Tenant> => {
 // 테넌트 영구 삭제
 export const deleteTenantPermanently = async (id: string): Promise<void> => {
   await apiClient.delete(`/tenant/${id}/permanent`);
+};
+
+// 발신자 목록 조회
+export const getSenders = async (tenantId: string): Promise<TenantSender[]> => {
+  const { data } = await apiClient.get<TenantSender[]>(`/tenant/${tenantId}/senders`);
+  return data;
+};
+
+// 발신자 등록
+export const addSender = async (tenantId: string, sender: { email: string; displayName?: string; isDefault?: boolean }): Promise<TenantSender> => {
+  const { data } = await apiClient.post<TenantSender>(`/tenant/${tenantId}/senders`, sender);
+  return data;
+};
+
+// 발신자 삭제
+export const removeSender = async (tenantId: string, email: string): Promise<void> => {
+  await apiClient.delete(`/tenant/${tenantId}/senders/${encodeURIComponent(email)}`);
 };

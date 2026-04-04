@@ -1,12 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   activateTenant,
+  addSender,
   createTenant,
   deactivateTenant,
   deleteTenantPermanently,
+  getSenders,
   getTenant,
   getTenants,
   regenerateApiKey,
+  removeSender,
   updateTenant,
 } from '@/api/tenant';
 import type { CreateTenantRequest, UpdateTenantRequest } from '@/types/tenant';
@@ -93,6 +96,39 @@ export const useRegenerateApiKey = () => {
     mutationFn: (id: string) => regenerateApiKey(id),
     onSuccess: (_data, id) => {
       void queryClient.invalidateQueries({ queryKey: ['tenant', id] });
+    },
+  });
+};
+
+// 발신자 목록 조회 훅
+export const useSenders = (tenantId: string) => {
+  return useQuery({
+    queryKey: ['senders', tenantId],
+    queryFn: () => getSenders(tenantId),
+    enabled: !!tenantId,
+  });
+};
+
+// 발신자 등록 뮤테이션 훅
+export const useAddSender = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tenantId, sender }: { tenantId: string; sender: { email: string; displayName?: string; isDefault?: boolean } }) =>
+      addSender(tenantId, sender),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['senders', variables.tenantId] });
+    },
+  });
+};
+
+// 발신자 삭제 뮤테이션 훅
+export const useRemoveSender = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tenantId, email }: { tenantId: string; email: string }) =>
+      removeSender(tenantId, email),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['senders', variables.tenantId] });
     },
   });
 };

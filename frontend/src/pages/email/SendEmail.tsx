@@ -29,6 +29,7 @@ import {
   TagOutlined,
 } from '@ant-design/icons';
 import { useSendEmail, useSendTemplatedEmail, useTemplates } from '@/hooks/useEmail';
+import { useTenants, useSenders } from '@/hooks/useTenants';
 import type { SendEmailRequest, SendTemplatedEmailRequest } from '@/types/email';
 import PageHeader from '@/components/PageHeader';
 
@@ -321,6 +322,7 @@ function TextEmailForm() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(false);
   const [messageId, setMessageId] = useState('');
+  const [selectedTenantId, setSelectedTenantId] = useState('');
   const [pendingValues, setPendingValues] = useState<{
     from: string;
     to: string;
@@ -329,6 +331,8 @@ function TextEmailForm() {
     tags?: Array<{ name: string; value: string }>;
   } | null>(null);
   const { mutate: send, isPending } = useSendEmail();
+  const { data: tenantsData } = useTenants({ size: 100 });
+  const { data: senders } = useSenders(selectedTenantId);
   const [htmlPreview, setHtmlPreview] = useState(false);
   const bodyValue = Form.useWatch('body', form) as string | undefined;
 
@@ -369,22 +373,43 @@ function TextEmailForm() {
     <>
       <Form form={form} layout="vertical" onFinish={handleFinish}>
         <Row gutter={16}>
-          <Col xs={24} sm={12}>
+          <Col xs={24} sm={8}>
             <Form.Item
-              name="from"
-              label={<Text style={{ fontWeight: 500 }}>발신자 이메일</Text>}
-              rules={[
-                { required: true, message: '발신자 이메일을 입력하세요.' },
-                { type: 'email', message: '올바른 이메일 형식이 아닙니다.' },
-              ]}
+              label={<Text style={{ fontWeight: 500 }}>발송 테넌트</Text>}
+              rules={[{ required: true, message: '테넌트를 선택하세요.' }]}
             >
-              <Input
-                placeholder="sender@example.com"
-                prefix={<MailOutlined style={{ color: '#9ca3af' }} />}
+              <Select
+                placeholder="테넌트 선택"
+                showSearch
+                optionFilterProp="label"
+                options={tenantsData?.tenants
+                  ?.filter((t) => t.status === 'ACTIVE')
+                  .map((t) => ({ label: `${t.tenantName} (${t.domain})`, value: t.tenantId }))}
+                onChange={(v) => {
+                  setSelectedTenantId(v);
+                  form.setFieldValue('from', undefined);
+                }}
               />
             </Form.Item>
           </Col>
-          <Col xs={24} sm={12}>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="from"
+              label={<Text style={{ fontWeight: 500 }}>발신자 이메일</Text>}
+              rules={[{ required: true, message: '발신자를 선택하세요.' }]}
+            >
+              <Select
+                placeholder={selectedTenantId ? '발신자 선택' : '테넌트를 먼저 선택하세요'}
+                disabled={!selectedTenantId}
+                options={senders?.map((s) => ({
+                  label: s.displayName ? `${s.displayName} <${s.email}>` : s.email,
+                  value: s.email,
+                }))}
+                notFoundContent={selectedTenantId ? '등록된 발신자가 없습니다' : null}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
             <Form.Item
               name="to"
               label={<Text style={{ fontWeight: 500 }}>수신자 이메일</Text>}
@@ -502,6 +527,9 @@ function TemplatedEmailForm() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [resultOpen, setResultOpen] = useState(false);
   const [messageId, setMessageId] = useState('');
+  const [selectedTenantId, setSelectedTenantId] = useState('');
+  const { data: tenantsData } = useTenants({ size: 100 });
+  const { data: senders } = useSenders(selectedTenantId);
   const [pendingValues, setPendingValues] = useState<{
     templateName: string;
     from: string;
@@ -570,22 +598,43 @@ function TemplatedEmailForm() {
         </Form.Item>
 
         <Row gutter={16}>
-          <Col xs={24} sm={12}>
+          <Col xs={24} sm={8}>
             <Form.Item
-              name="from"
-              label={<Text style={{ fontWeight: 500 }}>발신자 이메일</Text>}
-              rules={[
-                { required: true, message: '발신자 이메일을 입력하세요.' },
-                { type: 'email', message: '올바른 이메일 형식이 아닙니다.' },
-              ]}
+              label={<Text style={{ fontWeight: 500 }}>발송 테넌트</Text>}
+              rules={[{ required: true, message: '테넌트를 선택하세요.' }]}
             >
-              <Input
-                placeholder="sender@example.com"
-                prefix={<MailOutlined style={{ color: '#9ca3af' }} />}
+              <Select
+                placeholder="테넌트 선택"
+                showSearch
+                optionFilterProp="label"
+                options={tenantsData?.tenants
+                  ?.filter((t) => t.status === 'ACTIVE')
+                  .map((t) => ({ label: `${t.tenantName} (${t.domain})`, value: t.tenantId }))}
+                onChange={(v) => {
+                  setSelectedTenantId(v);
+                  form.setFieldValue('from', undefined);
+                }}
               />
             </Form.Item>
           </Col>
-          <Col xs={24} sm={12}>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="from"
+              label={<Text style={{ fontWeight: 500 }}>발신자 이메일</Text>}
+              rules={[{ required: true, message: '발신자를 선택하세요.' }]}
+            >
+              <Select
+                placeholder={selectedTenantId ? '발신자 선택' : '테넌트를 먼저 선택하세요'}
+                disabled={!selectedTenantId}
+                options={senders?.map((s) => ({
+                  label: s.displayName ? `${s.displayName} <${s.email}>` : s.email,
+                  value: s.email,
+                }))}
+                notFoundContent={selectedTenantId ? '등록된 발신자가 없습니다' : null}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
             <Form.Item
               name="to"
               label={<Text style={{ fontWeight: 500 }}>수신자 이메일</Text>}
