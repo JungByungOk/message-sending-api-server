@@ -110,8 +110,8 @@ export default function TenantCreate() {
                 rules={[
                   { required: true, message: '도메인을 입력해 주세요.' },
                   {
-                    pattern: /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\.[a-zA-Z]{2,}$/,
-                    message: '올바른 도메인 형식이 아닙니다. (예: example.com)',
+                    pattern: /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/,
+                    message: '올바른 도메인 형식이 아닙니다. (예: example.com, example.co.kr)',
                   },
                 ]}
                 extra={
