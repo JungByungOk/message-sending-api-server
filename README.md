@@ -155,9 +155,9 @@ message-sending-api-server/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/settings/aws` | AWS 설정 조회 |
-| `PUT` | `/settings/aws` | AWS 설정 저장 |
-| `POST` | `/settings/aws/test` | AWS 연결 테스트 |
+| `GET` | `/settings/aws` | API Gateway 설정 조회 |
+| `PUT` | `/settings/aws` | API Gateway 설정 저장 |
+| `POST` | `/settings/aws/test` | API Gateway 연결 테스트 |
 
 ### Scheduler - 예약 발송
 

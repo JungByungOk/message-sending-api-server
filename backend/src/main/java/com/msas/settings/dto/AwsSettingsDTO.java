@@ -4,14 +4,10 @@ import lombok.Data;
 
 @Data
 public class AwsSettingsDTO {
-    // SES
-    private String sesRegion;
-    private String sesAccessKey;
-    private String sesSecretKey;
-    // DynamoDB
-    private String dynamoRegion;
-    private String dynamoAccessKey;
-    private String dynamoSecretKey;
-    // Common
     private String endpoint;
+    private String region;
+    private String authType;   // API_KEY or IAM
+    private String apiKey;
+    private String accessKey;
+    private String secretKey;
 }

@@ -1,30 +1,26 @@
 export interface AwsSettings {
-  sesRegion: string;
-  sesAccessKey: string;
-  sesSecretKey: string;
-  dynamoRegion: string;
-  dynamoAccessKey: string;
-  dynamoSecretKey: string;
   endpoint: string;
+  region: string;
+  authType: 'API_KEY' | 'IAM';
+  apiKey: string;
+  accessKey: string;
+  secretKey: string;
 }
 
 export interface AwsSettingsResponse {
-  sesRegion: string;
-  sesAccessKey: string;
-  sesSecretKeyMasked: string;
-  sesConfigured: boolean;
-  dynamoRegion: string;
-  dynamoAccessKey: string;
-  dynamoSecretKeyMasked: string;
-  dynamoConfigured: boolean;
   endpoint: string;
-  source: 'database' | 'environment';
+  region: string;
+  authType: string;
+  apiKeyMasked: string;
+  accessKey: string;
+  secretKeyMasked: string;
+  configured: boolean;
+  source: 'database' | 'none';
   updatedAt: string | null;
 }
 
 export interface AwsTestResult {
-  sesConnected: boolean;
-  sesMessage: string;
-  dynamoConnected: boolean;
-  dynamoMessage: string;
+  connected: boolean;
+  message: string;
+  statusCode: number;
 }

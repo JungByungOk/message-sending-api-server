@@ -8,8 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AwsTestResultDTO {
-    private boolean sesConnected;
-    private String sesMessage;
-    private boolean dynamoConnected;
-    private String dynamoMessage;
+    private boolean connected;
+    private String message;
+    private int statusCode;
 }

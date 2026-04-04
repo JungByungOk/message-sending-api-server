@@ -3,11 +3,9 @@ import {
   Badge,
   Button,
   Card,
-  Col,
-  Divider,
   Form,
   Input,
-  Row,
+  Radio,
   Select,
   Space,
   Spin,
@@ -15,9 +13,9 @@ import {
   message,
 } from 'antd';
 import {
+  ApiOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  CloudOutlined,
   ExperimentOutlined,
   SaveOutlined,
 } from '@ant-design/icons';
@@ -36,36 +34,26 @@ const AWS_REGIONS = [
   { value: 'eu-central-1', label: 'Europe (Frankfurt)' },
 ];
 
-function ConnectionBadge({ connected, label }: { connected: boolean; label: string }) {
-  return (
-    <Badge
-      status={connected ? 'success' : 'error'}
-      text={
-        <Space size={4}>
-          {connected ? (
-            <CheckCircleOutlined style={{ color: '#52c41a' }} />
-          ) : (
-            <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
-          )}
-          <Text style={{ fontSize: 13 }}>{label}</Text>
-        </Space>
-      }
-    />
-  );
-}
-
 function TestResultCard({ result }: { result: AwsTestResult }) {
   return (
-    <Card size="small" style={{ marginTop: 16, backgroundColor: '#fafafa' }}>
-      <Title level={5} style={{ marginTop: 0, marginBottom: 12 }}>연결 테스트 결과</Title>
-      <Space direction="vertical" size={8} style={{ width: '100%' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text strong>AWS SES</Text>
-          <ConnectionBadge connected={result.sesConnected} label={result.sesMessage} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text strong>AWS DynamoDB</Text>
-          <ConnectionBadge connected={result.dynamoConnected} label={result.dynamoMessage} />
+    <Card
+      size="small"
+      style={{
+        marginTop: 16,
+        backgroundColor: result.connected ? '#f6ffed' : '#fff2f0',
+        borderColor: result.connected ? '#b7eb8f' : '#ffccc7',
+      }}
+    >
+      <Space>
+        {result.connected ? (
+          <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 18 }} />
+        ) : (
+          <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: 18 }} />
+        )}
+        <div>
+          <Text strong>{result.connected ? '연결 성공' : '연결 실패'}</Text>
+          <br />
+          <Text type="secondary" style={{ fontSize: 13 }}>{result.message}</Text>
         </div>
       </Space>
     </Card>
@@ -74,6 +62,7 @@ function TestResultCard({ result }: { result: AwsTestResult }) {
 
 export default function AwsSettingsPage() {
   const [form] = Form.useForm<AwsSettings>();
+  const authType = Form.useWatch('authType', form);
   const { data: settings, isLoading } = useAwsSettings();
   const saveMutation = useSaveAwsSettings();
   const testMutation = useTestAwsConnection();
@@ -82,24 +71,22 @@ export default function AwsSettingsPage() {
   useEffect(() => {
     if (settings) {
       form.setFieldsValue({
-        sesRegion: settings.sesRegion || 'ap-northeast-2',
-        sesAccessKey: settings.sesAccessKey || '',
-        sesSecretKey: '',
-        dynamoRegion: settings.dynamoRegion || 'ap-northeast-2',
-        dynamoAccessKey: settings.dynamoAccessKey || '',
-        dynamoSecretKey: '',
         endpoint: settings.endpoint || '',
+        region: settings.region || 'ap-northeast-2',
+        authType: (settings.authType as 'API_KEY' | 'IAM') || 'API_KEY',
+        apiKey: '',
+        accessKey: settings.accessKey || '',
+        secretKey: '',
       });
     }
   }, [settings, form]);
 
   const getFormValues = (): AwsSettings => {
     const values = form.getFieldsValue();
-    // Secret Key가 비어있으면 기존 값 유지 (마스킹된 값 대신)
     return {
       ...values,
-      sesSecretKey: values.sesSecretKey || '',
-      dynamoSecretKey: values.dynamoSecretKey || '',
+      apiKey: values.apiKey || '',
+      secretKey: values.secretKey || '',
     };
   };
 
@@ -108,7 +95,7 @@ export default function AwsSettingsPage() {
       await form.validateFields();
       const values = getFormValues();
       await saveMutation.mutateAsync(values);
-      void message.success('AWS 설정이 저장되었습니다.');
+      void message.success('API Gateway 설정이 저장되었습니다.');
       setTestResult(null);
     } catch {
       void message.error('설정 저장에 실패했습니다.');
@@ -121,10 +108,10 @@ export default function AwsSettingsPage() {
       const values = getFormValues();
       const result = await testMutation.mutateAsync(values);
       setTestResult(result);
-      if (result.sesConnected && result.dynamoConnected) {
-        void message.success('모든 AWS 서비스 연결 성공');
+      if (result.connected) {
+        void message.success('API Gateway 연결 성공');
       } else {
-        void message.warning('일부 서비스 연결에 실패했습니다.');
+        void message.warning(result.message);
       }
     } catch {
       void message.error('연결 테스트에 실패했습니다.');
@@ -139,105 +126,80 @@ export default function AwsSettingsPage() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
         <Title level={4} style={{ margin: 0 }}>
-          <CloudOutlined style={{ marginRight: 8 }} />
-          AWS 연결 설정
+          <ApiOutlined style={{ marginRight: 8 }} />
+          API Gateway 연결 설정
         </Title>
-        <Space>
-          {settings && (
-            <Badge
-              status={settings.sesConfigured ? 'success' : 'default'}
-              text={settings.sesConfigured ? '설정됨' : '미설정'}
-            />
-          )}
-          {settings?.source === 'database' && (
-            <Text type="secondary" style={{ fontSize: 12 }}>
-              (DB 설정 사용 중)
-            </Text>
-          )}
-        </Space>
+        <Badge
+          status={settings?.configured ? 'success' : 'default'}
+          text={settings?.configured ? '설정됨' : '미설정'}
+        />
       </div>
       <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
-        AWS SES 이메일 발송 및 DynamoDB 이벤트 추적에 사용되는 연결 정보를 관리합니다.
+        이메일 발송 요청이 전달되는 AWS API Gateway 연결 정보를 관리합니다.
       </Text>
 
-      <Form form={form} layout="vertical" requiredMark="optional">
-        <Row gutter={24}>
-          {/* SES 설정 */}
-          <Col xs={24} lg={12}>
-            <Card
-              title="AWS SES 설정"
-              size="small"
-              extra={
-                settings && (
-                  <Badge
-                    status={settings.sesConfigured ? 'success' : 'error'}
-                    text={settings.sesConfigured ? '연결됨' : '미연결'}
-                  />
-                )
-              }
-            >
-              <Form.Item label="Region" name="sesRegion" rules={[{ required: true, message: '리전을 선택하세요' }]}>
-                <Select options={AWS_REGIONS} placeholder="리전 선택" />
-              </Form.Item>
-              <Form.Item label="Access Key" name="sesAccessKey" rules={[{ required: true, message: 'Access Key를 입력하세요' }]}>
-                <Input placeholder="AKIA..." />
-              </Form.Item>
-              <Form.Item
-                label="Secret Key"
-                name="sesSecretKey"
-                help={settings?.sesSecretKeyMasked ? `현재: ${settings.sesSecretKeyMasked} (변경 시에만 입력)` : undefined}
-              >
-                <Input.Password placeholder="비워두면 기존 값 유지" />
-              </Form.Item>
-            </Card>
-          </Col>
-
-          {/* DynamoDB 설정 */}
-          <Col xs={24} lg={12}>
-            <Card
-              title="AWS DynamoDB 설정"
-              size="small"
-              extra={
-                settings && (
-                  <Badge
-                    status={settings.dynamoConfigured ? 'success' : 'error'}
-                    text={settings.dynamoConfigured ? '연결됨' : '미연결'}
-                  />
-                )
-              }
-            >
-              <Form.Item label="Region" name="dynamoRegion" rules={[{ required: true, message: '리전을 선택하세요' }]}>
-                <Select options={AWS_REGIONS} placeholder="리전 선택" />
-              </Form.Item>
-              <Form.Item label="Access Key" name="dynamoAccessKey" rules={[{ required: true, message: 'Access Key를 입력하세요' }]}>
-                <Input placeholder="AKIA..." />
-              </Form.Item>
-              <Form.Item
-                label="Secret Key"
-                name="dynamoSecretKey"
-                help={settings?.dynamoSecretKeyMasked ? `현재: ${settings.dynamoSecretKeyMasked} (변경 시에만 입력)` : undefined}
-              >
-                <Input.Password placeholder="비워두면 기존 값 유지" />
-              </Form.Item>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Endpoint Override */}
-        <Card title="Endpoint Override" size="small" style={{ marginTop: 16 }}>
+      <Form form={form} layout="vertical" requiredMark="optional" initialValues={{ authType: 'API_KEY' }}>
+        {/* Endpoint */}
+        <Card title="Gateway Endpoint" size="small">
           <Form.Item
             label="Endpoint URL"
             name="endpoint"
-            help="LocalStack 등 커스텀 AWS 엔드포인트를 사용하는 경우 입력합니다. 비워두면 AWS 기본 엔드포인트를 사용합니다."
+            rules={[{ required: true, message: 'Endpoint URL을 입력하세요' }]}
           >
-            <Input placeholder="http://localhost:4566" />
+            <Input placeholder="https://xxxxxxxxxx.execute-api.ap-northeast-2.amazonaws.com/prod" />
           </Form.Item>
+          <Form.Item
+            label="Region"
+            name="region"
+            rules={[{ required: true, message: '리전을 선택하세요' }]}
+          >
+            <Select options={AWS_REGIONS} placeholder="리전 선택" />
+          </Form.Item>
+        </Card>
+
+        {/* Authentication */}
+        <Card title="인증 설정" size="small" style={{ marginTop: 16 }}>
+          <Form.Item label="인증 방식" name="authType">
+            <Radio.Group>
+              <Radio.Button value="API_KEY">API Key</Radio.Button>
+              <Radio.Button value="IAM">IAM Signature V4</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+
+          {authType === 'API_KEY' && (
+            <Form.Item
+              label="API Key"
+              name="apiKey"
+              help={settings?.apiKeyMasked ? `현재: ${settings.apiKeyMasked} (변경 시에만 입력)` : undefined}
+            >
+              <Input.Password placeholder="비워두면 기존 값 유지" />
+            </Form.Item>
+          )}
+
+          {authType === 'IAM' && (
+            <>
+              <Form.Item
+                label="Access Key"
+                name="accessKey"
+                rules={[{ required: true, message: 'Access Key를 입력하세요' }]}
+              >
+                <Input placeholder="AKIA..." />
+              </Form.Item>
+              <Form.Item
+                label="Secret Key"
+                name="secretKey"
+                help={settings?.secretKeyMasked ? `현재: ${settings.secretKeyMasked} (변경 시에만 입력)` : undefined}
+              >
+                <Input.Password placeholder="비워두면 기존 값 유지" />
+              </Form.Item>
+            </>
+          )}
         </Card>
 
         {/* 테스트 결과 */}
         {testResult && <TestResultCard result={testResult} />}
 
-        {/* 버튼 영역 */}
+        {/* 버튼 */}
         <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <Button
             icon={<ExperimentOutlined />}

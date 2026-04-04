@@ -882,9 +882,9 @@ DELETE /suppression/tenant/{tenantId}/{email}
 
 ---
 
-## 10. Settings - 시스템 설정
+## 10. Settings - 시스템 설정 (API Gateway 연동)
 
-### 10.1 AWS 설정 조회
+### 10.1 API Gateway 설정 조회
 
 ```
 GET /settings/aws
@@ -893,15 +893,13 @@ GET /settings/aws
 **Response** `200 OK`
 ```json
 {
-  "sesRegion": "ap-northeast-2",
-  "sesAccessKey": "AKIA...",
-  "sesSecretKeyMasked": "abcd****",
-  "sesConfigured": true,
-  "dynamoRegion": "ap-northeast-2",
-  "dynamoAccessKey": "AKIA...",
-  "dynamoSecretKeyMasked": "abcd****",
-  "dynamoConfigured": true,
-  "endpoint": "",
+  "endpoint": "https://xxxxxxxxxx.execute-api.ap-northeast-2.amazonaws.com/prod",
+  "region": "ap-northeast-2",
+  "authType": "API_KEY",
+  "apiKeyMasked": "abcd****",
+  "accessKey": "",
+  "secretKeyMasked": "",
+  "configured": true,
   "source": "database",
   "updatedAt": "2024-01-01T00:00:00"
 }
@@ -909,7 +907,7 @@ GET /settings/aws
 
 ---
 
-### 10.2 AWS 설정 저장
+### 10.2 API Gateway 설정 저장
 
 ```
 PUT /settings/aws
@@ -918,23 +916,29 @@ PUT /settings/aws
 **Request Body**
 ```json
 {
-  "sesRegion": "ap-northeast-2",
-  "sesAccessKey": "AKIA...",
-  "sesSecretKey": "secret...",
-  "dynamoRegion": "ap-northeast-2",
-  "dynamoAccessKey": "AKIA...",
-  "dynamoSecretKey": "secret...",
-  "endpoint": ""
+  "endpoint": "https://xxxxxxxxxx.execute-api.ap-northeast-2.amazonaws.com/prod",
+  "region": "ap-northeast-2",
+  "authType": "API_KEY",
+  "apiKey": "your-api-key",
+  "accessKey": "",
+  "secretKey": ""
 }
 ```
 
-저장 후 AWS 클라이언트(SES, SES v2, DynamoDB)가 자동으로 재생성됩니다.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| endpoint | String | Y | API Gateway Endpoint URL |
+| region | String | Y | AWS 리전 |
+| authType | String | Y | 인증 방식: `API_KEY` 또는 `IAM` |
+| apiKey | String | N | API Key (authType=API_KEY 시) |
+| accessKey | String | N | IAM Access Key (authType=IAM 시) |
+| secretKey | String | N | IAM Secret Key (authType=IAM 시) |
 
 **Response** `200 OK`: 10.1 응답과 동일
 
 ---
 
-### 10.3 AWS 연결 테스트
+### 10.3 API Gateway 연결 테스트
 
 ```
 POST /settings/aws/test
@@ -945,10 +949,9 @@ POST /settings/aws/test
 **Response** `200 OK`
 ```json
 {
-  "sesConnected": true,
-  "sesMessage": "SES 연결 성공",
-  "dynamoConnected": true,
-  "dynamoMessage": "DynamoDB 연결 성공"
+  "connected": true,
+  "message": "API Gateway 연결 성공 (HTTP 200)",
+  "statusCode": 200
 }
 ```
 

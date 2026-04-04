@@ -6,13 +6,12 @@ CREATE TABLE IF NOT EXISTS SYSTEM_CONFIG (
     UPDATED_AT   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- AWS SES 기본 설정
+-- API Gateway 연동 설정
 INSERT INTO SYSTEM_CONFIG (CONFIG_KEY, CONFIG_VALUE, DESCRIPTION, ENCRYPTED) VALUES
-('aws.ses.region', '', 'AWS SES 리전', FALSE),
-('aws.ses.access-key', '', 'AWS SES Access Key', TRUE),
-('aws.ses.secret-key', '', 'AWS SES Secret Key', TRUE),
-('aws.endpoint', '', 'AWS Endpoint Override (LocalStack 등)', FALSE),
-('aws.dynamo.region', '', 'AWS DynamoDB 리전', FALSE),
-('aws.dynamo.access-key', '', 'AWS DynamoDB Access Key', TRUE),
-('aws.dynamo.secret-key', '', 'AWS DynamoDB Secret Key', TRUE)
+('gateway.endpoint', '', 'API Gateway Endpoint URL', FALSE),
+('gateway.region', '', 'API Gateway AWS 리전 (IAM 서명용)', FALSE),
+('gateway.auth-type', 'API_KEY', '인증 방식 (API_KEY 또는 IAM)', FALSE),
+('gateway.api-key', '', 'API Gateway API Key', TRUE),
+('gateway.access-key', '', 'IAM Access Key (IAM 인증 시)', TRUE),
+('gateway.secret-key', '', 'IAM Secret Key (IAM 인증 시)', TRUE)
 ON CONFLICT (CONFIG_KEY) DO NOTHING;
