@@ -9,15 +9,18 @@
 
 | 기술 | 버전 | 용도 |
 |------|------|------|
-| React | 19 | UI 프레임워크 |
+| React | 19.2 | UI 프레임워크 |
 | TypeScript | 5.9 | 타입 안전성 |
-| Vite | 7 | 빌드 도구 |
-| Ant Design | 5 | UI 컴포넌트 |
+| Vite | 8 | 빌드 도구 |
+| Ant Design | 5.29 | UI 컴포넌트 |
 | @ant-design/pro-components | 2.8 | ProLayout, ProTable |
-| TanStack Query | 5 | 서버 상태 관리 |
+| @ant-design/icons | 6.1 | 아이콘 |
+| TanStack React Query | 5 | 서버 상태 관리 |
 | Zustand | 5 | 클라이언트 상태 관리 |
-| React Router | 7 | 라우팅 |
-| Axios | 1.13 | HTTP 클라이언트 |
+| React Router DOM | 7 | 라우팅 |
+| Axios | 1.14 | HTTP 클라이언트 |
+| Day.js | 1.11 | 날짜 처리 |
+| ESLint | 9 | 코드 린트 |
 
 ---
 

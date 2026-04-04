@@ -52,14 +52,17 @@ message-sending-api-server/
 
 | Category | Technology |
 |----------|-----------|
-| Framework | React 19 |
+| Framework | React 19.2 |
 | Language | TypeScript 5.9 |
-| Build | Vite 7 |
-| UI Components | Ant Design 5, @ant-design/pro-components 2.8 |
-| Server State | TanStack Query 5 |
+| Build | Vite 8 |
+| UI Components | Ant Design 5.29, @ant-design/pro-components 2.8 |
+| Icons | @ant-design/icons 6.1 |
+| Server State | TanStack React Query 5 |
 | Client State | Zustand 5 |
-| Routing | React Router 7 |
-| HTTP Client | Axios 1.13 |
+| Routing | React Router DOM 7 |
+| HTTP Client | Axios 1.14 |
+| Date | Day.js 1.11 |
+| Lint | ESLint 9 |
 
 ## Architecture
 

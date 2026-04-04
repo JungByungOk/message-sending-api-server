@@ -66,7 +66,7 @@
 | Layer | Technology |
 |-------|-----------|
 | Backend | Spring Boot 3.4.1, Java 17 |
-| Frontend | React 19, Vite 7, TypeScript 5.9 |
+| Frontend | React 19.2, Vite 8, TypeScript 5.9, Ant Design 5.29 |
 | Database | PostgreSQL 17, AWS DynamoDB |
 | ORM | MyBatis 3.0.4 |
 | Scheduler | Quartz (DB Store) |
