@@ -17,6 +17,16 @@ export class EmsCdkStack extends cdk.Stack {
     super(scope, id, props);
 
     // ============================================================
+    // ESM Server IP (IP Whitelist)
+    // 사용법: cdk deploy --context esmServerIp=203.0.113.10/32
+    // 또는: ESM_SERVER_IP=203.0.113.10/32 cdk deploy
+    // ============================================================
+
+    const esmServerIp = this.node.tryGetContext('esmServerIp')
+      || process.env.ESM_SERVER_IP
+      || '0.0.0.0/0'; // 미지정 시 전체 허용 (테스트용)
+
+    // ============================================================
     // DynamoDB Tables
     // ============================================================
 
@@ -223,6 +233,21 @@ export class EmsCdkStack extends cdk.Stack {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
       },
+      policy: new iam.PolicyDocument({
+        statements: [
+          new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            principals: [new iam.AnyPrincipal()],
+            actions: ['execute-api:Invoke'],
+            resources: ['execute-api:/*'],
+            conditions: {
+              IpAddress: {
+                'aws:SourceIp': esmServerIp.split(',').map((ip: string) => ip.trim()),
+              },
+            },
+          }),
+        ],
+      }),
     });
 
     // API Key 인증
