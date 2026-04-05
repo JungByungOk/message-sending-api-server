@@ -1,8 +1,6 @@
 package com.msas;
 
-import com.msas.pollingchecker.properties.AwsDynamoDefaultProperties;
 import com.msas.pollingchecker.properties.PollingCheckerProperties;
-import com.msas.ses.properties.AwsSesDefaultProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -18,15 +16,12 @@ import java.util.TimeZone;
 @Slf4j
 @ConfigurationPropertiesScan({
         PollingCheckerProperties.PREFIX,
-        AwsSesDefaultProperties.PREFIX,
-        AwsDynamoDefaultProperties.PREFIX,
 })
 public class MessageSendingApiServerApplication {
 
     @PostConstruct
     public void started() {
-        // 어플리케이션 타임존을 UTC 시간으로 설정
-        TimeZone.setDefault(TimeZone.getTimeZone("UTC")); // "Asia/Seoul"
+        TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 
         log.info("어플리케이션 타임존\t -> {}", TimeZone.getDefault().getID());
         log.info("어플리케이션 현재 시간\t -> {}",  LocalDateTime.now());
