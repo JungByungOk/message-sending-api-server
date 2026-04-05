@@ -60,7 +60,6 @@ function TestResultCard({ result }: { result: AwsTestResult }) {
 
 export default function AwsSettingsPage() {
   const [form] = Form.useForm<AwsSettings>();
-  const gatewayAuthType = Form.useWatch('gatewayAuthType', form);
   const deliveryMode = Form.useWatch('deliveryMode', form);
   const { data: settings, isLoading } = useAwsSettings();
   const saveMutation = useSaveAwsSettings();
@@ -72,10 +71,7 @@ export default function AwsSettingsPage() {
       form.setFieldsValue({
         gatewayEndpoint: settings.gatewayEndpoint || '',
         gatewayRegion: settings.gatewayRegion || 'ap-northeast-2',
-        gatewayAuthType: (settings.gatewayAuthType as 'API_KEY' | 'IAM') || 'API_KEY',
         gatewayApiKey: '',
-        gatewayAccessKey: settings.gatewayAccessKey || '',
-        gatewaySecretKey: '',
         gatewaySendPath: settings.gatewaySendPath || '/send-email',
         gatewayResultsPath: settings.gatewayResultsPath || '/results',
         gatewayConfigPath: settings.gatewayConfigPath || '/config',
@@ -185,37 +181,13 @@ export default function AwsSettingsPage() {
                 <Select options={AWS_REGIONS} />
               </Form.Item>
 
-              <Form.Item label="인증 방식" name="gatewayAuthType">
-                <Radio.Group>
-                  <Radio.Button value="API_KEY">API Key</Radio.Button>
-                  <Radio.Button value="IAM">IAM Signature V4</Radio.Button>
-                </Radio.Group>
+              <Form.Item
+                label="API Key"
+                name="gatewayApiKey"
+                help={settings?.gatewayApiKeyMasked ? `현재: ${settings.gatewayApiKeyMasked}` : undefined}
+              >
+                <Input.Password placeholder="비워두면 기존 값 유지" />
               </Form.Item>
-
-              {gatewayAuthType === 'API_KEY' && (
-                <Form.Item
-                  label="API Key"
-                  name="gatewayApiKey"
-                  help={settings?.gatewayApiKeyMasked ? `현재: ${settings.gatewayApiKeyMasked}` : undefined}
-                >
-                  <Input.Password placeholder="비워두면 기존 값 유지" />
-                </Form.Item>
-              )}
-
-              {gatewayAuthType === 'IAM' && (
-                <>
-                  <Form.Item label="Access Key" name="gatewayAccessKey">
-                    <Input placeholder="AKIA..." />
-                  </Form.Item>
-                  <Form.Item
-                    label="Secret Key"
-                    name="gatewaySecretKey"
-                    help={settings?.gatewaySecretKeyMasked ? `현재: ${settings.gatewaySecretKeyMasked}` : undefined}
-                  >
-                    <Input.Password placeholder="비워두면 기존 값 유지" />
-                  </Form.Item>
-                </>
-              )}
             </Card>
           </Col>
 

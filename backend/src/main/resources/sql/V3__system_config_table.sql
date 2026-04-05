@@ -10,10 +10,7 @@ CREATE TABLE IF NOT EXISTS SYSTEM_CONFIG (
 INSERT INTO SYSTEM_CONFIG (CONFIG_KEY, CONFIG_VALUE, DESCRIPTION, ENCRYPTED) VALUES
 ('gateway.endpoint', '', 'API Gateway Base URL', FALSE),
 ('gateway.region', 'ap-northeast-2', 'API Gateway AWS 리전', FALSE),
-('gateway.auth-type', 'API_KEY', '인증 방식 (API_KEY 또는 IAM)', FALSE),
 ('gateway.api-key', '', 'API Gateway API Key', TRUE),
-('gateway.access-key', '', 'IAM Access Key', TRUE),
-('gateway.secret-key', '', 'IAM Secret Key', TRUE),
 ('gateway.send-path', '/send-email', '이메일 발송 경로', FALSE),
 ('gateway.results-path', '/results', '발송 결과 조회 경로', FALSE),
 ('gateway.config-path', '/config', 'SSM 설정 동기화 경로', FALSE),

@@ -65,13 +65,10 @@ public class ApiGatewayClient {
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json");
 
-        // 인증
-        String authType = getConfigValue("gateway.auth-type");
-        if ("API_KEY".equals(authType)) {
-            String apiKey = getConfigValue("gateway.api-key");
-            if (apiKey != null && !apiKey.isBlank()) {
-                builder.header("x-api-key", apiKey);
-            }
+        // API Key 인증
+        String apiKey = getConfigValue("gateway.api-key");
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.header("x-api-key", apiKey);
         }
 
         // HTTP Method

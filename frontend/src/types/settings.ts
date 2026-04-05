@@ -2,10 +2,7 @@ export interface AwsSettings {
   // API Gateway
   gatewayEndpoint: string;
   gatewayRegion: string;
-  gatewayAuthType: 'API_KEY' | 'IAM';
   gatewayApiKey: string;
-  gatewayAccessKey: string;
-  gatewaySecretKey: string;
   gatewaySendPath: string;
   gatewayResultsPath: string;
   gatewayConfigPath: string;
@@ -22,10 +19,7 @@ export interface AwsSettingsResponse {
   // API Gateway
   gatewayEndpoint: string;
   gatewayRegion: string;
-  gatewayAuthType: string;
   gatewayApiKeyMasked: string;
-  gatewayAccessKey: string;
-  gatewaySecretKeyMasked: string;
   gatewaySendPath: string;
   gatewayResultsPath: string;
   gatewayConfigPath: string;

@@ -9,10 +9,7 @@ public class AwsSettingsResponseDTO {
     // API Gateway
     private String gatewayEndpoint;
     private String gatewayRegion;
-    private String gatewayAuthType;
     private String gatewayApiKeyMasked;
-    private String gatewayAccessKey;
-    private String gatewaySecretKeyMasked;
     private String gatewaySendPath;
     private String gatewayResultsPath;
     private String gatewayConfigPath;

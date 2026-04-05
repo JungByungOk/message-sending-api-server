@@ -30,10 +30,7 @@ public class SettingsService {
     private static final Map<String, String> KEY_MAP = Map.ofEntries(
             Map.entry("gatewayEndpoint", "gateway.endpoint"),
             Map.entry("gatewayRegion", "gateway.region"),
-            Map.entry("gatewayAuthType", "gateway.auth-type"),
             Map.entry("gatewayApiKey", "gateway.api-key"),
-            Map.entry("gatewayAccessKey", "gateway.access-key"),
-            Map.entry("gatewaySecretKey", "gateway.secret-key"),
             Map.entry("gatewaySendPath", "gateway.send-path"),
             Map.entry("gatewayResultsPath", "gateway.results-path"),
             Map.entry("callbackUrl", "callback.url"),
@@ -52,10 +49,7 @@ public class SettingsService {
         // Gateway
         dto.setGatewayEndpoint(configs.getOrDefault("gateway.endpoint", ""));
         dto.setGatewayRegion(configs.getOrDefault("gateway.region", "ap-northeast-2"));
-        dto.setGatewayAuthType(configs.getOrDefault("gateway.auth-type", "API_KEY"));
         dto.setGatewayApiKeyMasked(maskSecret(configs.getOrDefault("gateway.api-key", "")));
-        dto.setGatewayAccessKey(configs.getOrDefault("gateway.access-key", ""));
-        dto.setGatewaySecretKeyMasked(maskSecret(configs.getOrDefault("gateway.secret-key", "")));
         dto.setGatewaySendPath(configs.getOrDefault("gateway.send-path", "/send-email"));
         dto.setGatewayResultsPath(configs.getOrDefault("gateway.results-path", "/results"));
         dto.setGatewayConfigPath(configs.getOrDefault("gateway.config-path", "/config"));
@@ -80,10 +74,7 @@ public class SettingsService {
     public AwsSettingsResponseDTO saveSettings(AwsSettingsDTO settings) {
         saveConfig("gateway.endpoint", settings.getGatewayEndpoint(), "API Gateway Base URL", false);
         saveConfig("gateway.region", settings.getGatewayRegion(), "API Gateway AWS 리전", false);
-        saveConfig("gateway.auth-type", settings.getGatewayAuthType(), "인증 방식", false);
         saveConfig("gateway.api-key", settings.getGatewayApiKey(), "API Gateway API Key", true);
-        saveConfig("gateway.access-key", settings.getGatewayAccessKey(), "IAM Access Key", true);
-        saveConfig("gateway.secret-key", settings.getGatewaySecretKey(), "IAM Secret Key", true);
         saveConfig("gateway.send-path", settings.getGatewaySendPath(), "이메일 발송 경로", false);
         saveConfig("gateway.results-path", settings.getGatewayResultsPath(), "발송 결과 조회 경로", false);
         saveConfig("gateway.config-path", settings.getGatewayConfigPath(), "SSM 설정 동기화 경로", false);
@@ -216,18 +207,12 @@ public class SettingsService {
                     .header("Content-Type", "application/json")
                     .PUT(HttpRequest.BodyPublishers.ofString(jsonBody));
 
-            // 인증 헤더
-            String authType = isNotBlank(settings.getGatewayAuthType())
-                    ? settings.getGatewayAuthType()
-                    : configs.getOrDefault("gateway.auth-type", "API_KEY");
-
-            if ("API_KEY".equals(authType)) {
-                String apiKey = isNotBlank(settings.getGatewayApiKey())
-                        ? settings.getGatewayApiKey()
-                        : configs.getOrDefault("gateway.api-key", "");
-                if (isNotBlank(apiKey)) {
-                    requestBuilder.header("x-api-key", apiKey);
-                }
+            // API Key 인증 헤더
+            String apiKey = isNotBlank(settings.getGatewayApiKey())
+                    ? settings.getGatewayApiKey()
+                    : configs.getOrDefault("gateway.api-key", "");
+            if (isNotBlank(apiKey)) {
+                requestBuilder.header("x-api-key", apiKey);
             }
 
             HttpResponse<String> response = client.send(requestBuilder.build(),
