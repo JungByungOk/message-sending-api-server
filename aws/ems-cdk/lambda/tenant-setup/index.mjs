@@ -9,6 +9,7 @@ const ses = new SESv2Client({});
 const dynamo = new DynamoDBClient({});
 const TENANT_CONFIG_TABLE = process.env.TENANT_CONFIG_TABLE;
 const SES_EVENT_TOPIC_ARN = process.env.SES_EVENT_TOPIC_ARN;
+const TENANT_TTL = parseInt(process.env.TENANT_CONFIG_TTL_SECONDS || String(365 * 10 * 86400), 10);
 
 export const handler = async (event) => {
   const method = event.httpMethod;
@@ -57,7 +58,7 @@ async function createTenant(body) {
       tenant_name: { S: tenantName || '' },
       domain: { S: domain },
       verification_status: { S: verified ? 'SUCCESS' : 'PENDING' },
-      ttl: { N: String(Math.floor(Date.now() / 1000) + 3600) },
+      ttl: { N: String(Math.floor(Date.now() / 1000) + TENANT_TTL) },
     },
   }));
 
@@ -109,7 +110,7 @@ async function activateTenant(body) {
       tenant_id: { S: tenantId },
       domain: { S: domain || '' },
       config_set_name: { S: configSetName },
-      ttl: { N: String(Math.floor(Date.now() / 1000) + 3600) },
+      ttl: { N: String(Math.floor(Date.now() / 1000) + TENANT_TTL) },
     },
   }));
 

@@ -52,7 +52,7 @@
 │                                                              │
 │  ┌─ 데이터 저장소 ─────────────────────────────────────┐    │
 │  │  DynamoDB: ems-send-results (TTL 7일)                │    │
-│  │  DynamoDB: ems-tenant-config (TTL 1시간)             │    │
+│  │  DynamoDB: ems-tenant-config (TTL 10년, 실질적 무제한) │    │
 │  │  DynamoDB: ems-idempotency (TTL 24시간)              │    │
 │  │  SSM: /ems/mode, /ems/callback_url, /ems/callback_secret │
 │  └──────────────────────────────────────────────────────┘    │
@@ -92,7 +92,7 @@
 | `domain` | String | 도메인 |
 | `config_set_name` | String | SES Config Set 이름 |
 | `verification_status` | String | PENDING / SUCCESS |
-| `ttl` | Number | TTL (1시간) |
+| `ttl` | Number | TTL (10년, 환경변수로 설정 가능) |
 
 ### ems-idempotency
 | Key | Type | 설명 |
@@ -139,15 +139,24 @@
 6. [Lambda] SES GetEmailIdentity → Verified → status: ACTIVE
 ```
 
+## SQS 설정
+
+| 항목 | 값 | 설명 |
+|------|-----|------|
+| visibilityTimeout | 180초 | Lambda 타임아웃(30초) × 6 |
+| maxReceiveCount | 3 | DLQ 이동 전 최대 재시도 |
+| reportBatchItemFailures | true | 부분 실패 시 실패 건만 재시도 |
+
 ## 보안
 
 | 항목 | 방식 |
 |------|------|
 | ESM → API Gateway | x-api-key 헤더 인증 |
-| API Gateway | IP Whitelist (ESM 서버 IP만 허용) |
+| API Gateway | IP Whitelist — CDK Context 또는 CfnParameter로 설정 |
 | 전구간 | HTTPS (TLS) 암호화 |
 | Lambda → ESM 콜백 | X-Callback-Secret 헤더 검증 |
-| SSM | Callback Secret은 SecureString 타입 |
+| SSM | Callback Secret: 배포 후 `aws ssm put-parameter --type SecureString`으로 교체 필요 |
+| CORS | 불필요 (서버 간 통신만 사용, 제거됨) |
 
 ## 비용 예상
 

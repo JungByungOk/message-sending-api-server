@@ -44,7 +44,14 @@ cdk diff
 
 ### Step 4: 배포
 ```bash
+# 기본 (IP 제한 없음, 테스트용)
 cdk deploy
+
+# IP Whitelist — Context 방식
+cdk deploy --context esmServerIp=203.0.113.10/32
+
+# IP Whitelist — CfnParameter 방식
+cdk deploy --parameters AllowedIps="203.0.113.10/32,198.51.100.5/32"
 ```
 
 배포 완료 시 출력:
@@ -78,7 +85,17 @@ ESM 관리 화면(설정 페이지)에서 입력:
 | Callback Secret | 임의 문자열 생성 |
 | 수신 모드 | callback |
 
-### Step 7: SES Production 전환 (운영 시)
+### Step 7: Callback Secret 보안 강화 (권장)
+배포 시 SSM에 `REPLACE_ME` 플레이스홀더가 설정됩니다. 실제 시크릿으로 교체하세요:
+```bash
+aws ssm put-parameter \
+  --name /ems/callback_secret \
+  --value "실제시크릿값" \
+  --type SecureString \
+  --overwrite
+```
+
+### Step 8: SES Production 전환 (운영 시)
 SES는 기본 Sandbox 모드입니다. 운영 발송을 위해 Production 전환 요청:
 ```
 AWS Console → SES → Account dashboard → Request production access

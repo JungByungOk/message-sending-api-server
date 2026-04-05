@@ -17,14 +17,19 @@ export class EmsCdkStack extends cdk.Stack {
     super(scope, id, props);
 
     // ============================================================
-    // ESM Server IP (IP Whitelist)
-    // 사용법: cdk deploy --context esmServerIp=203.0.113.10/32
-    // 또는: ESM_SERVER_IP=203.0.113.10/32 cdk deploy
+    // Parameters
     // ============================================================
 
+    const allowedIps = new cdk.CfnParameter(this, 'AllowedIps', {
+      type: 'CommaDelimitedList',
+      description: 'ESM 서버 공인 IP 목록 (예: 203.0.113.10/32)',
+      default: '0.0.0.0/0',
+    });
+
+    // Context/환경변수 우선, 없으면 CfnParameter 사용
     const esmServerIp = this.node.tryGetContext('esmServerIp')
       || process.env.ESM_SERVER_IP
-      || '0.0.0.0/0'; // 미지정 시 전체 허용 (테스트용)
+      || null; // null이면 CfnParameter 사용
 
     // ============================================================
     // DynamoDB Tables
@@ -79,8 +84,8 @@ export class EmsCdkStack extends cdk.Stack {
 
     const ssmCallbackSecret = new ssm.StringParameter(this, 'EmsCallbackSecret', {
       parameterName: '/ems/callback_secret',
-      stringValue: '',
-      description: 'Callback Secret Token',
+      stringValue: 'REPLACE_ME',
+      description: '배포 후 교체 필요: aws ssm put-parameter --name /ems/callback_secret --value "실제시크릿" --type SecureString --overwrite',
       type: ssm.ParameterType.STRING,
     });
 
@@ -95,7 +100,7 @@ export class EmsCdkStack extends cdk.Stack {
 
     const sendQueue = new sqs.Queue(this, 'EmsSendQueue', {
       queueName: 'ems-send-queue',
-      visibilityTimeout: cdk.Duration.seconds(60),
+      visibilityTimeout: cdk.Duration.seconds(180),
       deadLetterQueue: {
         queue: sendDlq,
         maxReceiveCount: 3,
@@ -130,6 +135,7 @@ export class EmsCdkStack extends cdk.Stack {
     });
     emailSenderFn.addEventSource(new eventsources.SqsEventSource(sendQueue, {
       batchSize: 10,
+      reportBatchItemFailures: true,
     }));
     tenantConfigTable.grantReadData(emailSenderFn);
     idempotencyTable.grantReadWriteData(emailSenderFn);
@@ -200,6 +206,7 @@ export class EmsCdkStack extends cdk.Stack {
         TENANT_CONFIG_TABLE: tenantConfigTable.tableName,
         SES_EVENT_TOPIC_ARN: sesEventTopic.topicArn,
         SES_REGION: this.region,
+        TENANT_CONFIG_TTL_SECONDS: String(365 * 10 * 86400), // 10년 (실질적 무제한)
       },
     });
     tenantConfigTable.grantReadWriteData(tenantSetupFn);
@@ -229,20 +236,19 @@ export class EmsCdkStack extends cdk.Stack {
         throttlingRateLimit: 100,
         throttlingBurstLimit: 200,
       },
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
-      },
+      // CORS 불필요 (서버 간 통신만 사용)
       policy: new iam.PolicyDocument({
         statements: [
           new iam.PolicyStatement({
             effect: iam.Effect.ALLOW,
             principals: [new iam.AnyPrincipal()],
             actions: ['execute-api:Invoke'],
-            resources: ['execute-api:/*'],
+            resources: ['execute-api:/*/*/*'],
             conditions: {
               IpAddress: {
-                'aws:SourceIp': esmServerIp.split(',').map((ip: string) => ip.trim()),
+                'aws:SourceIp': esmServerIp
+                  ? esmServerIp.split(',').map((ip: string) => ip.trim())
+                  : allowedIps.valueAsList,
               },
             },
           }),
@@ -312,25 +318,14 @@ export class EmsCdkStack extends cdk.Stack {
       functionName: 'ems-config-updater',
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
-      code: lambda.Code.fromInline(`
-const { SSMClient, PutParameterCommand } = require('@aws-sdk/client-ssm');
-const ssm = new SSMClient({});
-exports.handler = async (event) => {
-  const body = JSON.parse(event.body || '{}');
-  const params = [
-    { name: '/ems/mode', value: body.mode || 'callback' },
-    { name: '/ems/callback_url', value: body.callback_url || '' },
-    { name: '/ems/callback_secret', value: body.callback_secret || '' },
-  ];
-  for (const p of params) {
-    await ssm.send(new PutParameterCommand({
-      Name: p.name, Value: p.value, Type: 'String', Overwrite: true,
-    }));
-  }
-  return { statusCode: 200, body: JSON.stringify({ message: 'Config updated' }) };
-};
-      `),
+      code: lambda.Code.fromAsset('lambda/config-updater'),
       timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: {
+        SSM_MODE_PARAM: ssmMode.parameterName,
+        SSM_CALLBACK_URL_PARAM: ssmCallbackUrl.parameterName,
+        SSM_CALLBACK_SECRET_PARAM: ssmCallbackSecret.parameterName,
+      },
     });
     ssmMode.grantWrite(configFn);
     ssmCallbackUrl.grantWrite(configFn);

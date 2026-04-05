@@ -7,7 +7,10 @@ const TENANT_CONFIG_TABLE = process.env.TENANT_CONFIG_TABLE;
 const IDEMPOTENCY_TABLE = process.env.IDEMPOTENCY_TABLE;
 
 export const handler = async (event) => {
+  const batchItemFailures = [];
+
   for (const record of event.Records) {
+   try {
     const body = JSON.parse(record.body);
     const messageId = body.messageId || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -94,7 +97,13 @@ export const handler = async (event) => {
       }));
     } catch (e) {
       console.error(`Email send failed: ${e.message}`);
-      throw e; // SQS 재시도
+      throw e;
     }
+   } catch (err) {
+      console.error('Failed to process record:', record.messageId, err);
+      batchItemFailures.push({ itemIdentifier: record.messageId });
+   }
   }
+
+  return { batchItemFailures };
 };

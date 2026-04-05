@@ -77,6 +77,13 @@ export const handler = async (event) => {
     }
 
     // ② Callback 모드일 때 ESM 호출
+    if (params.mode === 'callback' && !params.callbackUrl) {
+      console.warn(JSON.stringify({
+        level: 'WARN',
+        message: 'mode=callback but callback_url is empty. Events stored in DynamoDB only. Set /ems/callback_url via PUT /config.',
+      }));
+    }
+
     if (params.mode === 'callback' && params.callbackUrl) {
       try {
         const callbackBody = JSON.stringify({
