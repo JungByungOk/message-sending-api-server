@@ -1,4 +1,4 @@
-import type { OnboardingResult, OnboardingStartRequest, OnboardingStatus, DkimRecord } from '@/types/onboarding';
+import type { OnboardingResult, OnboardingStartRequest, OnboardingStatus, DkimRecordsDTO } from '@/types/onboarding';
 import apiClient from './client';
 
 // 온보딩 시작
@@ -14,8 +14,8 @@ export const getOnboardingStatus = async (tenantId: string): Promise<OnboardingS
 };
 
 // DKIM 레코드 조회
-export const getDkimRecords = async (tenantId: string): Promise<DkimRecord[]> => {
-  const { data } = await apiClient.get<DkimRecord[]>(`/onboarding/${tenantId}/dkim`);
+export const getDkimRecords = async (tenantId: string): Promise<DkimRecordsDTO> => {
+  const { data } = await apiClient.get<DkimRecordsDTO>(`/onboarding/${tenantId}/dkim`);
   return data;
 };
 

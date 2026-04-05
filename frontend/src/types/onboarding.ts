@@ -1,3 +1,5 @@
+import type { Tenant } from './tenant';
+
 export interface OnboardingStartRequest {
   tenantName: string;
   domain: string;
@@ -10,12 +12,15 @@ export interface DkimRecord {
   value: string;
 }
 
-export interface OnboardingResult {
-  tenantId: string;
-  apiKey: string;
+export interface DkimRecordsDTO {
   domain: string;
   verificationStatus: string;
   dkimRecords: DkimRecord[];
+}
+
+export interface OnboardingResult {
+  tenant: Tenant;
+  dkimRecords: DkimRecordsDTO | null;
 }
 
 export interface OnboardingStep {

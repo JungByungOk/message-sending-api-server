@@ -73,8 +73,6 @@ public class RequestTemplatedEmailScheduleJobDTO {
     @NotEmpty(message = "Email templateName cannot be Null")
     String templateName;
 
-    @NotNull
-    @NotEmpty(message = "Email tags (campaign name or event name) cannot be Null")
     List<com.msas.ses.dto.MessageTagDto> tags;
 
     private String jobGroup = "DEFAULT";

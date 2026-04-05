@@ -15,8 +15,8 @@ public class RequestBasicEmailDto {
     String from;
 
     @NotNull
-    @Email(message = "Invalid Email recipient address")
-    String to;
+    @NotEmpty(message = "Email recipient list cannot be empty")
+    List<String> to;
 
     @NotNull
     @NotEmpty(message = "Email subject cannot be Null")
@@ -26,7 +26,5 @@ public class RequestBasicEmailDto {
     @NotEmpty(message = "Email body cannot be Null")
     String body;
 
-    @NotNull
-    @NotEmpty(message = "Email tags (campaign name or event name) cannot be Null")
     List<MessageTagDto> tags;
 }

@@ -270,7 +270,7 @@ export default function OnboardingStatus() {
         </Col>
 
         {/* ─── DKIM 레코드 ─── */}
-        {dkimRecords && dkimRecords.length > 0 && (
+        {dkimRecords?.dkimRecords && dkimRecords.dkimRecords.length > 0 && (
           <Col xs={24} lg={12}>
             <Card
               title={
@@ -283,7 +283,7 @@ export default function OnboardingStatus() {
               bodyStyle={{ padding: 0 }}
             >
               <Table
-                dataSource={dkimRecords}
+                dataSource={dkimRecords.dkimRecords}
                 columns={dkimColumns}
                 rowKey="name"
                 pagination={false}

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.Map;
 
 @Tag(name = "AWS SES", description = "이메일 발송 테스트 API (API Gateway 경유)")
@@ -77,6 +78,92 @@ public class EmailController {
         } catch (Exception e) {
             log.error("EmailController - 템플릿 이메일 발송 실패.", e);
             throw new RuntimeException("템플릿 이메일 발송 실패: " + e.getMessage());
+        }
+    }
+
+    // === 템플릿 관리 (API Gateway 경유) ===
+
+    @Operation(summary = "템플릿 생성", description = "API Gateway를 통해 SES 이메일 템플릿을 생성합니다.")
+    @PostMapping("/template")
+    public ResponseEntity<ResponseTemplatedDTO> createTemplate(@Valid @RequestBody RequestTemplateDto requestTemplateDto) {
+        try {
+            String jsonBody = gson.toJson(Map.of(
+                    "action", "CREATE_TEMPLATE",
+                    "templateName", requestTemplateDto.getTemplateName(),
+                    "subjectPart", requestTemplateDto.getSubjectPart(),
+                    "htmlPart", requestTemplateDto.getHtmlPart(),
+                    "textPart", requestTemplateDto.getTextPart()
+            ));
+            HttpResponse<String> response = apiGatewayClient.post("/tenant-setup", jsonBody);
+            ResponseTemplatedDTO dto = new ResponseTemplatedDTO();
+            dto.setAwsRequestId(extractField(response.body(), "awsRequestId"));
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            log.error("EmailController - 템플릿 생성 실패.", e);
+            throw new RuntimeException("템플릿 생성 실패: " + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "템플릿 수정", description = "API Gateway를 통해 SES 이메일 템플릿을 수정합니다.")
+    @PatchMapping("/template")
+    public ResponseEntity<ResponseTemplatedDTO> updateTemplate(@Valid @RequestBody RequestTemplateDto requestTemplateDto) {
+        try {
+            String jsonBody = gson.toJson(Map.of(
+                    "action", "UPDATE_TEMPLATE",
+                    "templateName", requestTemplateDto.getTemplateName(),
+                    "subjectPart", requestTemplateDto.getSubjectPart(),
+                    "htmlPart", requestTemplateDto.getHtmlPart(),
+                    "textPart", requestTemplateDto.getTextPart()
+            ));
+            HttpResponse<String> response = apiGatewayClient.post("/tenant-setup", jsonBody);
+            ResponseTemplatedDTO dto = new ResponseTemplatedDTO();
+            dto.setAwsRequestId(extractField(response.body(), "awsRequestId"));
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            log.error("EmailController - 템플릿 수정 실패.", e);
+            throw new RuntimeException("템플릿 수정 실패: " + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "템플릿 삭제", description = "API Gateway를 통해 SES 이메일 템플릿을 삭제합니다.")
+    @DeleteMapping("/template")
+    public ResponseEntity<ResponseDeleteTemplatedDTO> deleteTemplate(@Valid @RequestBody RequestDeleteTemplateDto requestDeleteTemplateDto) {
+        try {
+            String jsonBody = gson.toJson(Map.of(
+                    "action", "DELETE_TEMPLATE",
+                    "templateName", requestDeleteTemplateDto.getTemplateName()
+            ));
+            HttpResponse<String> response = apiGatewayClient.post("/tenant-setup", jsonBody);
+            ResponseDeleteTemplatedDTO dto = new ResponseDeleteTemplatedDTO();
+            dto.setAwsRequestId(extractField(response.body(), "awsRequestId"));
+            return ResponseEntity.ok(dto);
+        } catch (Exception e) {
+            log.error("EmailController - 템플릿 삭제 실패.", e);
+            throw new RuntimeException("템플릿 삭제 실패: " + e.getMessage());
+        }
+    }
+
+    @Operation(summary = "템플릿 목록 조회", description = "API Gateway를 통해 SES 이메일 템플릿 목록을 조회합니다.")
+    @GetMapping("/templates")
+    public ResponseEntity<List<Map<String, Object>>> listTemplate() {
+        try {
+            HttpResponse<String> response = apiGatewayClient.get("/tenant-setup?action=LIST_TEMPLATES");
+            List<Map<String, Object>> templates = gson.fromJson(response.body(),
+                    new com.google.gson.reflect.TypeToken<List<Map<String, Object>>>() {}.getType());
+            return ResponseEntity.ok(templates != null ? templates : List.of());
+        } catch (Exception e) {
+            log.error("EmailController - 템플릿 목록 조회 실패.", e);
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
+    private String extractField(String json, String field) {
+        try {
+            Map<String, String> map = gson.fromJson(json,
+                    new com.google.gson.reflect.TypeToken<Map<String, String>>() {}.getType());
+            return map != null ? map.getOrDefault(field, "") : "";
+        } catch (Exception e) {
+            return json;
         }
     }
 }

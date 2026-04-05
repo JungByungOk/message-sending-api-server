@@ -281,7 +281,7 @@ export default function OnboardingWizard() {
               bodyStyle={{ padding: 0 }}
             >
               <Table
-                dataSource={dkimRecords ?? onboardingResult?.dkimRecords ?? []}
+                dataSource={dkimRecords?.dkimRecords ?? onboardingResult?.dkimRecords?.dkimRecords ?? []}
                 columns={dkimColumns}
                 rowKey="name"
                 pagination={false}
@@ -412,7 +412,7 @@ export default function OnboardingWizard() {
                   <ProDescriptions
                     column={1}
                     title={<Text style={{ fontWeight: 600 }}>테넌트 정보 요약</Text>}
-                    dataSource={onboardingResult ?? undefined}
+                    dataSource={onboardingResult?.tenant ?? undefined}
                     columns={[
                       {
                         title: '테넌트 ID',

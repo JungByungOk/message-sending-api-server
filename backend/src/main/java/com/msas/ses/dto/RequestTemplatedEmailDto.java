@@ -36,8 +36,6 @@ public class RequestTemplatedEmailDto {
     @NotEmpty(message = "Email template data cannot be Null")
     Map<String, String> templateData;
 
-    @NotNull
-    @NotEmpty(message = "Email tags (campaign name or event name) cannot be Null")
     List<MessageTagDto> tags;
 
 }

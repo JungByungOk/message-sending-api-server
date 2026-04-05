@@ -19,7 +19,7 @@ export const useUpdateQuota = () => {
       data,
     }: {
       tenantId: string;
-      data: Partial<{ daily: number; monthly: number }>;
+      data: Partial<{ quotaDaily: number; quotaMonthly: number }>;
     }) => updateQuota(tenantId, data),
     onSuccess: (_result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['quota', variables.tenantId] });
