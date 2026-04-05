@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Joins EMS — AWS 예상 비용</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'IBM Plex Sans KR',sans-serif; background:#f8f9fb; color:#1a1d23; padding:32px 20px; }
+.wrap { max-width:840px; margin:0 auto; }
+
+.hdr { margin-bottom:28px; }
+.hdr h1 { font-size:17px; font-weight:600; letter-spacing:-.2px; }
+.hdr p  { font-size:11px; color:#7a8394; margin-top:3px; font-family:'IBM Plex Mono',monospace; }
+
+.tbl-wrap { border:1px solid #d0d5de; border-radius:10px; overflow:hidden; margin-bottom:16px; }
+.tbl-head { padding:9px 14px; border-bottom:1px solid #d0d5de; font-size:11px; font-weight:600; display:flex; align-items:center; justify-content:space-between; }
+.tbl-head .badge { font-size:10px; font-weight:700; padding:2px 8px; border-radius:4px; font-family:'IBM Plex Mono',monospace; }
+
+table { width:100%; border-collapse:collapse; font-size:11px; }
+th { text-align:left; padding:7px 12px; font-size:10px; font-weight:600; color:#9aa3b2; letter-spacing:.3px; text-transform:uppercase; background:#f8f9fb; border-bottom:1px solid #e4e7ed; }
+td { padding:7px 12px; border-bottom:.5px solid #f0f2f5; vertical-align:top; }
+tr:last-child td { border-bottom:none; }
+.mono { font-family:'IBM Plex Mono',monospace; font-size:10px; }
+.right { text-align:right; }
+.bold { font-weight:600; }
+
+.total-row { background:#f0f2f5; }
+.total-row td { font-weight:700; font-size:12px; border-bottom:none; }
+
+.free { color:#0c6b4a; font-weight:600; }
+.low  { color:#1a52a8; font-weight:600; }
+.med  { color:#7a5000; font-weight:600; }
+
+.note { font-size:10px; color:#7a8394; padding:10px 14px; border-top:1px solid #e4e7ed; line-height:1.7; }
+
+/* Cards */
+.cards { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+.card { flex:1; min-width:200px; border-radius:10px; padding:16px 20px; text-align:center; }
+.card-free { background:#e3f5ef; border:1.5px solid #7ecfb2; }
+.card-low  { background:#e8f0fb; border:1.5px solid #93b8f0; }
+.card-prod { background:#fdf5e0; border:1.5px solid #e8cc7a; }
+.card .label { font-size:10px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; margin-bottom:4px; }
+.card .price { font-size:28px; font-weight:700; margin:4px 0; }
+.card .sub   { font-size:10px; color:#5a6275; }
+.card-free .label { color:#0c6b4a; }
+.card-free .price { color:#0c6b4a; }
+.card-low .label  { color:#1a52a8; }
+.card-low .price  { color:#1a52a8; }
+.card-prod .label { color:#7a5000; }
+.card-prod .price { color:#7a5000; }
+
+/* Section */
+.section { margin-bottom:24px; }
+.section-title { font-size:13px; font-weight:600; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+
+/* Gauge bar */
+.gauge { height:8px; border-radius:4px; background:#e4e7ed; margin:6px 0; overflow:hidden; }
+.gauge-fill { height:100%; border-radius:4px; }
+
+/* Comparison */
+.cmp-row { display:flex; gap:8px; margin-bottom:8px; align-items:center; }
+.cmp-label { width:120px; font-size:11px; font-weight:500; flex-shrink:0; }
+.cmp-bar { flex:1; height:24px; border-radius:6px; display:flex; align-items:center; padding:0 8px; font-size:10px; font-weight:600; color:#fff; font-family:'IBM Plex Mono',monospace; }
+
+/* Tip box */
+.tip { background:#f3edfb; border:1px solid #c5a8f0; border-radius:8px; padding:12px 16px; margin-top:16px; }
+.tip-title { font-size:10px; font-weight:700; color:#6b30b0; margin-bottom:6px; letter-spacing:.3px; text-transform:uppercase; }
+.tip-body { font-size:11px; color:#4b30a0; line-height:1.7; }
+.tip-body code { background:rgba(255,255,255,.6); border:1px solid #d0c0f0; border-radius:3px; padding:1px 4px; font-family:'IBM Plex Mono',monospace; font-size:10px; }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- Header -->
+<div class="hdr">
+  <h1>Joins EMS — AWS 예상 비용</h1>
+  <p>리전: ap-northeast-2 (서울) · 2026년 4월 기준 · 모든 가격 USD</p>
+</div>
+
+<!-- Summary Cards -->
+<div class="cards">
+  <div class="card card-free">
+    <div class="label">테스트 (Free Tier)</div>
+    <div class="price">$0</div>
+    <div class="sub">12개월 내 · 일 수십 건</div>
+  </div>
+  <div class="card card-low">
+    <div class="label">테스트 (Free Tier 만료)</div>
+    <div class="price">&lt; $1</div>
+    <div class="sub">월 1,000건 이하</div>
+  </div>
+  <div class="card card-prod">
+    <div class="label">운영 (월 10만 통)</div>
+    <div class="price">~$13</div>
+    <div class="sub">전체 인프라 포함</div>
+  </div>
+</div>
+
+<!-- ====== Free Tier ====== -->
+<div class="section">
+<div class="tbl-wrap">
+  <div class="tbl-head" style="background:#e3f5ef; color:#0c6b4a;">
+    테스트 환경 — Free Tier 기간 (12개월)
+    <span class="badge" style="background:#0c6b4a; color:#fff;">$0 / 월</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%;">서비스</th>
+        <th style="width:28%;">Free Tier 한도</th>
+        <th style="width:25%;">테스트 예상 사용</th>
+        <th style="width:12%;" class="right">월 비용</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="bold">API Gateway</td>
+        <td class="mono">100만 호출/월</td>
+        <td class="mono">~1,000건</td>
+        <td class="right free">$0</td>
+      </tr>
+      <tr>
+        <td class="bold">Lambda (5개)</td>
+        <td class="mono">100만 요청 + 40만 GB-초/월</td>
+        <td class="mono">~1,000건</td>
+        <td class="right free">$0</td>
+      </tr>
+      <tr>
+        <td class="bold">SQS (3개)</td>
+        <td class="mono">100만 요청/월</td>
+        <td class="mono">~1,000건</td>
+        <td class="right free">$0</td>
+      </tr>
+      <tr>
+        <td class="bold">SNS</td>
+        <td class="mono">100만 게시/월</td>
+        <td class="mono">~100건</td>
+        <td class="right free">$0</td>
+      </tr>
+      <tr>
+        <td class="bold">DynamoDB (3개)</td>
+        <td class="mono">25 WCU + 25 RCU (항시 무료)</td>
+        <td class="mono">미미</td>
+        <td class="right free">$0</td>
+      </tr>
+      <tr>
+        <td class="bold">SSM Parameter</td>
+        <td class="mono">Standard 무료</td>
+        <td class="mono">3개</td>
+        <td class="right free">$0</td>
+      </tr>
+      <tr>
+        <td class="bold">SES</td>
+        <td class="mono">62,000통/월 (Lambda 발송)</td>
+        <td class="mono">~100통</td>
+        <td class="right free">$0</td>
+      </tr>
+      <tr>
+        <td class="bold">S3 (CDK Assets)</td>
+        <td class="mono">5GB 저장 + 2만 GET/월</td>
+        <td class="mono">~70KB</td>
+        <td class="right free">$0</td>
+      </tr>
+      <tr>
+        <td class="bold">CloudWatch Logs</td>
+        <td class="mono">5GB 수집 + 5GB 저장/월</td>
+        <td class="mono">미미</td>
+        <td class="right free">$0</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="3">합계</td>
+        <td class="right" style="color:#0c6b4a;">$0</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="note">
+    * Free Tier는 AWS 계정 생성 후 12개월간 적용 (DynamoDB 25 WCU/RCU는 항시 무료)<br>
+    * SES Free Tier는 EC2/Lambda에서 발송 시 적용
+  </div>
+</div>
+</div>
+
+<!-- ====== Post Free Tier ====== -->
+<div class="section">
+<div class="tbl-wrap">
+  <div class="tbl-head" style="background:#e8f0fb; color:#1a52a8;">
+    테스트 환경 — Free Tier 만료 후
+    <span class="badge" style="background:#1a52a8; color:#fff;">&lt; $1 / 월</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%;">서비스</th>
+        <th style="width:30%;">단가</th>
+        <th style="width:23%;">예상 사용</th>
+        <th style="width:12%;" class="right">월 비용</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="bold">API Gateway</td>
+        <td class="mono">$3.50 / 100만 호출</td>
+        <td class="mono">~1,000건</td>
+        <td class="right low">$0.01</td>
+      </tr>
+      <tr>
+        <td class="bold">Lambda</td>
+        <td class="mono">$0.20 / 100만 요청<br>$0.0000167 / GB-초</td>
+        <td class="mono">~1,000건</td>
+        <td class="right low">$0.01</td>
+      </tr>
+      <tr>
+        <td class="bold">DynamoDB</td>
+        <td class="mono">$1.25 / 100만 쓰기<br>$0.25 / 100만 읽기</td>
+        <td class="mono">~1,000건</td>
+        <td class="right low">$0.01</td>
+      </tr>
+      <tr>
+        <td class="bold">SQS / SNS</td>
+        <td class="mono">$0.40 / 100만 요청</td>
+        <td class="mono">~1,000건</td>
+        <td class="right low">$0.01</td>
+      </tr>
+      <tr>
+        <td class="bold">SES</td>
+        <td class="mono">$0.10 / 1,000통</td>
+        <td class="mono">~100통</td>
+        <td class="right low">$0.01</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="3">합계</td>
+        <td class="right" style="color:#1a52a8;">&lt; $0.10</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+</div>
+
+<!-- ====== Production ====== -->
+<div class="section">
+<div class="tbl-wrap">
+  <div class="tbl-head" style="background:#fdf5e0; color:#7a5000;">
+    운영 환경 — 월 10만 통 발송
+    <span class="badge" style="background:#7a5000; color:#fff;">~$13 / 월</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%;">서비스</th>
+        <th style="width:25%;">산출 근거</th>
+        <th style="width:28%;">상세</th>
+        <th style="width:12%;" class="right">월 비용</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="bold">SES</td>
+        <td class="mono">100,000 × $0.10/1K</td>
+        <td>이메일 발송 비용</td>
+        <td class="right med">$10.00</td>
+      </tr>
+      <tr>
+        <td class="bold">Lambda</td>
+        <td class="mono">~300,000 요청<br>256MB × 0.5초 평균</td>
+        <td>email-sender + event-processor<br>+ event-query + tenant-setup</td>
+        <td class="right med">$0.50</td>
+      </tr>
+      <tr>
+        <td class="bold">API Gateway</td>
+        <td class="mono">~200,000 호출</td>
+        <td>발송 + 조회 + 설정</td>
+        <td class="right med">$0.70</td>
+      </tr>
+      <tr>
+        <td class="bold">DynamoDB</td>
+        <td class="mono">~300,000 쓰기<br>~200,000 읽기</td>
+        <td>send-results + idempotency<br>+ tenant-config</td>
+        <td class="right med">$0.50</td>
+      </tr>
+      <tr>
+        <td class="bold">SQS</td>
+        <td class="mono">~200,000 요청</td>
+        <td>send-queue + DLQ</td>
+        <td class="right med">$0.10</td>
+      </tr>
+      <tr>
+        <td class="bold">SNS</td>
+        <td class="mono">~100,000 게시</td>
+        <td>SES 이벤트 전달</td>
+        <td class="right med">$0.05</td>
+      </tr>
+      <tr>
+        <td class="bold">CloudWatch</td>
+        <td class="mono">~2GB 로그/월</td>
+        <td>Lambda 로그</td>
+        <td class="right med">$1.00</td>
+      </tr>
+      <tr>
+        <td class="bold">S3 / SSM</td>
+        <td class="mono">미미</td>
+        <td>CDK Assets + Parameter Store</td>
+        <td class="right med">$0.05</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="3">합계</td>
+        <td class="right" style="color:#7a5000;">~$12.90</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="note">
+    * SES가 전체 비용의 약 77% 차지 — 발송량에 비례<br>
+    * DynamoDB On-Demand 모드 기준 (Provisioned 모드 전환 시 추가 절감 가능)
+  </div>
+</div>
+</div>
+
+<!-- ====== Scale Comparison ====== -->
+<div class="section">
+  <div class="section-title">규모별 월 비용 비교</div>
+
+  <div class="cmp-row">
+    <div class="cmp-label">테스트<br><span style="font-size:9px;color:#9aa3b2;">~100통/월</span></div>
+    <div class="cmp-bar" style="width:3%;min-width:60px;background:#0c6b4a;">$0</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-label">소규모<br><span style="font-size:9px;color:#9aa3b2;">1만통/월</span></div>
+    <div class="cmp-bar" style="width:10%;min-width:60px;background:#1a52a8;">~$2</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-label">중규모<br><span style="font-size:9px;color:#9aa3b2;">10만통/월</span></div>
+    <div class="cmp-bar" style="width:30%;min-width:60px;background:#7a5000;">~$13</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-label">대규모<br><span style="font-size:9px;color:#9aa3b2;">100만통/월</span></div>
+    <div class="cmp-bar" style="width:80%;min-width:60px;background:#8f4a10;">~$110</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-label">초대규모<br><span style="font-size:9px;color:#9aa3b2;">1000만통/월</span></div>
+    <div class="cmp-bar" style="width:100%;min-width:60px;background:#8b2020;">~$1,050</div>
+  </div>
+
+  <div style="font-size:9px;color:#9aa3b2;margin-top:4px;text-align:right;">* SES 비용이 지배적 ($0.10/1,000통)</div>
+</div>
+
+<!-- ====== SES 비용 상세 ====== -->
+<div class="section">
+<div class="tbl-wrap">
+  <div class="tbl-head" style="background:#e3f5ef; color:#0c6b4a;">
+    SES 비용 상세 (전체 비용의 70~80%)
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>항목</th>
+        <th>단가</th>
+        <th>비고</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="bold">이메일 발송</td>
+        <td class="mono">$0.10 / 1,000통</td>
+        <td>기본 발송 비용</td>
+      </tr>
+      <tr>
+        <td class="bold">첨부파일</td>
+        <td class="mono">$0.12 / GB</td>
+        <td>메시지 크기에 따른 추가 비용</td>
+      </tr>
+      <tr>
+        <td class="bold">전용 IP</td>
+        <td class="mono">$24.95 / IP / 월</td>
+        <td>선택사항 (기본: 공유 IP 무료)</td>
+      </tr>
+      <tr>
+        <td class="bold">수신 (Receiving)</td>
+        <td class="mono">$0.10 / 1,000건</td>
+        <td>EMS에서는 미사용</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="note">
+    * Lambda에서 발송 시 62,000통/월 무료 (Free Tier)<br>
+    * 대량 발송 시 SES 발송 한도 증량 요청 필요 (AWS Support)
+  </div>
+</div>
+</div>
+
+<!-- ====== 비용 절감 팁 ====== -->
+<div class="tip">
+  <div class="tip-title">비용 절감 팁</div>
+  <div class="tip-body">
+    <b>1. DynamoDB Provisioned 모드</b> — 트래픽 패턴이 예측 가능하면 On-Demand → Provisioned 전환으로 ~40% 절감<br>
+    <b>2. Lambda ARM64</b> — Graviton2 프로세서 사용 시 ~20% 비용 절감 (CDK에서 <code>architecture: lambda.Architecture.ARM_64</code>)<br>
+    <b>3. SES 전용 IP 불필요</b> — 월 10만 통 이하에서는 공유 IP로 충분<br>
+    <b>4. CloudWatch 로그 보존</b> — 로그 보존 기간을 30일로 설정하여 저장 비용 절감<br>
+    <b>5. 리소스 정리</b> — 테스트 후 <code>cdk destroy</code>로 전체 삭제하면 과금 즉시 중단
+  </div>
+</div>
+
+<!-- ====== 타 서비스 비교 ====== -->
+<div class="section" style="margin-top:20px;">
+<div class="tbl-wrap">
+  <div class="tbl-head" style="background:#f0f2f5; color:#3d4555;">
+    타 이메일 서비스 대비 비용 비교 (월 10만 통 기준)
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:25%;">서비스</th>
+        <th style="width:20%;">월 비용</th>
+        <th>특징</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:#f0faf5;">
+        <td class="bold" style="color:#0c6b4a;">AWS SES (EMS)</td>
+        <td class="mono bold" style="color:#0c6b4a;">~$13</td>
+        <td>자체 인프라, 완전 제어, 멀티테넌트</td>
+      </tr>
+      <tr>
+        <td class="bold">SendGrid</td>
+        <td class="mono">$19.95~</td>
+        <td>Pro 플랜, 10만 통 포함</td>
+      </tr>
+      <tr>
+        <td class="bold">Mailgun</td>
+        <td class="mono">$35~</td>
+        <td>Foundation 플랜, 5만 통 (초과분 추가)</td>
+      </tr>
+      <tr>
+        <td class="bold">Mailchimp</td>
+        <td class="mono">$87~</td>
+        <td>Standard 플랜, Transactional 별도</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="note">
+    * EMS + AWS SES 조합이 가장 경제적 · 대량 발송 시 격차 더 확대<br>
+    * 타 서비스는 관리 편의성 제공, EMS는 완전한 제어와 멀티테넌트 지원
+  </div>
+</div>
+</div>
+
+</div><!-- wrap -->
+</body>
+</html>

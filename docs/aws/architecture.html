@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Joins EMS — AWS 아키텍처</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'IBM Plex Sans KR',sans-serif; background:#f8f9fb; color:#1a1d23; padding:32px 20px; }
+.wrap { max-width:960px; margin:0 auto; }
+
+/* Header */
+.hdr { margin-bottom:28px; border-bottom:2px solid #e4e7ed; padding-bottom:16px; }
+.hdr h1 { font-size:18px; font-weight:600; letter-spacing:-.2px; color:#1a1d23; }
+.hdr p  { font-size:11px; color:#7a8394; margin-top:4px; font-family:'IBM Plex Mono',monospace; }
+.hdr-meta { display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; }
+.hdr-badge { font-size:9.5px; font-weight:600; padding:3px 8px; border-radius:4px; font-family:'IBM Plex Mono',monospace; }
+.hdr-badge.aws   { background:#fdf0e4; color:#8f4a10; border:1px solid #e8b07a; }
+.hdr-badge.lambda{ background:#ede9f8; color:#4b30a0; border:1px solid #b09de4; }
+.hdr-badge.dynamo{ background:#e4f1fd; color:#0d5a9b; border:1px solid #7ab8ec; }
+.hdr-badge.ssm   { background:#f3edfb; color:#6b30b0; border:1px solid #c5a8f0; }
+
+/* Zone */
+.zone { border-radius:12px; padding:18px; position:relative; margin-bottom:8px; }
+.zone-label { position:absolute; top:-11px; left:14px; font-size:10px; font-weight:600; letter-spacing:.8px; text-transform:uppercase; padding:0 8px; background:#f8f9fb; }
+.z-idc  { border:1.5px dashed #aab3bf; background:rgba(240,242,245,.6); }
+.z-idc  .zone-label { color:#7a8394; }
+.z-aws  { border:1.5px dashed #c0782a; background:rgba(250,245,237,.5); }
+.z-aws  .zone-label { color:#9b5a1a; }
+.z-cfg  { border:1.5px dashed #7ecfb2; background:rgba(227,245,239,.35); }
+.z-cfg  .zone-label { color:#0c6b4a; }
+.z-security { border:1.5px dashed #b09de4; background:rgba(237,233,248,.35); }
+.z-security .zone-label { color:#4b30a0; }
+
+/* Flex helpers */
+.row { display:flex; align-items:flex-start; gap:10px; justify-content:center; flex-wrap:wrap; }
+.col { display:flex; flex-direction:column; align-items:center; }
+
+/* Node */
+.nd { border-radius:8px; padding:9px 12px; text-align:center; font-size:11px; font-weight:600; line-height:1.35; }
+.nd .sub { font-size:9.5px; font-weight:400; opacity:.85; margin-top:3px; line-height:1.55; }
+.nd .mono { font-family:'IBM Plex Mono',monospace; font-size:9px; }
+
+.n-gray   { background:#eef0f3; border:1px solid #d0d5de; color:#3d4555; }
+.n-blue   { background:#e8f0fb; border:1px solid #93b8f0; color:#1a52a8; }
+.n-orange { background:#fdf0e4; border:1px solid #e8b07a; color:#8f4a10; }
+.n-amber  { background:#fdf5e0; border:1px solid #e8cc7a; color:#7a5000; }
+.n-teal   { background:#e3f5ef; border:1px solid #7ecfb2; color:#0c6b4a; }
+.n-dynamo { background:#e4f1fd; border:1px solid #7ab8ec; color:#0d5a9b; }
+.n-purple { background:#ede9f8; border:1px solid #b09de4; color:#4b30a0; }
+.n-red    { background:#fde8e8; border:1px solid #e8a0a0; color:#8b2020; }
+.n-ssm    { background:#f3edfb; border:1px solid #c5a8f0; color:#6b30b0; }
+.n-green  { background:#e3f5ef; border:1px solid #7ecfb2; color:#0c6b4a; }
+
+/* Arrows */
+.arr { font-size:13px; color:#7a8394; padding:3px 0; text-align:center; line-height:1; }
+.arr-lbl { font-size:9px; color:#9aa3b2; font-family:'IBM Plex Mono',monospace; display:block; margin-top:1px; }
+.arr.blue   { color:#3a72d8; }
+.arr.amber  { color:#c08020; }
+.arr.teal   { color:#0c6b4a; }
+.arr.dynamo { color:#0d5a9b; }
+.arr.purple { color:#6b30b0; }
+.arr.red    { color:#8b2020; }
+
+/* Badges */
+.tag { display:inline-block; font-size:8.5px; font-weight:700; padding:1px 5px; border-radius:3px; margin-left:4px; vertical-align:middle; font-family:'IBM Plex Mono',monospace; }
+.tag-get  { background:#e3f5ef; color:#0c6b4a; border:1px solid #7ecfb2; }
+.tag-post { background:#e8f0fb; color:#1a52a8; border:1px solid #93b8f0; }
+.tag-put  { background:#fdf5e0; color:#7a5000; border:1px solid #e8cc7a; }
+
+/* Path labels */
+.path-lbl { font-size:9.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; padding:3px 8px; border-radius:4px; margin-bottom:8px; display:inline-block; }
+.path-send  { background:#e8f0fb; color:#1a52a8; border:1px solid #93b8f0; }
+.path-event { background:#fdf5e0; color:#7a5000; border:1px solid #e8cc7a; }
+.path-poll  { background:#e3f5ef; color:#0c6b4a; border:1px solid #7ecfb2; }
+.path-cfg   { background:#f3edfb; color:#6b30b0; border:1px solid #c5a8f0; }
+.path-onboard { background:#e3f5ef; color:#0c6b4a; border:1px solid #7ecfb2; }
+
+/* Section separator */
+.sep { width:100%; height:1px; background:linear-gradient(to right,transparent,#d0d5de 20%,#d0d5de 80%,transparent); margin:14px 0; }
+
+/* Number circle */
+.num { width:17px; height:17px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; flex-shrink:0; font-family:'IBM Plex Mono',monospace; }
+
+/* Order box inside Lambda */
+.order-box { background:rgba(255,255,255,.75); border-radius:6px; padding:7px 8px; margin-top:5px; text-align:left; border:1px solid rgba(0,0,0,.08); font-size:9.5px; line-height:1.8; }
+.order-box .step { display:flex; align-items:flex-start; gap:5px; margin-bottom:2px; }
+.mode-row { display:flex; gap:6px; margin-top:5px; }
+.mode-tag { font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; font-family:'IBM Plex Mono',monospace; }
+.mode-cb  { background:#fdf5e0; color:#7a5000; border:1px solid #e8cc7a; }
+.mode-pl  { background:#e3f5ef; color:#0c6b4a; border:1px solid #7ecfb2; }
+
+/* DLQ note */
+.dlq-note { border-left:2px dashed #e8a0a0; padding:4px 8px; margin-top:6px; font-size:9px; color:#8b2020; text-align:left; }
+
+/* Column divider */
+.col-div { width:1.5px; background:linear-gradient(to bottom,transparent,#d0d5de 10%,#d0d5de 90%,transparent); align-self:stretch; margin-top:8px; }
+
+/* Dashed box */
+.dashed-box { border:1.5px dashed; border-radius:8px; padding:8px 12px; text-align:center; }
+
+/* Security strip */
+.sec-strip { background:#f0ecfc; border:1px solid #c5b8f0; border-radius:8px; padding:8px 16px; display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; }
+.sec-item { font-size:10px; color:#4b30a0; font-weight:500; }
+
+/* ESM node */
+.esm-node { background:#eef0f3; border:1.5px solid #aab3bf; border-radius:10px; padding:12px 16px; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.esm-label { font-size:12px; font-weight:600; color:#3d4555; }
+.esm-flow  { font-size:9.5px; font-family:'IBM Plex Mono',monospace; color:#5a6275; line-height:2.1; }
+
+/* Internet line */
+.inet-line { display:flex; flex-direction:column; align-items:center; padding:6px 0; gap:4px; }
+
+/* Tables */
+table { width:100%; border-collapse:collapse; font-size:11px; }
+th { text-align:left; padding:7px 12px; font-size:10px; font-weight:600; color:#9aa3b2; letter-spacing:.3px; text-transform:uppercase; background:#f0f2f5; border-bottom:1px solid #e4e7ed; }
+td { padding:7px 12px; border-bottom:.5px solid #f0f2f5; vertical-align:top; }
+tr:last-child td { border-bottom:none; }
+.tbl-wrap { border:1px solid #d0d5de; border-radius:10px; overflow:hidden; margin-top:10px; }
+.tbl-head { background:#e8eaee; padding:9px 14px; border-bottom:1px solid #d0d5de; font-size:11px; font-weight:600; color:#3d4555; display:flex; align-items:center; gap:6px; }
+.mono { font-family:'IBM Plex Mono',monospace; font-size:10px; }
+
+/* SSM config bar */
+.ssm-bar { background:#f3edfb; border:1px solid #c5a8f0; border-radius:8px; padding:10px 14px; margin-bottom:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.ssm-bar-title { font-size:10px; font-weight:700; color:#6b30b0; white-space:nowrap; }
+.ssm-arrow { font-size:11px; color:#9aa3b2; }
+.ssm-param { font-family:'IBM Plex Mono',monospace; font-size:9.5px; background:rgba(255,255,255,.7); border:1px solid #d0c0f0; border-radius:4px; padding:2px 6px; color:#4b30a0; }
+
+/* Mode table */
+.mode-tbl td { padding:6px 10px; }
+.mode-tbl .cb { background:#fdf5e0; }
+.mode-tbl .pl { background:#f0faf5; }
+
+/* Cost table */
+.cost-row-test { background:#f0faf5; }
+.cost-row-prod { background:#fdf0e4; }
+
+/* Section title */
+.section-title { font-size:11px; font-weight:700; color:#3d4555; margin:18px 0 8px 0; letter-spacing:.3px; text-transform:uppercase; display:flex; align-items:center; gap:6px; }
+.section-title::before { content:''; display:inline-block; width:3px; height:13px; border-radius:2px; background:#3a72d8; }
+
+/* CDK block */
+.cdk-block { background:#1a1d23; border-radius:10px; padding:16px 18px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:#e2e8f0; line-height:1.9; }
+.cdk-comment { color:#6a7a8a; }
+.cdk-cmd { color:#7ecfb2; }
+.cdk-flag { color:#93b8f0; }
+.cdk-val { color:#e8cc7a; }
+
+/* SQS info strip */
+.sqs-strip { background:#fdf5e0; border:1px solid #e8cc7a; border-radius:8px; padding:10px 14px; display:flex; gap:20px; flex-wrap:wrap; align-items:flex-start; }
+.sqs-item { font-size:10px; }
+.sqs-item b { color:#7a5000; font-size:10px; display:block; margin-bottom:2px; }
+
+/* Flow step */
+.flow-step { display:flex; gap:8px; align-items:flex-start; margin-bottom:10px; }
+.flow-num { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; flex-shrink:0; font-family:'IBM Plex Mono',monospace; }
+
+/* API table highlight */
+.api-post { color:#1a52a8; font-weight:700; }
+.api-get  { color:#0c6b4a; font-weight:700; }
+.api-put  { color:#7a5000; font-weight:700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===== HEADER ===== -->
+<div class="hdr">
+  <h1>Joins EMS — AWS 아키텍처</h1>
+  <p>On-premise IDC (목동) ↔ AWS · API Gateway 5개 엔드포인트 · Lambda 5개 · DynamoDB 3개 · SSM Parameter Store · SQS/DLQ · 멀티테넌트 온보딩</p>
+  <div class="hdr-meta">
+    <span class="hdr-badge aws">ap-northeast-2 (서울)</span>
+    <span class="hdr-badge lambda">Lambda × 5</span>
+    <span class="hdr-badge dynamo">DynamoDB × 3</span>
+    <span class="hdr-badge ssm">SSM Parameter Store × 3</span>
+    <span class="hdr-badge" style="background:#fde8e8;color:#8b2020;border:1px solid #e8a0a0;">SQS + DLQ</span>
+  </div>
+</div>
+
+<!-- ===== IDC ZONE ===== -->
+<div class="zone z-idc">
+  <span class="zone-label">On-premise IDC (목동)</span>
+  <div class="esm-node">
+    <div>
+      <div class="esm-label">ESM <span style="font-size:10px;color:#7a8394;font-weight:400;">(이메일 발송 관리 시스템 — Spring Boot + React)</span></div>
+      <div style="font-size:10px;color:#7a8394;margin-top:2px;">CMS · 사내포털 · Batch jobs</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0;">
+      <div class="esm-flow"><span style="color:#1a52a8;font-weight:700;">①</span> POST /send-email      →  발송 요청</div>
+      <div class="esm-flow"><span style="color:#0c6b4a;font-weight:700;">②</span> GET  /results         →  보정 폴링 (5~10분)</div>
+      <div class="esm-flow"><span style="color:#c08020;font-weight:700;">③</span> /ses/callback/event  ←  실시간 이벤트 수신</div>
+      <div class="esm-flow"><span style="color:#6b30b0;font-weight:700;">④</span> PUT  /config          →  수신 모드 / 콜백 URL 설정</div>
+      <div class="esm-flow"><span style="color:#0c6b4a;font-weight:700;">⑤</span> POST /tenant-setup   →  테넌트 온보딩 (UI)</div>
+      <div class="esm-flow" style="padding-left:12px;">    GET  /tenant-status  →  도메인 인증 상태 확인</div>
+    </div>
+  </div>
+</div>
+
+<!-- Internet / Security Line -->
+<div class="inet-line">
+  <div style="width:1.5px;height:10px;background:#c0782a;margin:0 auto;"></div>
+  <div class="sec-strip">
+    <span class="sec-item"><b>x-api-key</b> 헤더 인증</span>
+    <span style="color:#c5b8f0;">|</span>
+    <span class="sec-item"><b>IP Whitelist</b> — CDK Context / CfnParameter 설정</span>
+    <span style="color:#c5b8f0;">|</span>
+    <span class="sec-item"><b>HTTPS (TLS)</b> 전구간 암호화</span>
+    <span style="color:#c5b8f0;">|</span>
+    <span class="sec-item"><b>X-Callback-Secret</b> 콜백 무결성 검증</span>
+    <span style="color:#c5b8f0;">|</span>
+    <span class="sec-item" style="color:#8b2020;"><b>CORS 없음</b> (서버 간 통신만)</span>
+  </div>
+  <div style="width:1.5px;height:10px;background:#c0782a;margin:0 auto;"></div>
+</div>
+
+<!-- ===== AWS ZONE ===== -->
+<div class="zone z-aws">
+  <span class="zone-label">AWS (ap-northeast-2)</span>
+
+  <!-- SSM 설정 관리 흐름 -->
+  <div class="ssm-bar">
+    <div class="ssm-bar-title">⚙ 설정 관리 흐름</div>
+    <div class="ssm-arrow">UI PUT /config →</div>
+    <div class="nd n-blue" style="padding:5px 10px;font-size:10px;">API Gateway<br><span class="mono">PUT /config</span></div>
+    <div class="ssm-arrow">→ Lambda (config-updater) →</div>
+    <div class="nd n-ssm" style="padding:5px 10px;font-size:10px;">SSM Parameter Store<br>
+      <span class="ssm-param">/ems/mode</span>&nbsp;
+      <span class="ssm-param">/ems/callback_url</span>&nbsp;
+      <span class="ssm-param">/ems/callback_secret</span>
+    </div>
+    <div class="ssm-arrow">← 읽기 (캐시 30초)</div>
+    <div class="nd n-purple" style="padding:5px 10px;font-size:10px;">Lambda<br>event-processor</div>
+  </div>
+
+  <!-- API Gateway 전체 -->
+  <div class="nd n-blue" style="width:100%;margin-bottom:10px;padding:10px 14px;">
+    <div style="font-size:12px;font-weight:700;">API Gateway — ems-api</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;justify-content:center;">
+      <div style="background:rgba(26,82,168,.08);border:1px solid #93b8f0;border-radius:5px;padding:4px 8px;font-size:9.5px;font-family:'IBM Plex Mono',monospace;">
+        <span class="api-post">POST</span> /send-email → SQS
+      </div>
+      <div style="background:rgba(12,107,74,.08);border:1px solid #7ecfb2;border-radius:5px;padding:4px 8px;font-size:9.5px;font-family:'IBM Plex Mono',monospace;">
+        <span class="api-get">GET</span> /results → Lambda (event-query)
+      </div>
+      <div style="background:rgba(122,80,0,.08);border:1px solid #e8cc7a;border-radius:5px;padding:4px 8px;font-size:9.5px;font-family:'IBM Plex Mono',monospace;">
+        <span class="api-put">PUT</span> /config → Lambda (config-updater) → SSM
+      </div>
+      <div style="background:rgba(12,107,74,.08);border:1px solid #7ecfb2;border-radius:5px;padding:4px 8px;font-size:9.5px;font-family:'IBM Plex Mono',monospace;">
+        <span class="api-post">POST</span> /tenant-setup → Lambda (tenant-setup)
+      </div>
+      <div style="background:rgba(12,107,74,.08);border:1px solid #7ecfb2;border-radius:5px;padding:4px 8px;font-size:9.5px;font-family:'IBM Plex Mono',monospace;">
+        <span class="api-get">GET</span> /tenant-status → Lambda (tenant-setup)
+      </div>
+    </div>
+  </div>
+
+  <!-- 3-column layout -->
+  <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+
+    <!-- LEFT: 발송 경로 -->
+    <div style="flex:1;min-width:210px;max-width:300px;">
+      <div style="text-align:center;margin-bottom:6px;">
+        <span class="path-lbl path-send">① 발송 경로</span>
+      </div>
+      <div class="col">
+        <div class="nd n-orange" style="width:100%;">
+          <div>SQS — ems-send-queue</div>
+          <div class="sub">비동기 디커플링 · tenant_id 포함<br>visibilityTimeout: <b>180초</b></div>
+        </div>
+        <div class="arr blue">↓ <span class="arr-lbl">SQS trigger · reportBatchItemFailures</span></div>
+        <div class="nd n-purple" style="width:100%;">
+          <div>Lambda — email-sender</div>
+          <div class="sub">SES 호출 · Idempotency 체크<br>tenant_id → Config 조회 → 발송</div>
+        </div>
+        <div style="display:flex;gap:6px;margin:5px 0;width:100%;">
+          <div class="nd n-dynamo" style="flex:1;">
+            <div style="font-size:9.5px;">DynamoDB</div>
+            <div class="sub mono">ems-tenant-config</div>
+          </div>
+          <div class="nd n-dynamo" style="flex:1;">
+            <div style="font-size:9.5px;">DynamoDB</div>
+            <div class="sub mono">ems-idempotency</div>
+          </div>
+        </div>
+        <div class="dlq-note" style="width:100%;">
+          실패 시 → DLQ (ems-send-dlq) · maxReceiveCount: 3
+        </div>
+        <div class="arr blue" style="margin-top:6px;">↓</div>
+        <div class="nd n-teal" style="width:100%;">
+          <div>Amazon SES</div>
+          <div class="sub">DKIM / SPF · Sending Rate 관리<br>Config Set per Tenant</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="col-div"></div>
+
+    <!-- CENTER: 이벤트 수신 -->
+    <div style="flex:1;min-width:210px;max-width:310px;">
+      <div style="text-align:center;margin-bottom:6px;">
+        <span class="path-lbl path-event">② 이벤트 수신 — Callback / Polling</span>
+      </div>
+      <div class="col">
+        <div class="nd n-amber" style="width:100%;">
+          <div>SNS Topic — ems-ses-events</div>
+          <div class="sub">SES Config Set → SNS 이벤트 전달<br>Bounce · Complaint · Delivery</div>
+        </div>
+        <div class="arr amber">↓ <span class="arr-lbl">직접 트리거 (SQS 없음)</span></div>
+        <div class="nd n-purple" style="width:100%;">
+          <div>Lambda — event-processor</div>
+          <div class="order-box">
+            <div style="font-size:8.5px;color:#6b30b0;font-weight:600;margin-bottom:5px;">
+              <span style="background:#f3edfb;border:1px solid #c5a8f0;border-radius:3px;padding:1px 5px;">SSM</span>
+              모드 읽기 (캐시 30초)
+            </div>
+            <div class="step">
+              <span class="num" style="background:#0d5a9b;color:#fff;">①</span>
+              <span style="color:#0d5a9b;font-weight:600;">ems-send-results 저장 — 항상</span>
+            </div>
+            <div class="mode-row">
+              <div style="flex:1;border:1px dashed #e8cc7a;border-radius:5px;padding:4px 6px;background:rgba(253,245,224,.5);">
+                <div class="mode-tag mode-cb" style="margin-bottom:3px;">callback</div>
+                <div style="font-size:9px;color:#7a5000;">② ESM Callback 호출</div>
+              </div>
+              <div style="flex:1;border:1px dashed #7ecfb2;border-radius:5px;padding:4px 6px;background:rgba(227,245,239,.5);">
+                <div class="mode-tag mode-pl" style="margin-bottom:3px;">polling</div>
+                <div style="font-size:9px;color:#0c6b4a;">② 생략 (DB저장만)</div>
+              </div>
+            </div>
+            <div style="font-size:8.5px;color:#9aa3b2;margin-top:4px;">①은 모드 무관 항상 실행 → Callback 실패 시 폴링으로 보정</div>
+          </div>
+          <div class="dlq-note">
+            실패 시 → DLQ (event-processor-dlq) · 재시도 2회
+          </div>
+        </div>
+        <div class="arr amber" style="margin-top:4px;">↓ <span class="arr-lbl">callback 모드일 때만</span></div>
+        <div class="dashed-box" style="border-color:#e8cc7a;background:rgba(253,245,224,.4);width:100%;">
+          <div style="font-size:11px;font-weight:600;color:#7a5000;">ESM /ses/callback/event</div>
+          <div style="font-size:9.5px;color:#9a7020;margin-top:2px;">실시간 Push · X-Callback-Secret 검증</div>
+        </div>
+        <div class="arr dynamo" style="margin-top:4px;">① ↑ 먼저 저장</div>
+        <div class="nd n-dynamo" style="width:100%;">
+          <div>DynamoDB</div>
+          <div class="sub mono">ems-send-results</div>
+          <div class="sub">PK: tenant_id · SK: message_id<br>GSI: gsi-tenant-timestamp<br>TTL 7일</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="col-div"></div>
+
+    <!-- RIGHT: 보정 폴링 -->
+    <div style="flex:1;min-width:180px;max-width:250px;">
+      <div style="text-align:center;margin-bottom:6px;">
+        <span class="path-lbl path-poll">③ 보정 폴링 (5~10분)</span>
+      </div>
+      <div class="col">
+        <div class="nd n-blue" style="width:100%;">
+          <div>API Gateway</div>
+          <div class="sub mono">GET /results?tenant_id=X<br>&amp;after=T&amp;limit=100</div>
+        </div>
+        <div class="arr teal">↓ <span class="arr-lbl">Lambda trigger</span></div>
+        <div class="nd n-purple" style="width:100%;">
+          <div>Lambda — event-query</div>
+          <div class="sub">tenant_id + after 검증<br>GSI Query → 페이징<br>JSON 응답</div>
+        </div>
+        <div class="arr dynamo">↕ <span class="arr-lbl">GSI Query</span></div>
+        <div class="nd n-dynamo" style="width:100%;">
+          <div>DynamoDB</div>
+          <div class="sub mono">ems-send-results</div>
+          <div class="sub">event-processor가 쓰고<br>event-query가 읽는 공유 테이블</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /aws zone -->
+
+<!-- ===== 테넌트 온보딩 ZONE ===== -->
+<div class="zone z-cfg" style="margin-top:8px;">
+  <span class="zone-label">테넌트 온보딩 플로우</span>
+  <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;">
+
+    <!-- Lambda tenant-setup -->
+    <div style="flex:2;min-width:260px;">
+      <div style="text-align:center;margin-bottom:6px;">
+        <span class="path-lbl path-onboard">POST /tenant-setup · GET /tenant-status</span>
+      </div>
+      <div class="col">
+        <div class="nd n-blue" style="width:100%;">
+          <div>API Gateway</div>
+          <div class="sub mono">POST /tenant-setup · GET /tenant-status</div>
+        </div>
+        <div class="arr teal">↓ <span class="arr-lbl">Lambda trigger</span></div>
+        <div class="nd n-purple" style="width:100%;">
+          <div>Lambda — tenant-setup</div>
+          <div class="order-box">
+            <div class="step"><span class="num" style="background:#0c6b4a;color:#fff;">①</span><span>SES CreateEmailIdentity (도메인 등록)</span></div>
+            <div class="step"><span class="num" style="background:#0c6b4a;color:#fff;">②</span><span>SES CreateConfigurationSet</span></div>
+            <div class="step"><span class="num" style="background:#0c6b4a;color:#fff;">③</span><span>SES CreateConfigurationSetEventDestination (SNS 연결)</span></div>
+            <div class="step"><span class="num" style="background:#0d5a9b;color:#fff;">④</span><span>ems-tenant-config 저장 (status: PENDING)</span></div>
+            <div class="step"><span class="num" style="background:#0c6b4a;color:#fff;">⑤</span><span>DKIM CNAME 레코드 3개 반환 → UI 표시</span></div>
+            <div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(0,0,0,.08);font-size:8.5px;color:#3d4555;">
+              GET /tenant-status 호출 시:<br>
+              SES GetEmailIdentity → VerificationStatus 확인<br>
+              Verified → status: ACTIVE 업데이트
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;width:100%;">
+          <div class="nd n-teal" style="flex:1;">
+            <div style="font-size:10px;">Amazon SES</div>
+            <div class="sub">Identity 자동 생성<br>Config Set 자동 생성</div>
+          </div>
+          <div class="nd n-dynamo" style="flex:1;">
+            <div style="font-size:10px;">DynamoDB</div>
+            <div class="sub mono">ems-tenant-config</div>
+            <div class="sub">PENDING → ACTIVE</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 온보딩 단계 -->
+    <div style="flex:1;min-width:200px;background:rgba(255,255,255,.65);border:1px solid #7ecfb2;border-radius:8px;padding:14px;">
+      <div style="font-size:10px;font-weight:700;color:#0c6b4a;margin-bottom:12px;letter-spacing:.3px;text-transform:uppercase;">온보딩 단계</div>
+      <div class="flow-step">
+        <div class="flow-num" style="background:#0c6b4a;color:#fff;">1</div>
+        <div style="font-size:10px;color:#3d4555;"><b>도메인 입력</b><br>UI에서 tenant_id + domain 입력 후 POST /tenant-setup 호출</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num" style="background:#0c6b4a;color:#fff;">2</div>
+        <div style="font-size:10px;color:#3d4555;"><b>Lambda 자동 처리</b><br>SES Identity 생성 → ConfigSet → SNS 연결 → DynamoDB 저장</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num" style="background:#0c6b4a;color:#fff;">3</div>
+        <div style="font-size:10px;color:#3d4555;"><b>DKIM 레코드 발급</b><br>CNAME 레코드 3개를 UI에 표시</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num" style="background:#0c6b4a;color:#fff;">4</div>
+        <div style="font-size:10px;color:#3d4555;"><b>DNS 등록</b><br>고객사가 자사 DNS에 CNAME 3개 추가</div>
+      </div>
+      <div class="flow-step">
+        <div class="flow-num" style="background:#0c6b4a;color:#fff;">5</div>
+        <div style="font-size:10px;color:#3d4555;"><b>인증 확인 (폴링)</b><br>UI → GET /tenant-status 주기적 호출</div>
+      </div>
+      <div class="flow-step" style="margin-bottom:0;">
+        <div class="flow-num" style="background:#0c6b4a;color:#fff;">6</div>
+        <div style="font-size:10px;color:#3d4555;"><b>발송 활성화</b><br>SES Verified → status: ACTIVE → 발송 가능</div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /onboarding zone -->
+
+
+<!-- ===== API Gateway 엔드포인트 5개 ===== -->
+<div class="section-title">API Gateway 엔드포인트</div>
+<div class="tbl-wrap">
+  <div class="tbl-head">API Gateway — ems-api (5개 엔드포인트, 전체 x-api-key 인증)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8%;">Method</th>
+        <th style="width:18%;">경로</th>
+        <th style="width:12%;">인증</th>
+        <th style="width:30%;">연결</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span style="font-weight:700;color:#1a52a8;font-family:'IBM Plex Mono',monospace;font-size:10px;">POST</span></td>
+        <td class="mono">/send-email</td>
+        <td style="font-size:10px;">API Key</td>
+        <td style="font-size:10px;">AWS Service Integration → SQS</td>
+        <td style="font-size:10px;">이메일 발송 요청 (비동기 큐잉)</td>
+      </tr>
+      <tr>
+        <td><span style="font-weight:700;color:#0c6b4a;font-family:'IBM Plex Mono',monospace;font-size:10px;">GET</span></td>
+        <td class="mono">/results</td>
+        <td style="font-size:10px;">API Key</td>
+        <td style="font-size:10px;">Lambda (event-query)</td>
+        <td style="font-size:10px;">발송결과 조회 — 보정 폴링용</td>
+      </tr>
+      <tr>
+        <td><span style="font-weight:700;color:#7a5000;font-family:'IBM Plex Mono',monospace;font-size:10px;">PUT</span></td>
+        <td class="mono">/config</td>
+        <td style="font-size:10px;">API Key</td>
+        <td style="font-size:10px;">Lambda (config-updater) → SSM</td>
+        <td style="font-size:10px;">수신 모드 / 콜백 URL / 시크릿 설정</td>
+      </tr>
+      <tr>
+        <td><span style="font-weight:700;color:#1a52a8;font-family:'IBM Plex Mono',monospace;font-size:10px;">POST</span></td>
+        <td class="mono">/tenant-setup</td>
+        <td style="font-size:10px;">API Key</td>
+        <td style="font-size:10px;">Lambda (tenant-setup)</td>
+        <td style="font-size:10px;">테넌트 생성 — Identity / ConfigSet / 템플릿 관리</td>
+      </tr>
+      <tr>
+        <td><span style="font-weight:700;color:#0c6b4a;font-family:'IBM Plex Mono',monospace;font-size:10px;">GET</span></td>
+        <td class="mono">/tenant-status</td>
+        <td style="font-size:10px;">API Key</td>
+        <td style="font-size:10px;">Lambda (tenant-setup)</td>
+        <td style="font-size:10px;">도메인 인증 상태 확인 (PENDING / ACTIVE)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== Lambda 5개 ===== -->
+<div class="section-title">Lambda 구성 (5개)</div>
+<div class="tbl-wrap">
+  <div class="tbl-head">Lambda Functions</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:20%;">함수명</th>
+        <th style="width:14%;">트리거</th>
+        <th style="width:30%;">역할</th>
+        <th>주요 IAM 권한</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono" style="font-weight:700;color:#0c6b4a;">ems-email-sender</td>
+        <td style="font-size:10px;">SQS</td>
+        <td style="font-size:10px;">SES 이메일 발송 · 멱등성 체크<br>tenant_id로 Config 조회 후 발송</td>
+        <td class="mono" style="font-size:9.5px;color:#5a6275;">ses:SendEmail<br>dynamodb:GetItem · PutItem<br>sqs:ReceiveMessage · DeleteMessage</td>
+      </tr>
+      <tr>
+        <td class="mono" style="font-weight:700;color:#4b30a0;">ems-event-processor</td>
+        <td style="font-size:10px;">SNS <span style="font-size:9px;color:#0c6b4a;font-weight:700;">(직접)</span></td>
+        <td style="font-size:10px;">이벤트 → DynamoDB 저장 (항상)<br>SSM 모드에 따라 Callback 호출<br>DLQ: event-processor-dlq (재시도 2회)</td>
+        <td class="mono" style="font-size:9.5px;color:#5a6275;">dynamodb:PutItem · UpdateItem<br>ssm:GetParameter<br>(DLQ 설정 필수)</td>
+      </tr>
+      <tr>
+        <td class="mono" style="font-weight:700;color:#4b30a0;">ems-event-query</td>
+        <td style="font-size:10px;">API Gateway</td>
+        <td style="font-size:10px;">DynamoDB GSI Query → 발송결과 응답<br>tenant_id + after 파라미터 · 페이징</td>
+        <td class="mono" style="font-size:9.5px;color:#5a6275;">dynamodb:Query<br>(ems-send-results + GSI)</td>
+      </tr>
+      <tr>
+        <td class="mono" style="font-weight:700;color:#0c6b4a;">ems-tenant-setup</td>
+        <td style="font-size:10px;">API Gateway</td>
+        <td style="font-size:10px;">SES Identity / ConfigSet / 템플릿 CRUD<br>DKIM CNAME 반환 · 인증 상태 확인</td>
+        <td class="mono" style="font-size:9.5px;color:#5a6275;">ses:CreateEmailIdentity<br>ses:CreateConfigurationSet<br>ses:GetEmailIdentity<br>dynamodb:PutItem · UpdateItem</td>
+      </tr>
+      <tr>
+        <td class="mono" style="font-weight:700;color:#6b30b0;">ems-config-updater</td>
+        <td style="font-size:10px;">API Gateway</td>
+        <td style="font-size:10px;">SSM Parameter Store 업데이트<br>/ems/mode · /ems/callback_url · /ems/callback_secret</td>
+        <td class="mono" style="font-size:9.5px;color:#5a6275;">ssm:PutParameter<br>ssm:GetParameter</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== DynamoDB 3개 테이블 ===== -->
+<div class="section-title">DynamoDB 테이블 스키마 (3개)</div>
+
+<!-- ems-send-results -->
+<div class="tbl-wrap">
+  <div class="tbl-head">
+    <span class="mono" style="color:#0d5a9b;font-size:12px;">ems-send-results</span>
+    <span style="font-size:10px;color:#7a8394;font-weight:400;margin-left:8px;">발송 이벤트 결과 저장 · TTL 7일 · GSI: gsi-tenant-timestamp</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%;">Key / 필드</th>
+        <th style="width:12%;">타입</th>
+        <th style="width:16%;">키 유형</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:#e8f4fd;">
+        <td class="mono" style="font-weight:700;color:#0d5a9b;">tenant_id</td>
+        <td style="font-size:10px;">String</td>
+        <td><span style="background:#e8f0fb;color:#1a52a8;border:1px solid #93b8f0;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;">PK</span></td>
+        <td style="font-size:10px;">테넌트 ID</td>
+      </tr>
+      <tr style="background:#f0f7fe;">
+        <td class="mono" style="font-weight:700;color:#0d5a9b;">message_id</td>
+        <td style="font-size:10px;">String</td>
+        <td><span style="background:#e3f5ef;color:#0c6b4a;border:1px solid #7ecfb2;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;">SK</span></td>
+        <td style="font-size:10px;">SES 메시지 ID</td>
+      </tr>
+      <tr>
+        <td class="mono">status</td>
+        <td style="font-size:10px;">String</td>
+        <td style="font-size:10px;">-</td>
+        <td style="font-size:10px;">DELIVERED / BOUNCED / COMPLAINED</td>
+      </tr>
+      <tr>
+        <td class="mono">event_type</td>
+        <td style="font-size:10px;">String</td>
+        <td style="font-size:10px;">-</td>
+        <td style="font-size:10px;">Delivery / Bounce / Complaint</td>
+      </tr>
+      <tr>
+        <td class="mono">recipients</td>
+        <td style="font-size:10px;">StringSet</td>
+        <td style="font-size:10px;">-</td>
+        <td style="font-size:10px;">수신자 이메일 목록</td>
+      </tr>
+      <tr>
+        <td class="mono">timestamp</td>
+        <td style="font-size:10px;">String</td>
+        <td><span style="background:#fdf5e0;color:#7a5000;border:1px solid #e8cc7a;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;">GSI-SK</span></td>
+        <td style="font-size:10px;">이벤트 발생 시간 (GSI Sort Key)</td>
+      </tr>
+      <tr>
+        <td class="mono">ttl</td>
+        <td style="font-size:10px;">Number</td>
+        <td style="font-size:10px;">TTL</td>
+        <td style="font-size:10px;">자동 만료 (7일)</td>
+      </tr>
+      <tr style="background:#fdf5e0;">
+        <td colspan="4" style="font-size:9.5px;color:#7a5000;padding:6px 12px;">
+          <b>GSI</b>: gsi-tenant-timestamp — PK: tenant_id · SK: timestamp — 보정 폴링 조회용
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ems-tenant-config -->
+<div class="tbl-wrap" style="margin-top:8px;">
+  <div class="tbl-head">
+    <span class="mono" style="color:#0d5a9b;font-size:12px;">ems-tenant-config</span>
+    <span style="font-size:10px;color:#7a8394;font-weight:400;margin-left:8px;">테넌트 설정 저장 · TTL 10년 (실질적 무제한)</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%;">Key / 필드</th>
+        <th style="width:12%;">타입</th>
+        <th style="width:16%;">키 유형</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:#e8f4fd;">
+        <td class="mono" style="font-weight:700;color:#0d5a9b;">tenant_id</td>
+        <td style="font-size:10px;">String</td>
+        <td><span style="background:#e8f0fb;color:#1a52a8;border:1px solid #93b8f0;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;">PK</span></td>
+        <td style="font-size:10px;">테넌트 ID</td>
+      </tr>
+      <tr>
+        <td class="mono">tenant_name</td>
+        <td style="font-size:10px;">String</td>
+        <td style="font-size:10px;">-</td>
+        <td style="font-size:10px;">테넌트명</td>
+      </tr>
+      <tr>
+        <td class="mono">domain</td>
+        <td style="font-size:10px;">String</td>
+        <td style="font-size:10px;">-</td>
+        <td style="font-size:10px;">발송 도메인</td>
+      </tr>
+      <tr>
+        <td class="mono">config_set_name</td>
+        <td style="font-size:10px;">String</td>
+        <td style="font-size:10px;">-</td>
+        <td style="font-size:10px;">SES Configuration Set 이름</td>
+      </tr>
+      <tr>
+        <td class="mono">verification_status</td>
+        <td style="font-size:10px;">String</td>
+        <td style="font-size:10px;">-</td>
+        <td style="font-size:10px;">PENDING / SUCCESS (→ status: ACTIVE)</td>
+      </tr>
+      <tr>
+        <td class="mono">ttl</td>
+        <td style="font-size:10px;">Number</td>
+        <td style="font-size:10px;">TTL</td>
+        <td style="font-size:10px;">10년 (환경변수로 설정 가능)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ems-idempotency -->
+<div class="tbl-wrap" style="margin-top:8px;">
+  <div class="tbl-head">
+    <span class="mono" style="color:#0d5a9b;font-size:12px;">ems-idempotency</span>
+    <span style="font-size:10px;color:#7a8394;font-weight:400;margin-left:8px;">중복 발송 방지 · TTL 24시간</span>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22%;">Key / 필드</th>
+        <th style="width:12%;">타입</th>
+        <th style="width:16%;">키 유형</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:#e8f4fd;">
+        <td class="mono" style="font-weight:700;color:#0d5a9b;">message_id</td>
+        <td style="font-size:10px;">String</td>
+        <td><span style="background:#e8f0fb;color:#1a52a8;border:1px solid #93b8f0;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:700;">PK</span></td>
+        <td style="font-size:10px;">발송 요청 ID (클라이언트 제공)</td>
+      </tr>
+      <tr>
+        <td class="mono">ses_message_id</td>
+        <td style="font-size:10px;">String</td>
+        <td style="font-size:10px;">-</td>
+        <td style="font-size:10px;">SES가 반환한 메시지 ID</td>
+      </tr>
+      <tr>
+        <td class="mono">ttl</td>
+        <td style="font-size:10px;">Number</td>
+        <td style="font-size:10px;">TTL</td>
+        <td style="font-size:10px;">자동 만료 (24시간)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== SSM Parameter Store ===== -->
+<div class="section-title">SSM Parameter Store (3개)</div>
+<div class="tbl-wrap">
+  <div class="tbl-head">SSM Parameter Store — /ems/*</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:28%;">파라미터</th>
+        <th style="width:15%;">기본값</th>
+        <th style="width:12%;">타입</th>
+        <th>설명</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mono" style="font-weight:700;color:#6b30b0;">/ems/mode</td>
+        <td class="mono" style="font-size:10px;">callback</td>
+        <td style="font-size:10px;">String</td>
+        <td style="font-size:10px;">발송결과 수신 모드 — <span class="mode-tag mode-cb">callback</span> / <span class="mode-tag mode-pl">polling</span></td>
+      </tr>
+      <tr>
+        <td class="mono" style="font-weight:700;color:#6b30b0;">/ems/callback_url</td>
+        <td style="font-size:10px;color:#9aa3b2;">(빈값)</td>
+        <td style="font-size:10px;">String</td>
+        <td style="font-size:10px;">ESM 콜백 수신 URL — PUT /config로 설정</td>
+      </tr>
+      <tr>
+        <td class="mono" style="font-weight:700;color:#6b30b0;">/ems/callback_secret</td>
+        <td style="font-size:10px;color:#9aa3b2;">(빈값)</td>
+        <td style="font-size:10px;color:#8b2020;font-weight:600;">SecureString</td>
+        <td style="font-size:10px;">콜백 무결성 검증 시크릿 — 배포 후 <span class="mono">aws ssm put-parameter --type SecureString</span>으로 교체 필요</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== SQS 설정 ===== -->
+<div class="section-title">SQS 설정</div>
+<div class="sqs-strip" style="margin-top:4px;">
+  <div class="sqs-item">
+    <b>Queue</b>
+    <span class="mono" style="font-size:10px;">ems-send-queue</span>
+  </div>
+  <div class="sqs-item">
+    <b>visibilityTimeout</b>
+    <span style="font-size:10px;">180초 (Lambda 타임아웃 30초 × 6)</span>
+  </div>
+  <div class="sqs-item">
+    <b>maxReceiveCount</b>
+    <span style="font-size:10px;">3 (DLQ 이동 전 최대 재시도)</span>
+  </div>
+  <div class="sqs-item">
+    <b>reportBatchItemFailures</b>
+    <span style="font-size:10px;">true — 부분 실패 시 실패 건만 재시도</span>
+  </div>
+  <div class="sqs-item">
+    <b>DLQ</b>
+    <span class="mono" style="font-size:10px;">ems-send-dlq</span>
+    <span style="font-size:10px;"> — 3회 실패 후 이동</span>
+  </div>
+  <div class="sqs-item">
+    <b>event-processor DLQ</b>
+    <span class="mono" style="font-size:10px;">event-processor-dlq</span>
+    <span style="font-size:10px;"> — 재시도 2회</span>
+  </div>
+</div>
+
+<!-- ===== 발송결과 수신 모드 ===== -->
+<div class="section-title">발송결과 수신 모드</div>
+<div class="tbl-wrap">
+  <div class="tbl-head">Callback / Polling 모드 비교</div>
+  <table class="mode-tbl">
+    <thead>
+      <tr>
+        <th style="width:12%;">모드</th>
+        <th style="width:30%;">Lambda 동작</th>
+        <th style="width:25%;">ESM 동작</th>
+        <th style="width:20%;">사용 상황</th>
+        <th>전환 방법</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="cb">
+        <td><span class="mode-tag mode-cb">callback</span></td>
+        <td style="font-size:10px;">DB저장 + ESM Callback 호출<br>(X-Callback-Secret 헤더 포함)</td>
+        <td style="font-size:10px;">콜백 수신 + 보정 폴링 병행</td>
+        <td style="font-size:10px;">정상 운영 시<br>ESM 서버 정상 상태</td>
+        <td style="font-size:10px;">UI → PUT /config → SSM → 30초 내 반영</td>
+      </tr>
+      <tr class="pl">
+        <td><span class="mode-tag mode-pl">polling</span></td>
+        <td style="font-size:10px;">DB저장만 (Callback 없음)</td>
+        <td style="font-size:10px;">보정 폴링만 (5~10분 주기)</td>
+        <td style="font-size:10px;">ESM 장애 시<br>콜백 포트 미개방</td>
+        <td style="font-size:10px;">UI → PUT /config → SSM → 30초 내 반영</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== 보안 ===== -->
+<div class="section-title">보안</div>
+<div class="zone z-security" style="padding:14px 18px;">
+  <span class="zone-label">Security</span>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:180px;background:rgba(255,255,255,.6);border:1px solid #b09de4;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:10px;font-weight:700;color:#4b30a0;margin-bottom:6px;">ESM → API Gateway</div>
+      <div style="font-size:10px;color:#3d4555;">x-api-key 헤더 인증<br>API Gateway Usage Plan 설정</div>
+    </div>
+    <div style="flex:1;min-width:180px;background:rgba(255,255,255,.6);border:1px solid #b09de4;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:10px;font-weight:700;color:#4b30a0;margin-bottom:6px;">IP Whitelist</div>
+      <div style="font-size:10px;color:#3d4555;">CDK Context 또는 CfnParameter로 설정<br>ESM 서버 IP만 허용</div>
+    </div>
+    <div style="flex:1;min-width:180px;background:rgba(255,255,255,.6);border:1px solid #b09de4;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:10px;font-weight:700;color:#4b30a0;margin-bottom:6px;">전구간 암호화</div>
+      <div style="font-size:10px;color:#3d4555;">HTTPS (TLS 1.2+)<br>IDC ↔ AWS 전구간 적용</div>
+    </div>
+    <div style="flex:1;min-width:180px;background:rgba(255,255,255,.6);border:1px solid #b09de4;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:10px;font-weight:700;color:#4b30a0;margin-bottom:6px;">Callback Secret</div>
+      <div style="font-size:10px;color:#3d4555;">Lambda → ESM 호출 시 X-Callback-Secret 헤더<br>SSM SecureString으로 암호화 저장</div>
+    </div>
+    <div style="flex:1;min-width:180px;background:rgba(255,255,255,.6);border:1px solid #b09de4;border-radius:8px;padding:10px 12px;">
+      <div style="font-size:10px;font-weight:700;color:#8b2020;margin-bottom:6px;">CORS 없음</div>
+      <div style="font-size:10px;color:#3d4555;">서버 간 통신만 사용<br>브라우저 직접 호출 없음 → CORS 제거됨</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 비용 예상 ===== -->
+<div class="section-title">비용 예상</div>
+<div class="tbl-wrap">
+  <div class="tbl-head">월 비용 예상 (ap-northeast-2 기준)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:35%;">환경</th>
+        <th style="width:20%;">월 비용</th>
+        <th>비고</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="cost-row-test">
+        <td style="font-size:10px;font-weight:600;">테스트 (Free Tier 적용)</td>
+        <td style="font-weight:700;color:#0c6b4a;font-size:12px;">$0</td>
+        <td style="font-size:10px;">Lambda 100만 호출, DynamoDB 25GB, SES 62,000건/월 Free Tier 내</td>
+      </tr>
+      <tr class="cost-row-test">
+        <td style="font-size:10px;font-weight:600;">테스트 (Free Tier 만료 후)</td>
+        <td style="font-weight:700;color:#0c6b4a;font-size:12px;">&lt; $1</td>
+        <td style="font-size:10px;">소량 테스트 트래픽 기준</td>
+      </tr>
+      <tr class="cost-row-prod">
+        <td style="font-size:10px;font-weight:600;">운영 (월 10만 통 발송)</td>
+        <td style="font-weight:700;color:#8f4a10;font-size:12px;">~$13</td>
+        <td style="font-size:10px;">SES ~$10 + Lambda/API GW/DynamoDB/SQS ~$3</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== CDK 배포 명령어 ===== -->
+<div class="section-title">CDK 배포 명령어</div>
+<div class="cdk-block">
+  <div class="cdk-comment"># 최초 배포 — CDK 부트스트랩 (계정당 1회)</div>
+  <div><span class="cdk-cmd">cdk bootstrap</span> <span class="cdk-flag">aws://</span><span class="cdk-val">123456789012</span><span class="cdk-flag">/ap-northeast-2</span></div>
+  <div style="margin-top:8px;" class="cdk-comment"># 스택 합성 (CloudFormation 템플릿 생성)</div>
+  <div><span class="cdk-cmd">cdk synth</span></div>
+  <div style="margin-top:8px;" class="cdk-comment"># 전체 배포</div>
+  <div><span class="cdk-cmd">cdk deploy</span> <span class="cdk-flag">--all</span></div>
+  <div style="margin-top:8px;" class="cdk-comment"># IP Whitelist 지정 배포</div>
+  <div><span class="cdk-cmd">cdk deploy</span> <span class="cdk-flag">--context</span> <span class="cdk-val">allowedIp=203.0.113.10/32</span></div>
+  <div style="margin-top:8px;" class="cdk-comment"># Callback Secret 설정 (배포 후 별도 실행 — SecureString 타입)</div>
+  <div><span class="cdk-cmd">aws ssm put-parameter</span> <span class="cdk-flag">\</span></div>
+  <div style="padding-left:20px;"><span class="cdk-flag">--name</span> <span class="cdk-val">/ems/callback_secret</span> <span class="cdk-flag">\</span></div>
+  <div style="padding-left:20px;"><span class="cdk-flag">--value</span> <span class="cdk-val">"your-secret-here"</span> <span class="cdk-flag">\</span></div>
+  <div style="padding-left:20px;"><span class="cdk-flag">--type</span> <span class="cdk-val">SecureString</span> <span class="cdk-flag">--overwrite</span></div>
+  <div style="margin-top:8px;" class="cdk-comment"># 스택 삭제 (테스트 환경 정리)</div>
+  <div><span class="cdk-cmd">cdk destroy</span> <span class="cdk-flag">--all</span></div>
+</div>
+
+<div style="margin-top:20px;text-align:right;font-size:9px;color:#aab3bf;font-family:'IBM Plex Mono',monospace;">
+  Joins EMS AWS Architecture · Generated 2026-04-04
+</div>
+
+</div><!-- /wrap -->
+</body>
+</html>
