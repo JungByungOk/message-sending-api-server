@@ -33,7 +33,7 @@ public class SendTemplatedEmailJob extends AbstractSendTemplatedEmailJob {
         dto.getTemplatedEmailList().forEach(ForeachUtils.withCounter((count, templatedEmail) -> {
             rateLimiter.acquire();
 
-            String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(dto, count));
+            String messageId = sendTemplatedEmail(getTemplatedEmailDto(dto, count));
 
             log.info("@SendTemplatedEmailJob - Email sending ({}/{}) : templateName = {}, messageId = {}",
                     count + 1, dto.getTemplatedEmailList().size(), dto.getTemplateName(), messageId);

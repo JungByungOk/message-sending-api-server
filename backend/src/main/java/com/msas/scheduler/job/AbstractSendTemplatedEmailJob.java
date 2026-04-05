@@ -51,9 +51,8 @@ public abstract class AbstractSendTemplatedEmailJob extends QuartzJobBean implem
             var response = apiGatewayClient.post("/send-email", jsonBody);
 
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                var result = gson.fromJson(response.body(),
+                java.util.Map<String, String> resultMap = gson.fromJson(response.body(),
                         new com.google.gson.reflect.TypeToken<java.util.Map<String, String>>() {}.getType());
-                java.util.Map<String, String> resultMap = result;
                 return resultMap.getOrDefault("messageId", "");
             } else {
                 log.warn("AbstractSendTemplatedEmailJob - 발송 실패. (HTTP {})", response.statusCode());

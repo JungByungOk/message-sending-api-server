@@ -112,7 +112,7 @@ public class SettingsService {
                     .timeout(Duration.ofSeconds(10))
                     .GET();
 
-            if ("API_KEY".equals(settings.getGatewayAuthType()) && isNotBlank(settings.getGatewayApiKey())) {
+            if (isNotBlank(settings.getGatewayApiKey())) {
                 requestBuilder.header("x-api-key", settings.getGatewayApiKey());
             }
 
