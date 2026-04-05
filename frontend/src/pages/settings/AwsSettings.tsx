@@ -133,9 +133,8 @@ export default function AwsSettingsPage() {
       </Text>
 
       <Form form={form} layout="vertical" requiredMark="optional">
-        <Row gutter={24}>
-          {/* === API Gateway === */}
-          <Col xs={24} lg={12}>
+        {/* === API Gateway === */}
+        <div>
             <Card
               title={<><SendOutlined style={{ marginRight: 8 }} />API Gateway</>}
               size="small"
@@ -189,10 +188,10 @@ export default function AwsSettingsPage() {
                 <Input.Password placeholder="비워두면 기존 값 유지" />
               </Form.Item>
             </Card>
-          </Col>
+        </div>
 
           {/* === Callback + Delivery Mode === */}
-          <Col xs={24} lg={12}>
+        <div style={{ marginTop: 16 }}>
             <Card
               title={<><SyncOutlined style={{ marginRight: 8 }} />발송 결과 수신</>}
               size="small"
@@ -254,8 +253,7 @@ export default function AwsSettingsPage() {
                 <Select options={POLLING_OPTIONS} />
               </Form.Item>
             </Card>
-          </Col>
-        </Row>
+        </div>
 
         {/* 테스트 결과 */}
         {testResult && <TestResultCard result={testResult} />}
