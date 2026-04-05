@@ -1,6 +1,5 @@
 package com.msas.common.exceptionhandler;
 
-import software.amazon.awssdk.services.ses.model.SesException;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.SchedulerException;
 import org.springframework.http.HttpStatus;
@@ -33,21 +32,14 @@ public class GlobalControllerAdvice {
     }
 
     /**
-     * AWS SES 예외 처리 및 에러 응답
-     * {
-     * "errorType": "Client",
-     * "errorMessage": "Email address is not verified. The following identities failed the check in region AP-NORTHEAST-2: no1-reply@joins.com",
-     * "errorCode": "MessageRejected",
-     * "serviceName": "AmazonSimpleEmailService"
-     * }
+     * 런타임 예외 처리 (API Gateway 호출 실패 등)
      */
-    @ExceptionHandler(SesException.class)
-    public ResponseEntity<ResponseErrorDTO> handleSesExceptions(SesException ex) {
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ResponseErrorDTO> handleRuntimeExceptions(RuntimeException ex) {
+        log.error("Runtime exception: {}", ex.getMessage());
 
         ResponseErrorDTO responseErrorDTO = ResponseErrorDTO.builder()
-                .serviceName("AmazonSimpleEmailService")
-                .errorCode(ex.awsErrorDetails() != null ? ex.awsErrorDetails().errorCode() : "Unknown")
-                .errorType(ex.awsErrorDetails() != null ? ex.awsErrorDetails().sdkHttpResponse().statusCode() + "" : "Unknown")
+                .serviceName("ESM")
                 .errorMessage(ex.getMessage())
                 .build();
 

@@ -15,12 +15,6 @@ spring:
       org.quartz.dataSource.quartzDataSource.user: ${QUARTZ_DB_USER:esm}
       org.quartz.dataSource.quartzDataSource.password: ${QUARTZ_DB_PASSWORD:esm}
 
-aws:
-  endpoint: ${AWS_ENDPOINT:http://localhost:4566}
-  ses:
-    access-key: ${AWS_ACCESS_KEY:test}
-    secret-key: ${AWS_SECRET_KEY:test}
-
 security:
   api-key: ${API_KEY:}
 

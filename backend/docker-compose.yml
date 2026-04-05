@@ -15,10 +15,6 @@ services:
       - QUARTZ_DB_URL=jdbc:postgresql://postgres:5432/esm
       - QUARTZ_DB_USER=esm
       - QUARTZ_DB_PASSWORD=esm
-      # AWS
-      - AWS_ACCESS_KEY=test
-      - AWS_SECRET_KEY=test
-      - AWS_ENDPOINT=http://localstack:4566
       # Security
       - API_KEY=${API_KEY}
     depends_on:

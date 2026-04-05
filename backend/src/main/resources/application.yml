@@ -68,15 +68,6 @@ spring:
       pool-name: Joins-HikariCP
 
 #################################################
-# AWS SES (이메일 발송 테스트용)
-#################################################
-aws:
-  ses:
-    region: ap-northeast-2
-    access-key: ${AWS_ACCESS_KEY:}
-    secret-key: ${AWS_SECRET_KEY:}
-
-#################################################
 # actuator
 #################################################
 management:

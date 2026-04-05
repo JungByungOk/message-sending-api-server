@@ -6,7 +6,7 @@ import com.msas.common.utils.LocalDateTimeDeserializer;
 import com.msas.common.utils.LocalDateTimeSerializer;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
 import com.msas.ses.dto.RequestTemplatedEmailDto;
-import com.msas.ses.service.SESMailService;
+import com.msas.settings.service.ApiGatewayClient;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +17,11 @@ import java.time.LocalDateTime;
 @Slf4j
 public abstract class AbstractSendTemplatedEmailJob extends QuartzJobBean implements InterruptableJob {
 
-    protected SESMailService sesMailService;
+    protected ApiGatewayClient apiGatewayClient;
 
     @Autowired
-    public void setSESMailService(SESMailService sesMailService) {
-        this.sesMailService = sesMailService;
+    public void setApiGatewayClient(ApiGatewayClient apiGatewayClient) {
+        this.apiGatewayClient = apiGatewayClient;
     }
 
     protected volatile boolean isJobInterrupted = false;
@@ -39,6 +39,30 @@ public abstract class AbstractSendTemplatedEmailJob extends QuartzJobBean implem
         Gson gson = gsonBuilder.setPrettyPrinting().create();
 
         return gson.fromJson(strJson, RequestTemplatedEmailScheduleJobDTO.class);
+    }
+
+    /**
+     * API Gateway를 통해 이메일 발송
+     */
+    protected String sendTemplatedEmail(RequestTemplatedEmailDto dto) {
+        try {
+            Gson gson = new Gson();
+            String jsonBody = gson.toJson(dto);
+            var response = apiGatewayClient.post("/send-email", jsonBody);
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                var result = gson.fromJson(response.body(),
+                        new com.google.gson.reflect.TypeToken<java.util.Map<String, String>>() {}.getType());
+                java.util.Map<String, String> resultMap = result;
+                return resultMap.getOrDefault("messageId", "");
+            } else {
+                log.warn("AbstractSendTemplatedEmailJob - 발송 실패. (HTTP {})", response.statusCode());
+                throw new RuntimeException("이메일 발송 실패 (HTTP " + response.statusCode() + ")");
+            }
+        } catch (Exception e) {
+            log.error("AbstractSendTemplatedEmailJob - 발송 실패.", e);
+            throw new RuntimeException("이메일 발송 실패: " + e.getMessage(), e);
+        }
     }
 
     /**

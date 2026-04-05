@@ -6,7 +6,6 @@ import com.msas.pollingchecker.repository.SESMariaDBRepository;
 import com.msas.pollingchecker.types.EnumEmailSendStatusCode;
 import com.msas.pollingchecker.types.EnumSESEventTypeCode;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
-import com.msas.ses.exception.AwsSesClientException;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.DisallowConcurrentExecution;
 import org.quartz.JobExecutionContext;
@@ -56,14 +55,14 @@ public class SendTemplatedEmailWithPollingJob extends AbstractSendTemplatedEmail
             try {
                 rateLimiter.acquire();
 
-                String messageId = sesMailService.sendTemplatedEmail(getTemplatedEmailDto(dto, count));
+                String messageId = sendTemplatedEmail(getTemplatedEmailDto(dto, count));
 
                 log.info("@SendTemplatedEmailWithPollingJob - Email sending ({}/{}) : templateName = {}, messageId = {}",
                         count + 1, dto.getTemplatedEmailList().size(), dto.getTemplateName(), messageId);
 
                 updateSendEmailStatus(emailSendDtlSeq, successCode.name().toUpperCase(Locale.ENGLISH), null, messageId);
 
-            } catch (AwsSesClientException e) {
+            } catch (Exception e) {
                 log.error("@SendTemplatedEmailWithPollingJob - {}", e.getMessage());
 
                 updateSendEmailStatus(emailSendDtlSeq,
