@@ -68,17 +68,13 @@ spring:
       pool-name: Joins-HikariCP
 
 #################################################
-# AWS {SES, DynamoDB}
+# AWS SES (이메일 발송 테스트용)
 #################################################
 aws:
-  dynamo:
-    region: ap-northeast-2
-    access-key: ${AWS_ACCESS_KEY}
-    secret-key: ${AWS_SECRET_KEY}
   ses:
     region: ap-northeast-2
-    access-key: ${AWS_ACCESS_KEY}
-    secret-key: ${AWS_SECRET_KEY}
+    access-key: ${AWS_ACCESS_KEY:}
+    secret-key: ${AWS_SECRET_KEY:}
 
 #################################################
 # actuator
