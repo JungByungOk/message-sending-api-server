@@ -1,4 +1,5 @@
-import { Button, Card, Col, Form, Input, InputNumber, Row, Slider, Space, Typography, message } from 'antd';
+import { useState } from 'react';
+import { Alert, Button, Card, Col, Form, Input, InputNumber, Modal, Result, Row, Slider, Space, Typography, message } from 'antd';
 import {
   ArrowLeftOutlined,
   CheckOutlined,
@@ -22,31 +23,33 @@ export default function TenantCreate() {
   const { mutateAsync: addSenderAsync } = useAddSender();
   const { mutateAsync: verifyEmailAsync } = useVerifyEmail();
   const domainValue = Form.useWatch('domain', form);
+  const [successModal, setSuccessModal] = useState<{ open: boolean; tenantId: string; email: string; emailSent: boolean }>({
+    open: false, tenantId: '', email: '', emailSent: false,
+  });
 
   const handleSubmit = (values: CreateTenantRequest & { senderEmail?: string; senderDisplayName?: string }) => {
     const { senderEmail, senderDisplayName, ...tenantValues } = values;
     create(tenantValues, {
       onSuccess: async (tenant) => {
         // 발신자 이메일이 입력된 경우 함께 등록
+        let emailSent = false;
         if (senderEmail) {
           try {
             await addSenderAsync({
               tenantId: tenant.tenantId,
               sender: { email: senderEmail, displayName: senderDisplayName, isDefault: true },
             });
-            // 이메일 개별 인증 자동 요청 (도메인 미인증 상태이므로)
             try {
               await verifyEmailAsync({ tenantId: tenant.tenantId, email: senderEmail });
-              void message.info('인증 이메일이 발송되었습니다. 메일함을 확인해주세요.');
+              emailSent = true;
             } catch {
-              void message.warning('발신자는 등록되었으나 인증 이메일 발송에 실패했습니다.');
+              // 인증 발송 실패해도 계속 진행
             }
           } catch {
             void message.warning('테넌트는 생성되었으나 발신자 등록에 실패했습니다.');
           }
         }
-        void message.success('테넌트가 생성되었습니다.');
-        navigate('/tenant');
+        setSuccessModal({ open: true, tenantId: tenant.tenantId, email: senderEmail || '', emailSent });
       },
       onError: (error) => {
         const msg: string = (error as { response?: { data?: { message?: string } } })
@@ -268,10 +271,18 @@ export default function TenantCreate() {
           style={{ marginBottom: 24, borderRadius: 12, border: '1px solid #e5e8ed' }}
           bodyStyle={{ padding: '20px 24px' }}
         >
-          <Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
+          <Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>
             테넌트 생성 시 기본 발신자 이메일을 함께 등록할 수 있습니다.
             {domainValue ? ` (@${domainValue} 도메인만 허용)` : ''}
           </Text>
+          <Alert
+            type="info"
+            showIcon
+            icon={<MailOutlined />}
+            message="이메일 인증 안내"
+            description="발신자 이메일을 입력하면, 해당 이메일 주소로 AWS 인증 메일이 발송됩니다. 메일함에 접근 가능한 이메일을 입력해주세요."
+            style={{ marginBottom: 16 }}
+          />
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
@@ -334,6 +345,59 @@ export default function TenantCreate() {
           </Button>
         </div>
       </Form>
+
+      {/* 생성 성공 모달 */}
+      <Modal
+        open={successModal.open}
+        footer={null}
+        closable={false}
+        width={480}
+      >
+        <Result
+          status="success"
+          title="테넌트가 생성되었습니다"
+          subTitle={
+            successModal.email && successModal.emailSent ? (
+              <div style={{ textAlign: 'left', marginTop: 8 }}>
+                <Alert
+                  type="warning"
+                  showIcon
+                  icon={<MailOutlined />}
+                  message="이메일 인증이 필요합니다"
+                  description={
+                    <div>
+                      <b>{successModal.email}</b> 주소로 인증 메일이 발송되었습니다.<br />
+                      메일함에서 인증 링크를 클릭하면 해당 이메일로 발송이 가능합니다.
+                    </div>
+                  }
+                  style={{ marginTop: 8 }}
+                />
+              </div>
+            ) : successModal.email ? (
+              '발신자가 등록되었습니다. 도메인 인증 또는 이메일 인증 후 발송 가능합니다.'
+            ) : (
+              '테넌트 상세 페이지에서 발신자를 등록하고 인증을 진행하세요.'
+            )
+          }
+          extra={[
+            <Button
+              key="detail"
+              type="primary"
+              onClick={() => navigate(`/tenant/${successModal.tenantId}`)}
+              style={{ borderRadius: 8 }}
+            >
+              테넌트 상세로 이동
+            </Button>,
+            <Button
+              key="list"
+              onClick={() => navigate('/tenant')}
+              style={{ borderRadius: 8 }}
+            >
+              목록으로
+            </Button>,
+          ]}
+        />
+      </Modal>
     </div>
   );
 }
