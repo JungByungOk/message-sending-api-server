@@ -485,6 +485,17 @@ export default function TenantDetail() {
       ),
       children: (
         <div style={{ padding: '8px 0' }}>
+          {/* 도메인 미인증 시 안내 배너 */}
+          {tenant.verificationStatus !== 'VERIFIED' && (
+            <Alert
+              type="warning"
+              showIcon
+              message="도메인이 인증되지 않았습니다"
+              description="발신자를 추가하면 이메일 개별 인증이 필요합니다. 도메인 인증을 완료하면 발신자를 바로 등록할 수 있습니다."
+              style={{ marginBottom: 16, borderRadius: 8 }}
+            />
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <div>
               <Title level={5} style={{ margin: 0 }}>등록된 발신자</Title>
@@ -526,11 +537,12 @@ export default function TenantDetail() {
                   style={{ borderRadius: 8, border: '1px solid #e5e8ed' }}
                   bodyStyle={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                     <div style={{
                       width: 36, height: 36, borderRadius: 8,
                       background: 'rgba(22,119,255,0.08)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
                     }}>
                       <MailOutlined style={{ color: '#1677ff' }} />
                     </div>
@@ -550,6 +562,29 @@ export default function TenantDetail() {
                       }}>
                         기본
                       </span>
+                    )}
+                    {/* 도메인 미인증 시 이메일 개별 인증 상태 표시 */}
+                    {tenant.verificationStatus !== 'VERIFIED' && (
+                      <SenderVerificationBadge
+                        tenantId={id}
+                        email={sender.email}
+                        onResend={(email) => {
+                          resendVerification(
+                            { tenantId: id, email },
+                            { onSuccess: () => void message.success('인증 이메일을 재발송했습니다.') },
+                          );
+                        }}
+                      />
+                    )}
+                    {/* 도메인 인증 완료 시 인증됨 Badge */}
+                    {tenant.verificationStatus === 'VERIFIED' && (
+                      <Tag
+                        icon={<CheckCircleOutlined />}
+                        color="success"
+                        style={{ borderRadius: 6, fontSize: 12 }}
+                      >
+                        도메인 인증됨
+                      </Tag>
                     )}
                   </div>
                   <Popconfirm
@@ -708,12 +743,36 @@ export default function TenantDetail() {
             </div>
           </Space>
         }
+        footer={
+          tenant.verificationStatus !== 'VERIFIED' ? (
+            <div>
+              <Alert
+                type="info"
+                showIcon
+                icon={<MailOutlined />}
+                message="이메일 인증이 필요합니다"
+                description="도메인이 인증되지 않아 발신자 등록 후 인증 이메일이 자동 발송됩니다. 메일함을 확인하고 인증 링크를 클릭하세요."
+                style={{ marginBottom: 12, borderRadius: 8, textAlign: 'left' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                <Button onClick={() => setSenderModalOpen(false)}>취소</Button>
+                <Button
+                  type="primary"
+                  loading={isAddingSender || isVerifyingEmail}
+                  onClick={() => senderForm.submit()}
+                >
+                  등록 및 인증 이메일 발송
+                </Button>
+              </div>
+            </div>
+          ) : undefined
+        }
         open={senderModalOpen}
         onCancel={() => setSenderModalOpen(false)}
-        onOk={() => senderForm.submit()}
+        onOk={tenant.verificationStatus === 'VERIFIED' ? () => senderForm.submit() : undefined}
         okText="등록"
         cancelText="취소"
-        confirmLoading={isAddingSender}
+        confirmLoading={isAddingSender || isVerifyingEmail}
         width={480}
       >
         <Form
@@ -724,7 +783,22 @@ export default function TenantDetail() {
               { tenantId: id, sender: values },
               {
                 onSuccess: () => {
-                  void message.success('발신자가 등록되었습니다.');
+                  // 도메인 미인증 시 이메일 인증 요청 자동 발송
+                  if (tenant.verificationStatus !== 'VERIFIED') {
+                    verifyEmail(
+                      { tenantId: id, email: values.email },
+                      {
+                        onSuccess: () => {
+                          void message.success('발신자가 등록되었습니다. 인증 이메일을 확인하세요.');
+                        },
+                        onError: () => {
+                          void message.warning('발신자가 등록되었으나 인증 이메일 발송에 실패했습니다.');
+                        },
+                      },
+                    );
+                  } else {
+                    void message.success('발신자가 등록되었습니다.');
+                  }
                   setSenderModalOpen(false);
                   senderForm.resetFields();
                 },

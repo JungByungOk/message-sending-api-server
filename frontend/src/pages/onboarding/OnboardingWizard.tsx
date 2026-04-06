@@ -6,6 +6,7 @@ import {
   Col,
   Form,
   Input,
+  Radio,
   Result,
   Row,
   Space,
@@ -18,11 +19,14 @@ import {
 } from 'antd';
 import {
   CheckCircleFilled,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
   CopyOutlined,
   GlobalOutlined,
   MailOutlined,
   RocketOutlined,
   SafetyCertificateOutlined,
+  SendOutlined,
   TeamOutlined,
   ThunderboltFilled,
 } from '@ant-design/icons';
@@ -31,8 +35,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   useActivateTenant,
   useDkimRecords,
+  useEmailVerificationStatus,
   useOnboardingStatus,
+  useResendVerification,
   useStartOnboarding,
+  useVerifyEmail,
 } from '@/hooks/useOnboarding';
 import type { OnboardingResult } from '@/types/onboarding';
 import type { OnboardingStartRequest } from '@/types/onboarding';
@@ -46,13 +53,25 @@ export default function OnboardingWizard() {
   const [tenantId, setTenantId] = useState('');
   const [onboardingResult, setOnboardingResult] = useState<OnboardingResult | null>(null);
   const [activated, setActivated] = useState(false);
+  // 인증 방식: 'domain' | 'email'
+  const [verificationMethod, setVerificationMethod] = useState<'domain' | 'email'>('domain');
+  // 이메일 인증 플로우용 상태
+  const [emailVerifyTarget, setEmailVerifyTarget] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
 
   const [form] = Form.useForm<OnboardingStartRequest>();
+  const [emailForm] = Form.useForm<{ email: string }>();
 
   const startOnboarding = useStartOnboarding();
   const { data: dkimRecords } = useDkimRecords(tenantId);
   const { data: onboardingStatus } = useOnboardingStatus(tenantId);
   const activateTenant = useActivateTenant();
+  const verifyEmailMutation = useVerifyEmail();
+  const resendVerificationMutation = useResendVerification();
+  const { data: emailVerificationStatus } = useEmailVerificationStatus(
+    tenantId,
+    emailVerifyTarget,
+  );
 
   const handleStartSubmit = async () => {
     const values = await form.validateFields();
@@ -264,44 +283,264 @@ export default function OnboardingWizard() {
           </Form>
         )}
 
-        {/* ─── Step 2: DNS 설정 ─── */}
+        {/* ─── Step 2: 인증 방식 선택 & 설정 ─── */}
         {currentStep === 1 && (
           <div>
-            <Alert
-              type="info"
-              showIcon
-              message="DNS 레코드 추가 안내"
-              description="아래 DKIM 레코드를 DNS 공급업체에 추가하세요. DNS 전파에 최대 72시간이 소요될 수 있습니다."
-              style={{ marginBottom: 20, borderRadius: 8 }}
-            />
-
+            {/* 인증 방식 선택 */}
             <Card
-              size="small"
-              style={{ marginBottom: 24, borderRadius: 8, border: '1px solid #e5e8ed' }}
-              bodyStyle={{ padding: 0 }}
+              title={
+                <Space>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 8,
+                    background: 'rgba(22,119,255,0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <SafetyCertificateOutlined style={{ color: '#1677ff', fontSize: 13 }} />
+                  </div>
+                  <Text style={{ fontWeight: 600 }}>인증 방식 선택</Text>
+                </Space>
+              }
+              style={{ marginBottom: 20, borderRadius: 12, border: '1px solid #e5e8ed' }}
+              bodyStyle={{ padding: '16px 24px' }}
             >
-              <Table
-                dataSource={dkimRecords?.dkimRecords ?? onboardingResult?.dkimRecords?.dkimRecords ?? []}
-                columns={dkimColumns}
-                rowKey="name"
-                pagination={false}
-                size="small"
-                locale={{ emptyText: 'DKIM 레코드를 불러오는 중...' }}
-              />
+              <Radio.Group
+                value={verificationMethod}
+                onChange={(e) => {
+                  setVerificationMethod(e.target.value as 'domain' | 'email');
+                  setEmailSent(false);
+                  setEmailVerifyTarget('');
+                  emailForm.resetFields();
+                }}
+                style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}
+              >
+                <Radio.Button
+                  value="domain"
+                  style={{
+                    height: 'auto',
+                    padding: '12px 20px',
+                    borderRadius: 10,
+                    flex: 1,
+                    minWidth: 200,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <GlobalOutlined style={{ color: '#1677ff' }} />
+                      <Text strong>도메인 인증 (권장)</Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      DNS에 DKIM 레코드를 추가하면 해당 도메인의 모든 발신자가 자동으로 인증됩니다.
+                    </Text>
+                  </div>
+                </Radio.Button>
+                <Radio.Button
+                  value="email"
+                  style={{
+                    height: 'auto',
+                    padding: '12px 20px',
+                    borderRadius: 10,
+                    flex: 1,
+                    minWidth: 200,
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <MailOutlined style={{ color: '#52c41a' }} />
+                      <Text strong>이메일 인증</Text>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      DNS 접근 없이 발신자 이메일로 개별 인증합니다. 빠르게 시작할 때 적합합니다.
+                    </Text>
+                  </div>
+                </Radio.Button>
+              </Radio.Group>
             </Card>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <Button onClick={() => setCurrentStep(0)} style={{ borderRadius: 8 }}>
-                이전
-              </Button>
-              <Button
-                type="primary"
-                onClick={() => setCurrentStep(2)}
-                style={{ borderRadius: 8 }}
-              >
-                DNS 추가 완료, 다음으로
-              </Button>
-            </div>
+            {/* ── 도메인 인증 플로우 ── */}
+            {verificationMethod === 'domain' && (
+              <>
+                <Alert
+                  type="info"
+                  showIcon
+                  message="DNS 레코드 추가 안내"
+                  description="아래 DKIM 레코드를 DNS 공급업체에 추가하세요. DNS 전파에 최대 72시간이 소요될 수 있습니다."
+                  style={{ marginBottom: 20, borderRadius: 8 }}
+                />
+                <Card
+                  size="small"
+                  style={{ marginBottom: 24, borderRadius: 8, border: '1px solid #e5e8ed' }}
+                  bodyStyle={{ padding: 0 }}
+                >
+                  <Table
+                    dataSource={dkimRecords?.dkimRecords ?? onboardingResult?.dkimRecords?.dkimRecords ?? []}
+                    columns={dkimColumns}
+                    rowKey="name"
+                    pagination={false}
+                    size="small"
+                    locale={{ emptyText: 'DKIM 레코드를 불러오는 중...' }}
+                  />
+                </Card>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <Button onClick={() => setCurrentStep(0)} style={{ borderRadius: 8 }}>이전</Button>
+                  <Button type="primary" onClick={() => setCurrentStep(2)} style={{ borderRadius: 8 }}>
+                    DNS 추가 완료, 다음으로
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {/* ── 이메일 인증 플로우 ── */}
+            {verificationMethod === 'email' && (
+              <div>
+                {!emailSent ? (
+                  <Card
+                    style={{ marginBottom: 20, borderRadius: 12, border: '1px solid #e5e8ed' }}
+                    bodyStyle={{ padding: '20px 24px' }}
+                  >
+                    <Alert
+                      type="info"
+                      showIcon
+                      message="발신자 이메일로 인증합니다"
+                      description={`@${onboardingResult?.tenant?.domain ?? ''} 도메인의 이메일 주소로 인증 메일이 발송됩니다. 메일함을 확인하고 인증 링크를 클릭하세요.`}
+                      style={{ marginBottom: 20, borderRadius: 8 }}
+                    />
+                    <Form form={emailForm} layout="vertical" requiredMark={false}>
+                      <Form.Item
+                        name="email"
+                        label={<Text style={{ fontWeight: 500 }}>발신자 이메일 주소</Text>}
+                        rules={[
+                          { required: true, message: '이메일을 입력하세요.' },
+                          { type: 'email', message: '올바른 이메일 형식이 아닙니다.' },
+                        ]}
+                      >
+                        <Input
+                          size="large"
+                          placeholder={`no-reply@${onboardingResult?.tenant?.domain ?? 'example.com'}`}
+                          prefix={<MailOutlined style={{ color: '#9ca3af' }} />}
+                        />
+                      </Form.Item>
+                    </Form>
+                  </Card>
+                ) : (
+                  <Card
+                    style={{ marginBottom: 20, borderRadius: 12, border: '1px solid #e5e8ed' }}
+                    bodyStyle={{ padding: '28px 24px', textAlign: 'center' }}
+                  >
+                    <div style={{
+                      width: 64, height: 64, borderRadius: '50%',
+                      background: 'rgba(82,196,26,0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      margin: '0 auto 16px',
+                    }}>
+                      <SendOutlined style={{ fontSize: 28, color: '#52c41a' }} />
+                    </div>
+                    <Text strong style={{ fontSize: 16, display: 'block', marginBottom: 8 }}>
+                      인증 메일을 확인하세요
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: 13 }}>
+                      <Text strong>{emailVerifyTarget}</Text> 로 인증 이메일을 발송했습니다.
+                    </Text>
+                    <div style={{ marginTop: 8 }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        메일함에서 인증 링크를 클릭하면 자동으로 다음 단계로 이동합니다.
+                      </Text>
+                    </div>
+
+                    {/* 인증 상태 자동 표시 */}
+                    <div style={{ marginTop: 20 }}>
+                      {emailVerificationStatus?.verificationStatus === 'SUCCESS' ? (
+                        <Alert
+                          type="success"
+                          showIcon
+                          icon={<CheckCircleOutlined />}
+                          message="인증이 완료되었습니다!"
+                          style={{ borderRadius: 8, marginBottom: 12 }}
+                        />
+                      ) : emailVerificationStatus?.verificationStatus === 'FAILED' ? (
+                        <Alert
+                          type="error"
+                          showIcon
+                          message="인증에 실패했습니다. 이메일을 재발송해 주세요."
+                          style={{ borderRadius: 8, marginBottom: 12 }}
+                        />
+                      ) : (
+                        <Alert
+                          type="warning"
+                          showIcon
+                          icon={<ClockCircleOutlined />}
+                          message="인증 대기 중... (5초마다 자동 갱신)"
+                          style={{ borderRadius: 8, marginBottom: 12 }}
+                        />
+                      )}
+                    </div>
+
+                    <Space style={{ marginTop: 4 }}>
+                      <Button
+                        size="small"
+                        icon={<MailOutlined />}
+                        onClick={() => {
+                          resendVerificationMutation.mutate(
+                            { tenantId, email: emailVerifyTarget },
+                            { onSuccess: () => void message.success('인증 이메일을 재발송했습니다.') },
+                          );
+                        }}
+                        loading={resendVerificationMutation.isPending}
+                      >
+                        이메일 재발송
+                      </Button>
+                      <Button size="small" onClick={() => { setEmailSent(false); emailForm.resetFields(); }}>
+                        다른 이메일 사용
+                      </Button>
+                    </Space>
+                  </Card>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <Button onClick={() => setCurrentStep(0)} style={{ borderRadius: 8 }}>이전</Button>
+                  {!emailSent ? (
+                    <Button
+                      type="primary"
+                      icon={<SendOutlined />}
+                      loading={verifyEmailMutation.isPending}
+                      onClick={() => {
+                        void emailForm.validateFields().then((values) => {
+                          verifyEmailMutation.mutate(
+                            { tenantId, email: values.email },
+                            {
+                              onSuccess: () => {
+                                setEmailVerifyTarget(values.email);
+                                setEmailSent(true);
+                              },
+                              onError: () => {
+                                void message.error('인증 이메일 발송에 실패했습니다.');
+                              },
+                            },
+                          );
+                        });
+                      }}
+                      style={{ borderRadius: 8 }}
+                    >
+                      인증 이메일 발송
+                    </Button>
+                  ) : (
+                    <Button
+                      type="primary"
+                      onClick={() => setCurrentStep(2)}
+                      disabled={emailVerificationStatus?.verificationStatus !== 'SUCCESS'}
+                      style={{ borderRadius: 8 }}
+                    >
+                      다음으로
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
