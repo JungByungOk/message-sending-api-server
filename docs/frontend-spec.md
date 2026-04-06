@@ -1,6 +1,5 @@
 # Joins EMS 프론트엔드 어드민 대시보드 기술 명세서
 
-> 작성일: 2026-04-04
 > 대상 프로젝트: Joins EMS Admin Dashboard (React SPA)
 
 ---
@@ -37,7 +36,8 @@ frontend/
 │   │   ├── template.ts       # 템플릿 API 함수
 │   │   ├── scheduler.ts      # 스케줄러 API 함수
 │   │   ├── onboarding.ts     # 온보딩 API 함수
-│   │   └── suppression.ts    # Suppression API 함수
+│   │   ├── suppression.ts    # Suppression API 함수
+│   │   └── settings.ts       # Settings API 함수
 │   ├── components/           # 공용 컴포넌트
 │   │   ├── ErrorBoundary.tsx
 │   │   ├── PageContainer.tsx
@@ -47,7 +47,8 @@ frontend/
 │   │   ├── useEmail.ts
 │   │   ├── useTemplate.ts
 │   │   ├── useScheduler.ts
-│   │   └── useOnboarding.ts
+│   │   ├── useOnboarding.ts
+│   │   └── useSettings.ts
 │   ├── layouts/              # ProLayout 기반 레이아웃
 │   │   ├── MainLayout.tsx
 │   │   └── menuConfig.ts
@@ -69,19 +70,23 @@ frontend/
 │   │   │   ├── SchedulerListPage.tsx
 │   │   │   └── SchedulerCreatePage.tsx
 │   │   ├── onboarding/
-│   │   │   ├── OnboardingWizardPage.tsx
+│   │   │   ├── OnboardingWizardPage.tsx  # 도메인 인증 / 이메일 인증 선택
 │   │   │   └── OnboardingStatusPage.tsx
-│   │   └── suppression/
-│   │       └── SuppressionPage.tsx
+│   │   ├── suppression/
+│   │   │   └── SuppressionPage.tsx
+│   │   └── settings/
+│   │       └── SettingsPage.tsx          # API Gateway / Callback / 모드 설정
 │   ├── stores/               # Zustand 스토어
 │   │   ├── authStore.ts
 │   │   └── uiStore.ts
 │   ├── types/                # TypeScript 인터페이스 및 타입
+│   │   ├── common.ts
 │   │   ├── tenant.ts
 │   │   ├── email.ts
 │   │   ├── scheduler.ts
 │   │   ├── onboarding.ts
-│   │   └── suppression.ts
+│   │   ├── suppression.ts
+│   │   └── settings.ts
 │   ├── utils/                # 유틸리티 함수
 │   │   ├── format.ts
 │   │   └── validation.ts
@@ -117,9 +122,14 @@ interface PagedResponse<T> {
 /** API 에러 응답 */
 interface ApiError {
   status: number;
-  code: string;
+  error: string;
   message: string;
-  timestamp: string;
+}
+
+/** 메시지 태그 */
+interface MessageTag {
+  name: string;
+  value: string;
 }
 ```
 
@@ -130,8 +140,8 @@ interface ApiError {
 ```typescript
 // src/types/tenant.ts
 
-type VerificationStatus = 'PENDING' | 'VERIFIED' | 'FAILED';
-type TenantStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+type VerificationStatus = 'PENDING' | 'SUCCESS' | 'FAILED';
+type TenantStatus = 'ACTIVE' | 'INACTIVE' | 'PENDING';
 
 interface Tenant {
   tenantId: string;
@@ -150,20 +160,46 @@ interface Tenant {
 interface CreateTenantRequest {
   tenantName: string;
   domain: string;
-  configSetName?: string;
-  quotaDaily: number;
-  quotaMonthly: number;
 }
 
 interface UpdateTenantRequest {
   tenantName?: string;
-  configSetName?: string | null;
   quotaDaily?: number;
   quotaMonthly?: number;
-  status?: TenantStatus;
 }
 
-type TenantListResponse = PagedResponse<Tenant>;
+interface TenantListResponse {
+  totalCount: number;
+  tenants: Tenant[];
+}
+
+interface QuotaUsage {
+  limit: number;
+  used: number;
+  remaining: number;
+}
+
+interface QuotaInfo {
+  tenantId: string;
+  daily: QuotaUsage;
+  monthly: QuotaUsage;
+}
+
+/** 발신자 이메일 */
+interface TenantSender {
+  id: number;
+  tenantId: string;
+  email: string;
+  displayName: string | null;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+interface AddSenderRequest {
+  email: string;
+  displayName?: string;
+  isDefault?: boolean;
+}
 ```
 
 ---
@@ -173,15 +209,10 @@ type TenantListResponse = PagedResponse<Tenant>;
 ```typescript
 // src/types/email.ts
 
-interface MessageTag {
-  name: string;
-  value: string;
-}
-
 /** 일반 이메일 발송 요청 */
 interface SendEmailRequest {
   from: string;
-  to: string[];
+  to: string;
   subject: string;
   body: string;
   tags?: MessageTag[];
@@ -190,8 +221,6 @@ interface SendEmailRequest {
 /** 일반 이메일 발송 응답 */
 interface SendEmailResponse {
   messageId: string;
-  status: string;
-  sentAt: string;
 }
 
 /** 템플릿 이메일 발송 요청 */
@@ -208,18 +237,12 @@ interface SendTemplatedEmailRequest {
 /** 템플릿 이메일 발송 응답 */
 interface SendTemplatedEmailResponse {
   messageId: string;
-  status: string;
-  sentAt: string;
 }
 
 /** SES 이메일 템플릿 */
 interface EmailTemplate {
-  templateName: string;
-  subjectPart: string;
-  htmlPart: string;
-  textPart?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  name: string;
+  createdTimestamp?: string;
 }
 
 interface CreateTemplateRequest {
@@ -229,10 +252,8 @@ interface CreateTemplateRequest {
   textPart?: string;
 }
 
-interface UpdateTemplateRequest {
-  subjectPart?: string;
-  htmlPart?: string;
-  textPart?: string;
+interface TemplateResponse {
+  awsRequestId: string;
 }
 
 type TemplateListResponse = EmailTemplate[];
@@ -247,25 +268,25 @@ type TemplateListResponse = EmailTemplate[];
 
 type JobStatus = 'SCHEDULED' | 'RUNNING' | 'PAUSED' | 'COMPLETE' | 'ERROR' | 'BLOCKED';
 
-/** 수신자별 템플릿 데이터를 포함한 이메일 항목 */
 interface TemplatedEmailItem {
-  to: string;
-  templateData: Record<string, string>;
+  id?: string;
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  templateParameters: Record<string, string>;
 }
 
-/** 예약 발송 작업 생성 요청 */
 interface ScheduleJobRequest {
   jobName: string;
-  jobGroup: string;
+  jobGroup?: string;
   description?: string;
-  startDateAt: string;           // ISO 8601 형식 (예: "2026-04-10T09:00:00")
+  startDateAt?: string;           // ISO 8601 형식 (예: "2026-04-10T09:00:00")
   templateName: string;
   from: string;
   templatedEmailList: TemplatedEmailItem[];
   tags?: MessageTag[];
 }
 
-/** 예약 작업 정보 */
 interface JobInfo {
   jobName: string;
   groupName: string;
@@ -276,7 +297,6 @@ interface JobInfo {
   description?: string;
 }
 
-/** 전체 작업 목록 응답 */
 interface AllJobsResponse {
   numOfAllJobs: number;
   numOfGroups: number;
@@ -284,41 +304,37 @@ interface AllJobsResponse {
   jobs: JobInfo[];
 }
 
-/** 작업 일시정지/재개 요청 */
 interface JobActionRequest {
   jobName: string;
   jobGroup: string;
+}
+
+interface JobActionResponse {
+  result: boolean;
+  message: string;
 }
 ```
 
 ---
 
-### 3.5 온보딩 API 타입 (개발 예정)
+### 3.5 온보딩 API 타입
 
 ```typescript
 // src/types/onboarding.ts
 
-type OnboardingStepStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+type OnboardingStepStatus = 'COMPLETED' | 'WAITING' | 'PENDING';
 
 interface OnboardingStep {
-  stepName: string;
+  step: number;
+  name: string;
   status: OnboardingStepStatus;
-  completedAt?: string;
-  errorMessage?: string;
 }
 
-/** 온보딩 시작 요청 */
+/** 온보딩 시작 요청 (도메인 인증 방식) */
 interface OnboardingStartRequest {
   tenantName: string;
   domain: string;
-  contactEmail: string;
-}
-
-/** 온보딩 시작 응답 */
-interface OnboardingStartResponse {
-  tenantId: string;
-  domain: string;
-  message: string;
+  contactEmail?: string;
 }
 
 /** DKIM DNS 레코드 */
@@ -328,63 +344,117 @@ interface DkimRecord {
   value: string;
 }
 
-/** 도메인 검증 상태 응답 */
-interface DomainVerificationResponse {
+/** DKIM 레코드 응답 */
+interface DkimRecordsDTO {
   domain: string;
-  verificationStatus: VerificationStatus;
+  verificationStatus: 'PENDING' | 'SUCCESS' | 'FAILED';
   dkimRecords: DkimRecord[];
-  spfRecord?: string;
+}
+
+/** 온보딩 시작 응답 */
+interface OnboardingResultDTO {
+  tenant: Tenant;
+  dkimRecords: DkimRecordsDTO;
 }
 
 /** 온보딩 전체 상태 */
-interface OnboardingStatus {
+interface OnboardingStatusDTO {
   tenantId: string;
   domain: string;
   steps: OnboardingStep[];
-  verificationStatus: VerificationStatus;
+  verificationStatus: 'PENDING' | 'SUCCESS' | 'FAILED';
   tenantStatus: TenantStatus;
-  createdAt: string;
-  updatedAt: string;
+}
+
+/** 이메일 인증 상태 */
+interface EmailVerificationStatusDTO {
+  email: string;
+  verificationStatus: 'PENDING' | 'SUCCESS' | 'FAILED';
+}
+
+/** 이메일 인증 요청 */
+interface VerifyEmailRequest {
+  email: string;
 }
 ```
 
 ---
 
-### 3.6 쿼터 및 Suppression 타입 (개발 예정)
+### 3.6 Suppression 타입
 
 ```typescript
 // src/types/suppression.ts
 
-interface QuotaUsage {
-  limit: number;
-  used: number;
-  remaining: number;
-}
+type SuppressionReason = 'BOUNCE' | 'COMPLAINT';
 
-/** 테넌트 쿼터 정보 */
-interface QuotaInfo {
-  tenantId: string;
-  daily: QuotaUsage;
-  monthly: QuotaUsage;
-  updatedAt: string;
-}
-
-type SuppressionReason = 'BOUNCE' | 'COMPLAINT' | 'MANUAL';
-
-/** Suppression 목록 항목 */
 interface SuppressionEntry {
+  id: number;
+  tenantId: string;
   email: string;
   reason: SuppressionReason;
   createdAt: string;
 }
 
-/** Suppression 추가 요청 */
-interface AddSuppressionRequest {
-  email: string;
-  reason: SuppressionReason;
+interface SuppressionListResponse {
+  totalCount: number;
+  suppressions: SuppressionEntry[];
+}
+```
+
+---
+
+### 3.7 Settings 타입
+
+```typescript
+// src/types/settings.ts
+
+type GatewayAuthType = 'API_KEY' | 'IAM';
+type DeliveryMode = 'callback' | 'polling';
+
+/** 설정 조회 응답 */
+interface AwsSettingsResponse {
+  gatewayEndpoint: string;
+  gatewayRegion: string;
+  gatewayAuthType: GatewayAuthType;
+  gatewayApiKeyMasked: string;
+  gatewayAccessKey: string;
+  gatewaySecretKeyMasked: string;
+  gatewaySendPath: string;
+  gatewayResultsPath: string;
+  gatewayConfigPath: string;
+  gatewayConfigured: boolean;
+  callbackUrl: string;
+  callbackSecretMasked: string;
+  callbackConfigured: boolean;
+  deliveryMode: DeliveryMode;
+  pollingInterval: string;
+  updatedAt: string;
 }
 
-type SuppressionListResponse = PagedResponse<SuppressionEntry>;
+/** 설정 저장 요청 */
+interface SaveAwsSettingsRequest {
+  gatewayEndpoint: string;
+  gatewayRegion: string;
+  gatewayAuthType: GatewayAuthType;
+  gatewayApiKey?: string;
+  gatewayAccessKey?: string;
+  gatewaySecretKey?: string;
+  gatewaySendPath?: string;
+  gatewayResultsPath?: string;
+  gatewayConfigPath?: string;
+  gatewayTenantSetupPath?: string;
+  callbackUrl?: string;
+  callbackSecret?: string;
+  deliveryMode: DeliveryMode;
+  pollingInterval?: string;
+}
+
+/** 연결 테스트 응답 */
+interface GatewayTestResponse {
+  connected: boolean;
+  message: string;
+  statusCode: number;
+}
 ```
 
 ---
@@ -393,43 +463,21 @@ type SuppressionListResponse = PagedResponse<SuppressionEntry>;
 
 ### 4.1 TanStack Query (서버 상태)
 
-모든 API 호출은 TanStack Query v5로 관리한다. 서버에서 가져오는 데이터(테넌트 목록, 템플릿 목록, 작업 현황 등)는 컴포넌트 로컬 state가 아닌 Query Cache에 보관한다.
+모든 API 호출은 TanStack Query v5로 관리한다. 서버에서 가져오는 데이터는 컴포넌트 로컬 state가 아닌 Query Cache에 보관한다.
 
 #### queryKey 네이밍 컨벤션
 
 ```typescript
-// 리소스 단위로 계층 구조 사용
 ['tenants']                          // 테넌트 목록
 ['tenants', tenantId]                // 특정 테넌트
 ['tenants', tenantId, 'quota']       // 테넌트 쿼터
+['tenants', tenantId, 'senders']     // 테넌트 발신자 목록
 ['templates']                        // 템플릿 목록
-['templates', templateName]          // 특정 템플릿
 ['scheduler', 'jobs']                // 스케줄러 작업 목록
-['scheduler', 'jobs', jobName]       // 특정 작업
 ['onboarding', tenantId]             // 온보딩 상태
-['suppression']                      // Suppression 목록
-```
-
-#### Mutation 후 Invalidation 전략
-
-```typescript
-// 예시: 테넌트 생성 후 목록 무효화
-const createTenant = useMutation({
-  mutationFn: (data: CreateTenantRequest) => tenantApi.create(data),
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ['tenants'] });
-  },
-});
-
-// 예시: 템플릿 수정 후 해당 항목 및 목록 무효화
-const updateTemplate = useMutation({
-  mutationFn: ({ name, data }: { name: string; data: UpdateTemplateRequest }) =>
-    templateApi.update(name, data),
-  onSuccess: (_, { name }) => {
-    queryClient.invalidateQueries({ queryKey: ['templates'] });
-    queryClient.invalidateQueries({ queryKey: ['templates', name] });
-  },
-});
+['onboarding', tenantId, 'dkim']     // DKIM 레코드
+['suppression', tenantId]            // Suppression 목록
+['settings', 'aws']                  // API Gateway 설정
 ```
 
 #### 기본 캐시 설정
@@ -439,24 +487,12 @@ const updateTemplate = useMutation({
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,    // 5분: 서버 상태가 5분 이내에 자주 변하지 않는 리소스
-      gcTime: 1000 * 60 * 10,      // 10분: 캐시 보관 기간
-      retry: 2,                    // 실패 시 최대 2회 재시도
-      refetchOnWindowFocus: false, // 포커스 복귀 시 자동 재조회 비활성화
+      staleTime: 1000 * 60 * 5,    // 5분
+      gcTime: 1000 * 60 * 10,      // 10분
+      retry: 2,
+      refetchOnWindowFocus: false,
     },
   },
-});
-```
-
-#### Error Boundary 연동
-
-```typescript
-// src/components/ErrorBoundary.tsx 와 연동
-// useQuery의 throwOnError 옵션으로 에러를 ErrorBoundary로 전파
-const { data } = useQuery({
-  queryKey: ['tenants'],
-  queryFn: tenantApi.list,
-  throwOnError: true,  // ErrorBoundary가 처리
 });
 ```
 
@@ -464,15 +500,10 @@ const { data } = useQuery({
 
 ### 4.2 Zustand (클라이언트 상태)
 
-UI 상태 및 인증 정보는 Zustand v5로 관리한다. 서버 캐시와 무관한 순수 클라이언트 상태만 보관한다.
-
 #### authStore
 
 ```typescript
 // src/stores/authStore.ts
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
 interface AuthState {
   apiKey: string | null;
   currentTenantId: string | null;
@@ -481,42 +512,16 @@ interface AuthState {
   setCurrentTenant: (id: string, name: string) => void;
   clearAuth: () => void;
 }
-
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      apiKey: null,
-      currentTenantId: null,
-      currentTenantName: null,
-      setApiKey: (key) => set({ apiKey: key }),
-      setCurrentTenant: (id, name) =>
-        set({ currentTenantId: id, currentTenantName: name }),
-      clearAuth: () =>
-        set({ apiKey: null, currentTenantId: null, currentTenantName: null }),
-    }),
-    { name: 'ems-auth' }  // localStorage 키
-  )
-);
+// localStorage에 'ems-auth' 키로 persist
 ```
 
 #### uiStore
 
 ```typescript
 // src/stores/uiStore.ts
-import { create } from 'zustand';
-
-type Theme = 'light' | 'dark';
-
-interface Notification {
-  id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
-  message: string;
-  description?: string;
-}
-
 interface UiState {
   sidebarCollapsed: boolean;
-  theme: Theme;
+  theme: 'light' | 'dark';
   notifications: Notification[];
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
@@ -524,27 +529,6 @@ interface UiState {
   addNotification: (notification: Omit<Notification, 'id'>) => void;
   removeNotification: (id: string) => void;
 }
-
-export const useUiStore = create<UiState>()((set) => ({
-  sidebarCollapsed: false,
-  theme: 'light',
-  notifications: [],
-  setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
-  toggleSidebar: () =>
-    set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-  setTheme: (theme) => set({ theme }),
-  addNotification: (notification) =>
-    set((state) => ({
-      notifications: [
-        ...state.notifications,
-        { ...notification, id: crypto.randomUUID() },
-      ],
-    })),
-  removeNotification: (id) =>
-    set((state) => ({
-      notifications: state.notifications.filter((n) => n.id !== id),
-    })),
-}));
 ```
 
 ---
@@ -553,70 +537,31 @@ export const useUiStore = create<UiState>()((set) => ({
 
 ```typescript
 // src/api/client.ts
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { useAuthStore } from '@/stores/authStore';
-
-const apiClient: AxiosInstance = axios.create({
+const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-/** 요청 인터셉터: API Key 자동 주입 */
-apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const { apiKey } = useAuthStore.getState();
-    if (apiKey) {
-      config.headers['X-API-Key'] = apiKey;
-    }
+// 요청 인터셉터: Authorization 헤더에 API Key 자동 주입
+apiClient.interceptors.request.use((config) => {
+  const { apiKey } = useAuthStore.getState();
+  if (apiKey) {
+    config.headers['Authorization'] = apiKey;
+  }
+  return config;
+});
 
-    if (import.meta.env.DEV) {
-      console.debug(`[API] ${config.method?.toUpperCase()} ${config.url}`, {
-        params: config.params,
-        data: config.data,
-      });
-    }
-
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-/** 응답 인터셉터: 에러 처리 */
+// 응답 인터셉터: 401 시 인증 정보 초기화
 apiClient.interceptors.response.use(
-  (response) => {
-    if (import.meta.env.DEV) {
-      console.debug(`[API] Response ${response.status}`, response.data);
-    }
-    return response;
-  },
+  (response) => response,
   (error: AxiosError<ApiError>) => {
-    const status = error.response?.status;
-
-    switch (status) {
-      case 401:
-        // API Key 인증 실패 - 인증 정보 초기화
-        useAuthStore.getState().clearAuth();
-        break;
-      case 403:
-        console.error('[API] 접근 권한 없음:', error.response?.data?.message);
-        break;
-      case 500:
-        console.error('[API] 서버 내부 오류:', error.response?.data?.message);
-        break;
-      default:
-        if (import.meta.env.DEV) {
-          console.error('[API] 오류:', error.response?.data);
-        }
+    if (error.response?.status === 401) {
+      useAuthStore.getState().clearAuth();
     }
-
     return Promise.reject(error);
   }
 );
-
-export default apiClient;
 ```
 
 ---
@@ -625,89 +570,6 @@ export default apiClient;
 
 React Router v7의 `createBrowserRouter`를 사용한다.
 
-```typescript
-// src/router.tsx
-import { createBrowserRouter } from 'react-router';
-import MainLayout from '@/layouts/MainLayout';
-
-export const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <MainLayout />,
-    children: [
-      {
-        index: true,
-        lazy: () => import('@/pages/dashboard/DashboardPage'),
-      },
-
-      // 테넌트 관리
-      {
-        path: 'tenant',
-        lazy: () => import('@/pages/tenant/TenantListPage'),
-      },
-      {
-        path: 'tenant/create',
-        lazy: () => import('@/pages/tenant/TenantCreatePage'),
-      },
-      {
-        path: 'tenant/:id',
-        lazy: () => import('@/pages/tenant/TenantDetailPage'),
-      },
-
-      // 이메일 발송
-      {
-        path: 'email/send',
-        lazy: () => import('@/pages/email/EmailSendPage'),
-      },
-      {
-        path: 'email/history',
-        lazy: () => import('@/pages/email/EmailHistoryPage'),
-      },
-
-      // 템플릿 관리
-      {
-        path: 'template',
-        lazy: () => import('@/pages/template/TemplateListPage'),
-      },
-      {
-        path: 'template/create',
-        lazy: () => import('@/pages/template/TemplateCreatePage'),
-      },
-      {
-        path: 'template/:name',
-        lazy: () => import('@/pages/template/TemplateEditPage'),
-      },
-
-      // 스케줄러
-      {
-        path: 'scheduler',
-        lazy: () => import('@/pages/scheduler/SchedulerListPage'),
-      },
-      {
-        path: 'scheduler/create',
-        lazy: () => import('@/pages/scheduler/SchedulerCreatePage'),
-      },
-
-      // 온보딩 위저드 (개발 예정)
-      {
-        path: 'onboarding',
-        lazy: () => import('@/pages/onboarding/OnboardingWizardPage'),
-      },
-      {
-        path: 'onboarding/:id',
-        lazy: () => import('@/pages/onboarding/OnboardingStatusPage'),
-      },
-
-      // Suppression 관리 (개발 예정)
-      {
-        path: 'suppression',
-        lazy: () => import('@/pages/suppression/SuppressionPage'),
-      },
-    ],
-  },
-]);
-```
-
 ### 라우트 요약
 
 | 경로 | 페이지 | 설명 |
@@ -715,7 +577,7 @@ export const router = createBrowserRouter([
 | `/` | DashboardPage | 전체 현황 대시보드 |
 | `/tenant` | TenantListPage | 테넌트 목록 (ProTable) |
 | `/tenant/create` | TenantCreatePage | 테넌트 신규 등록 |
-| `/tenant/:id` | TenantDetailPage | 테넌트 상세 및 수정 |
+| `/tenant/:id` | TenantDetailPage | 테넌트 상세 및 수정, 발신자 이메일 관리 |
 | `/email/send` | EmailSendPage | 즉시 이메일 발송 |
 | `/email/history` | EmailHistoryPage | 발송 이력 조회 |
 | `/template` | TemplateListPage | SES 템플릿 목록 |
@@ -723,15 +585,66 @@ export const router = createBrowserRouter([
 | `/template/:name` | TemplateEditPage | 템플릿 편집 |
 | `/scheduler` | SchedulerListPage | 예약 발송 작업 목록 |
 | `/scheduler/create` | SchedulerCreatePage | 예약 발송 등록 |
-| `/onboarding` | OnboardingWizardPage | 신규 테넌트 온보딩 위저드 |
+| `/onboarding` | OnboardingWizardPage | 신규 테넌트 온보딩 (도메인/이메일 인증 선택) |
 | `/onboarding/:id` | OnboardingStatusPage | 온보딩 진행 상태 |
 | `/suppression` | SuppressionPage | Suppression 이메일 관리 |
+| `/settings` | SettingsPage | API Gateway, Callback, 수신 모드 설정 |
 
 ---
 
-## 7. 환경 설정
+## 7. 페이지별 주요 기능
 
-### 7.1 환경 변수 파일
+### 7.1 OnboardingWizardPage
+
+온보딩 시 인증 방식 선택 UI를 제공합니다.
+
+```
+Step 1: 테넌트 기본 정보 입력 (이름, 도메인)
+Step 2: 인증 방식 선택
+  ├── 도메인 인증 (DKIM): DNS CNAME 레코드 추가 → DKIM 상태 폴링
+  └── 이메일 개별 인증: 이메일 주소 입력 → 인증 메일 수신 확인
+Step 3: ConfigSet 구성 + 테넌트 활성화
+```
+
+- DKIM 인증 방식: `GET /onboarding/{id}/dkim` 폴링으로 `verificationStatus === 'SUCCESS'` 대기
+- 이메일 인증 방식: `GET /onboarding/{id}/email-status/{email}` 폴링
+
+### 7.2 SettingsPage
+
+API Gateway 연결 설정과 발송 결과 수신 모드를 관리합니다.
+
+```
+섹션 1: API Gateway 연결
+  - Endpoint URL, 리전, 인증 방식 (API_KEY / IAM), API Key
+  - 경로 설정 (/send-email, /results, /config, /tenant-setup)
+  - 연결 테스트 버튼 (POST /settings/aws/test)
+
+섹션 2: Callback 설정
+  - Callback URL (Lambda가 ESM을 호출할 주소)
+  - Callback Secret (X-Callback-Secret 헤더 검증용)
+
+섹션 3: 수신 모드
+  - callback: 실시간 콜백 + 보정 폴링
+  - polling: 보정 폴링만
+  - 폴링 주기 (ms)
+
+저장 시 ESM DB + SSM Parameter Store 자동 동기화
+```
+
+### 7.3 TenantDetailPage
+
+테넌트 상세 정보와 발신자 이메일 목록을 함께 관리합니다.
+
+- 테넌트 기본 정보 수정
+- 할당량(일/월) 수정
+- API Key 재발급
+- 발신자 이메일 목록 조회/추가/삭제 (도메인 제한 안내 포함)
+
+---
+
+## 8. 환경 설정
+
+### 8.1 환경 변수 파일
 
 ```bash
 # .env.development
@@ -745,54 +658,42 @@ VITE_API_BASE_URL=/api
 VITE_APP_TITLE=Joins EMS Admin
 ```
 
-### 7.2 Vite 설정
+### 8.2 Vite 설정
 
 ```typescript
 // vite.config.ts
-import { defineConfig, loadEnv } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-
-  return {
-    plugins: [react()],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, './src'),
+export default defineConfig(({ mode }) => ({
+  plugins: [react()],
+  resolve: {
+    alias: { '@': path.resolve(__dirname, './src') },
+  },
+  server: {
+    port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:7092',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
-    server: {
-      port: 3000,
-      proxy: {
-        // 개발 환경에서 /api 경로를 백엔드로 프록시
-        '/api': {
-          target: env.VITE_API_BASE_URL || 'http://localhost:7092',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, ''),
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: mode === 'development',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router'],
+          antd: ['antd', '@ant-design/pro-components'],
+          query: ['@tanstack/react-query'],
         },
       },
     },
-    build: {
-      outDir: 'dist',
-      sourcemap: mode === 'development',
-      rollupOptions: {
-        output: {
-          // 청크 분리로 초기 로딩 최적화
-          manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router'],
-            antd: ['antd', '@ant-design/pro-components'],
-            query: ['@tanstack/react-query'],
-          },
-        },
-      },
-    },
-  };
-});
+  },
+}));
 ```
 
-### 7.3 TypeScript 설정
+### 8.3 TypeScript 설정
 
 ```json
 // tsconfig.json (주요 설정)
@@ -803,58 +704,8 @@ export default defineConfig(({ mode }) => {
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "strict": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "paths": { "@/*": ["./src/*"] }
   }
-}
-```
-
----
-
-## 8. 커스텀 훅 패턴
-
-TanStack Query를 직접 컴포넌트에서 사용하지 않고 커스텀 훅으로 추상화한다.
-
-```typescript
-// src/hooks/useTenant.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as tenantApi from '@/api/tenant';
-
-export function useTenantList() {
-  return useQuery({
-    queryKey: ['tenants'],
-    queryFn: tenantApi.list,
-  });
-}
-
-export function useTenant(tenantId: string) {
-  return useQuery({
-    queryKey: ['tenants', tenantId],
-    queryFn: () => tenantApi.getById(tenantId),
-    enabled: !!tenantId,
-  });
-}
-
-export function useCreateTenant() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: tenantApi.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-    },
-  });
-}
-
-export function useUpdateTenant(tenantId: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: UpdateTenantRequest) => tenantApi.update(tenantId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tenants'] });
-      queryClient.invalidateQueries({ queryKey: ['tenants', tenantId] });
-    },
-  });
 }
 ```
 
@@ -864,14 +715,8 @@ export function useUpdateTenant(tenantId: string) {
 
 ```typescript
 // src/layouts/menuConfig.ts
-import type { MenuDataItem } from '@ant-design/pro-components';
-
 export const menuItems: MenuDataItem[] = [
-  {
-    path: '/',
-    name: '대시보드',
-    icon: 'DashboardOutlined',
-  },
+  { path: '/', name: '대시보드', icon: 'DashboardOutlined' },
   {
     path: '/tenant',
     name: '테넌트 관리',
@@ -908,15 +753,40 @@ export const menuItems: MenuDataItem[] = [
       { path: '/scheduler/create', name: '예약 등록' },
     ],
   },
-  {
-    path: '/onboarding',
-    name: '온보딩',
-    icon: 'RocketOutlined',
-  },
-  {
-    path: '/suppression',
-    name: 'Suppression',
-    icon: 'StopOutlined',
-  },
+  { path: '/onboarding', name: '온보딩', icon: 'RocketOutlined' },
+  { path: '/suppression', name: 'Suppression', icon: 'StopOutlined' },
+  { path: '/settings', name: '설정', icon: 'SettingOutlined' },
 ];
+```
+
+---
+
+## 10. 커스텀 훅 패턴
+
+TanStack Query를 직접 컴포넌트에서 사용하지 않고 커스텀 훅으로 추상화한다.
+
+```typescript
+// src/hooks/useSettings.ts
+export function useAwsSettings() {
+  return useQuery({
+    queryKey: ['settings', 'aws'],
+    queryFn: settingsApi.getAwsSettings,
+  });
+}
+
+export function useSaveAwsSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: settingsApi.saveAwsSettings,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings', 'aws'] });
+    },
+  });
+}
+
+export function useTestGateway() {
+  return useMutation({
+    mutationFn: settingsApi.testGateway,
+  });
+}
 ```
