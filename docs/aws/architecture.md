@@ -130,14 +130,31 @@
 
 ## 테넌트 온보딩 플로우
 
+### 방식 A: 도메인 인증 (권장)
 ```
-1. [UI] 도메인 입력 → POST /tenant-setup
+1. [UI] 인증 방식 선택: "도메인 인증" → 도메인 입력 → POST /tenant-setup
 2. [Lambda] SES Identity 생성 → ConfigSet 생성 → SNS 연결 → DynamoDB 저장
 3. [Lambda → UI] DKIM CNAME 레코드 3개 반환
 4. [고객사] 자사 DNS에 CNAME 등록
 5. [UI] GET /tenant-status 주기적 호출 → 인증 상태 확인
 6. [Lambda] SES GetEmailIdentity → Verified → status: ACTIVE
+→ 도메인 전체 발송 가능 (any@domain.com)
 ```
+
+### 방식 B: 이메일 개별 인증 (DNS 접근 불가 시)
+```
+1. [UI] 인증 방식 선택: "이메일 인증" → 이메일 입력
+2. [ESM] POST /onboarding/{tenantId}/verify-email → API Gateway → Lambda
+3. [Lambda] SES CreateEmailIdentity(email) → SES가 인증 이메일 자동 발송
+4. [사용자] 메일함에서 인증 링크 클릭
+5. [UI] GET /onboarding/{tenantId}/email-status/{email} → 상태 확인
+6. verificationStatus: SUCCESS → 해당 이메일로만 발송 가능
+```
+
+| 방식 | 인증 대상 | 인증 방법 | 발송 가능 범위 |
+|------|-----------|-----------|----------------|
+| 도메인 인증 | @domain.com 전체 | DNS CNAME 등록 | 도메인 내 모든 이메일 |
+| 이메일 인증 | 개별 이메일 1개 | 인증 메일 링크 클릭 | 인증된 이메일만 |
 
 ## SQS 설정
 

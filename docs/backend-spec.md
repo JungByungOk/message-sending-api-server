@@ -736,7 +736,68 @@ GET /onboarding/{tenantId}/dkim
 
 ---
 
-### 6.4 테넌트 수동 활성화
+### 6.4 이메일 개별 인증 요청
+
+```
+POST /onboarding/{tenantId}/verify-email
+```
+
+DNS 접근 불가 시 개별 이메일 주소를 SES에 등록합니다. SES가 인증 이메일을 자동 발송합니다.
+
+**Request Body**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response** `201 Created`
+```json
+{
+  "email": "user@example.com",
+  "verificationStatus": "PENDING"
+}
+```
+
+---
+
+### 6.5 이메일 인증 상태 조회
+
+```
+GET /onboarding/{tenantId}/email-status/{email}
+```
+
+**Response** `200 OK`
+```json
+{
+  "email": "user@example.com",
+  "verificationStatus": "SUCCESS"
+}
+```
+
+verificationStatus: `PENDING` (대기), `SUCCESS` (인증 완료), `FAILED` (실패)
+
+---
+
+### 6.6 인증 이메일 재발송
+
+```
+POST /onboarding/{tenantId}/resend-verification/{email}
+```
+
+SES에서 인증 이메일을 재발송합니다 (기존 Identity 삭제 후 재생성).
+
+**Response** `200 OK`
+```json
+{
+  "email": "user@example.com",
+  "verificationStatus": "PENDING"
+}
+```
+
+---
+
+### 6.7 테넌트 수동 활성화
 
 ```
 POST /onboarding/{tenantId}/activate
