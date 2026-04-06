@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
+  Alert,
+  Badge,
   Button,
   Card,
   Col,
@@ -14,13 +16,18 @@ import {
   Row,
   Skeleton,
   Space,
+  Tag,
   Tabs,
+  Tooltip,
   Typography,
   message,
 } from 'antd';
 import {
   ApiOutlined,
   ArrowLeftOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   EyeInvisibleOutlined,
@@ -30,16 +37,95 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SafetyOutlined,
+  SendOutlined,
   SettingOutlined,
   TeamOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useTenant, useUpdateTenant, useRegenerateApiKey, useSenders, useAddSender, useRemoveSender } from '@/hooks/useTenants';
+import { useEmailVerificationStatus, useResendVerification, useVerifyEmail } from '@/hooks/useOnboarding';
 import type { UpdateTenantRequest } from '@/types/tenant';
+import type { EmailVerificationStatus } from '@/types/onboarding';
 import StatusTag from '@/components/StatusTag';
 import PageHeader from '@/components/PageHeader';
 
 const { Title, Text } = Typography;
+
+// 발신자 인증 상태 Badge 컴포넌트
+function SenderVerificationBadge({
+  tenantId,
+  email,
+  onResend,
+}: {
+  tenantId: string;
+  email: string;
+  onResend: (email: string) => void;
+}) {
+  const { data: status, isLoading } = useEmailVerificationStatus(tenantId, email);
+
+  if (isLoading) {
+    return <Badge status="processing" text={<Text style={{ fontSize: 12, color: '#9ca3af' }}>확인 중...</Text>} />;
+  }
+
+  if (!status) return null;
+
+  if (status.verificationStatus === 'SUCCESS') {
+    return (
+      <Tag
+        icon={<CheckCircleOutlined />}
+        color="success"
+        style={{ borderRadius: 6, fontSize: 12 }}
+      >
+        인증됨
+      </Tag>
+    );
+  }
+
+  if (status.verificationStatus === 'FAILED') {
+    return (
+      <Space size={4}>
+        <Tag
+          icon={<CloseCircleOutlined />}
+          color="error"
+          style={{ borderRadius: 6, fontSize: 12 }}
+        >
+          인증 실패
+        </Tag>
+        <Tooltip title="인증 이메일 재발송">
+          <Button
+            type="text"
+            size="small"
+            icon={<SendOutlined />}
+            onClick={() => onResend(email)}
+            style={{ color: '#f79009', padding: '0 4px' }}
+          />
+        </Tooltip>
+      </Space>
+    );
+  }
+
+  // PENDING
+  return (
+    <Space size={4}>
+      <Tag
+        icon={<ClockCircleOutlined />}
+        color="warning"
+        style={{ borderRadius: 6, fontSize: 12 }}
+      >
+        인증 대기중
+      </Tag>
+      <Tooltip title="인증 이메일 재발송">
+        <Button
+          type="text"
+          size="small"
+          icon={<SendOutlined />}
+          onClick={() => onResend(email)}
+          style={{ color: '#f79009', padding: '0 4px' }}
+        />
+      </Tooltip>
+    </Space>
+  );
+}
 
 export default function TenantDetail() {
   const { id = '' } = useParams<{ id: string }>();
@@ -56,6 +142,11 @@ export default function TenantDetail() {
   const { data: senders, isLoading: isSendersLoading } = useSenders(id);
   const { mutate: addSender, isPending: isAddingSender } = useAddSender();
   const { mutate: removeSender } = useRemoveSender();
+  const { mutate: verifyEmail, isPending: isVerifyingEmail } = useVerifyEmail();
+  const { mutate: resendVerification } = useResendVerification();
+
+  // 이메일 인증 상태 조회를 위한 선택된 발신자 이메일 추적
+  const [verifyingEmail, setVerifyingEmail] = useState<string | null>(null);
 
   const handleEditOpen = () => {
     if (!tenant) return;

@@ -24,6 +24,9 @@ export const handler = async (event) => {
       case 'DKIM_STATUS': return await getDkimStatus(params.tenantId || params.domain || body.domain);
       case 'CREATE_IDENTITY': return await createIdentity(body.domain);
       case 'DELETE_IDENTITY': return await deleteIdentity(params.domain || body.domain);
+      case 'VERIFY_EMAIL': return await verifyEmail(body.email);
+      case 'EMAIL_STATUS': return await getEmailStatus(params.email || body.email);
+      case 'RESEND_VERIFICATION': return await resendVerification(body.email);
       case 'CREATE_CONFIGSET': return await createConfigSet(body.tenantId);
       case 'GET_CONFIGSET': return await getConfigSet(params.tenantId || body.tenantId);
       case 'DELETE_CONFIGSET': return await deleteConfigSet(params.tenantId || body.tenantId);
@@ -146,6 +149,34 @@ async function getDkimStatus(domain) {
 async function deleteIdentity(domain) {
   await ses.send(new DeleteEmailIdentityCommand({ EmailIdentity: domain }));
   return respond(200, { message: 'Deleted', domain });
+}
+
+// === Email Identity (개별 이메일 인증) ===
+
+async function verifyEmail(email) {
+  await ses.send(new CreateEmailIdentityCommand({ EmailIdentity: email }));
+  return respond(200, { email, verificationStatus: 'PENDING' });
+}
+
+async function getEmailStatus(email) {
+  const result = await ses.send(new GetEmailIdentityCommand({ EmailIdentity: email }));
+  let verificationStatus = 'PENDING';
+  if (result.VerifiedForSendingStatus === true) {
+    verificationStatus = 'SUCCESS';
+  } else if (result.VerificationStatus === 'FAILED') {
+    verificationStatus = 'FAILED';
+  }
+  return respond(200, { email, verificationStatus });
+}
+
+async function resendVerification(email) {
+  try {
+    await ses.send(new DeleteEmailIdentityCommand({ EmailIdentity: email }));
+  } catch (e) {
+    if (e.name !== 'NotFoundException') throw e;
+  }
+  await ses.send(new CreateEmailIdentityCommand({ EmailIdentity: email }));
+  return respond(200, { email, verificationStatus: 'PENDING', message: '인증 이메일이 재발송되었습니다' });
 }
 
 // === ConfigSet ===

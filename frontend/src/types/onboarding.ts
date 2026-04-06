@@ -29,6 +29,15 @@ export interface OnboardingStep {
   status: 'COMPLETED' | 'WAITING' | 'PENDING';
 }
 
+export interface VerifyEmailRequest {
+  email: string;
+}
+
+export interface EmailVerificationStatus {
+  email: string;
+  verificationStatus: 'PENDING' | 'SUCCESS' | 'FAILED';
+}
+
 export interface OnboardingStatus {
   tenantId: string;
   domain: string;

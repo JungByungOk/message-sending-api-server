@@ -1,4 +1,4 @@
-import type { OnboardingResult, OnboardingStartRequest, OnboardingStatus, DkimRecordsDTO } from '@/types/onboarding';
+import type { OnboardingResult, OnboardingStartRequest, OnboardingStatus, DkimRecordsDTO, EmailVerificationStatus } from '@/types/onboarding';
 import apiClient from './client';
 
 // 온보딩 시작
@@ -22,4 +22,25 @@ export const getDkimRecords = async (tenantId: string): Promise<DkimRecordsDTO> 
 // 테넌트 활성화
 export const activateTenant = async (tenantId: string): Promise<void> => {
   await apiClient.post(`/onboarding/${tenantId}/activate`);
+};
+
+// 이메일 인증 요청
+export const verifyEmail = async (tenantId: string, email: string): Promise<void> => {
+  await apiClient.post(`/onboarding/${tenantId}/verify-email`, { email });
+};
+
+// 이메일 인증 상태 조회
+export const getEmailVerificationStatus = async (
+  tenantId: string,
+  email: string,
+): Promise<EmailVerificationStatus> => {
+  const { data } = await apiClient.get<EmailVerificationStatus>(
+    `/onboarding/${tenantId}/email-status/${email}`,
+  );
+  return data;
+};
+
+// 인증 이메일 재발송
+export const resendVerification = async (tenantId: string, email: string): Promise<void> => {
+  await apiClient.post(`/onboarding/${tenantId}/resend-verification/${email}`);
 };

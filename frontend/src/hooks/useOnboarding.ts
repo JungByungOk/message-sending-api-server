@@ -2,8 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   activateTenant,
   getDkimRecords,
+  getEmailVerificationStatus,
   getOnboardingStatus,
+  resendVerification,
   startOnboarding,
+  verifyEmail,
 } from '@/api/onboarding';
 import type { OnboardingStartRequest } from '@/types/onboarding';
 
@@ -44,6 +47,42 @@ export const useActivateTenant = () => {
     mutationFn: (tenantId: string) => activateTenant(tenantId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    },
+  });
+};
+
+// 이메일 인증 요청 뮤테이션 훅
+export const useVerifyEmail = () => {
+  return useMutation({
+    mutationFn: ({ tenantId, email }: { tenantId: string; email: string }) =>
+      verifyEmail(tenantId, email),
+  });
+};
+
+// 이메일 인증 상태 조회 훅 (PENDING 상태일 때 5초마다 자동 갱신)
+export const useEmailVerificationStatus = (tenantId: string, email: string) => {
+  return useQuery({
+    queryKey: ['onboarding', 'email-status', tenantId, email],
+    queryFn: () => getEmailVerificationStatus(tenantId, email),
+    enabled: !!tenantId && !!email,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data?.verificationStatus === 'PENDING') return 5000;
+      return false;
+    },
+  });
+};
+
+// 인증 이메일 재발송 뮤테이션 훅
+export const useResendVerification = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ tenantId, email }: { tenantId: string; email: string }) =>
+      resendVerification(tenantId, email),
+    onSuccess: (_data, variables) => {
+      void queryClient.invalidateQueries({
+        queryKey: ['onboarding', 'email-status', variables.tenantId, variables.email],
+      });
     },
   });
 };

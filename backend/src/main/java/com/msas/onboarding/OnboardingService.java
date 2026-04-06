@@ -156,6 +156,102 @@ public class OnboardingService {
         return tenantService.getTenant(tenantId);
     }
 
+    /**
+     * 이메일 개별 인증 요청 (SES CreateEmailIdentity)
+     */
+    public EmailVerificationStatusDTO verifyEmail(String tenantId, String email) {
+        TenantEntity entity = tenantRepository.selectTenantById(tenantId);
+        if (entity == null) {
+            throw new IllegalArgumentException("테넌트를 찾을 수 없습니다: " + tenantId);
+        }
+
+        try {
+            String jsonBody = gson.toJson(Map.of(
+                    "tenantId", tenantId,
+                    "email", email,
+                    "action", "VERIFY_EMAIL"
+            ));
+
+            HttpResponse<String> response = apiGatewayClient.post("/tenant-setup", jsonBody);
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                Map<String, Object> result = gson.fromJson(response.body(),
+                        new TypeToken<Map<String, Object>>() {}.getType());
+                String status = result.getOrDefault("verificationStatus", "PENDING").toString();
+                log.info("OnboardingService - 이메일 인증 요청 완료. (tenantId: {}, email: {})", tenantId, email);
+                return new EmailVerificationStatusDTO(email, status);
+            } else {
+                log.warn("OnboardingService - 이메일 인증 요청 실패. (HTTP {}, body: {})",
+                        response.statusCode(), response.body());
+            }
+        } catch (Exception e) {
+            log.warn("OnboardingService - 이메일 인증 요청 실패 (건너뜀).", e);
+        }
+
+        return new EmailVerificationStatusDTO(email, "PENDING");
+    }
+
+    /**
+     * 이메일 인증 상태 조회
+     */
+    public EmailVerificationStatusDTO getEmailVerificationStatus(String tenantId, String email) {
+        TenantEntity entity = tenantRepository.selectTenantById(tenantId);
+        if (entity == null) {
+            throw new IllegalArgumentException("테넌트를 찾을 수 없습니다: " + tenantId);
+        }
+
+        try {
+            HttpResponse<String> response = apiGatewayClient.get(
+                    "/tenant-setup?tenantId=" + tenantId + "&email=" + email + "&action=EMAIL_STATUS");
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                Map<String, Object> result = gson.fromJson(response.body(),
+                        new TypeToken<Map<String, Object>>() {}.getType());
+                String status = result.getOrDefault("verificationStatus", "PENDING").toString();
+                return new EmailVerificationStatusDTO(email, status);
+            }
+        } catch (Exception e) {
+            log.warn("OnboardingService - 이메일 인증 상태 조회 실패.", e);
+        }
+
+        return new EmailVerificationStatusDTO(email, "PENDING");
+    }
+
+    /**
+     * 인증 이메일 재발송
+     */
+    public EmailVerificationStatusDTO resendVerification(String tenantId, String email) {
+        TenantEntity entity = tenantRepository.selectTenantById(tenantId);
+        if (entity == null) {
+            throw new IllegalArgumentException("테넌트를 찾을 수 없습니다: " + tenantId);
+        }
+
+        try {
+            String jsonBody = gson.toJson(Map.of(
+                    "tenantId", tenantId,
+                    "email", email,
+                    "action", "RESEND_VERIFICATION"
+            ));
+
+            HttpResponse<String> response = apiGatewayClient.post("/tenant-setup", jsonBody);
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                Map<String, Object> result = gson.fromJson(response.body(),
+                        new TypeToken<Map<String, Object>>() {}.getType());
+                String status = result.getOrDefault("verificationStatus", "PENDING").toString();
+                log.info("OnboardingService - 인증 이메일 재발송 완료. (tenantId: {}, email: {})", tenantId, email);
+                return new EmailVerificationStatusDTO(email, status);
+            } else {
+                log.warn("OnboardingService - 인증 이메일 재발송 실패. (HTTP {}, body: {})",
+                        response.statusCode(), response.body());
+            }
+        } catch (Exception e) {
+            log.warn("OnboardingService - 인증 이메일 재발송 실패 (건너뜀).", e);
+        }
+
+        return new EmailVerificationStatusDTO(email, "PENDING");
+    }
+
     // --- Private helpers ---
 
     private List<OnboardingStepDTO> buildSteps(TenantEntity entity) {

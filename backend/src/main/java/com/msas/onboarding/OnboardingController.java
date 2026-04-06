@@ -45,4 +45,31 @@ public class OnboardingController {
         ResponseTenantDTO tenant = onboardingService.activate(tenantId);
         return ResponseEntity.ok(tenant);
     }
+
+    @Operation(summary = "이메일 인증 요청", description = "테넌트의 이메일 주소에 대한 SES 개별 인증을 요청합니다.")
+    @PostMapping("/{tenantId}/verify-email")
+    public ResponseEntity<EmailVerificationStatusDTO> verifyEmail(
+            @PathVariable String tenantId,
+            @Valid @RequestBody VerifyEmailRequest request) {
+        EmailVerificationStatusDTO result = onboardingService.verifyEmail(tenantId, request.getEmail());
+        return new ResponseEntity<>(result, HttpStatus.CREATED);
+    }
+
+    @Operation(summary = "이메일 인증 상태 조회", description = "테넌트의 이메일 인증 상태를 조회합니다.")
+    @GetMapping("/{tenantId}/email-status/{email}")
+    public ResponseEntity<EmailVerificationStatusDTO> getEmailVerificationStatus(
+            @PathVariable String tenantId,
+            @PathVariable String email) {
+        EmailVerificationStatusDTO status = onboardingService.getEmailVerificationStatus(tenantId, email);
+        return ResponseEntity.ok(status);
+    }
+
+    @Operation(summary = "인증 이메일 재발송", description = "테넌트의 이메일 인증 메일을 재발송합니다.")
+    @PostMapping("/{tenantId}/resend-verification/{email}")
+    public ResponseEntity<EmailVerificationStatusDTO> resendVerification(
+            @PathVariable String tenantId,
+            @PathVariable String email) {
+        EmailVerificationStatusDTO result = onboardingService.resendVerification(tenantId, email);
+        return ResponseEntity.ok(result);
+    }
 }
