@@ -9,6 +9,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useCreateTenant, useAddSender } from '@/hooks/useTenants';
+import { useVerifyEmail } from '@/hooks/useOnboarding';
 import type { CreateTenantRequest } from '@/types/tenant';
 import PageHeader from '@/components/PageHeader';
 
@@ -19,6 +20,7 @@ export default function TenantCreate() {
   const [form] = Form.useForm<CreateTenantRequest>();
   const { mutate: create, isPending } = useCreateTenant();
   const { mutateAsync: addSenderAsync } = useAddSender();
+  const { mutateAsync: verifyEmailAsync } = useVerifyEmail();
   const domainValue = Form.useWatch('domain', form);
 
   const handleSubmit = (values: CreateTenantRequest & { senderEmail?: string; senderDisplayName?: string }) => {
@@ -32,6 +34,13 @@ export default function TenantCreate() {
               tenantId: tenant.tenantId,
               sender: { email: senderEmail, displayName: senderDisplayName, isDefault: true },
             });
+            // 이메일 개별 인증 자동 요청 (도메인 미인증 상태이므로)
+            try {
+              await verifyEmailAsync({ tenantId: tenant.tenantId, email: senderEmail });
+              void message.info('인증 이메일이 발송되었습니다. 메일함을 확인해주세요.');
+            } catch {
+              void message.warning('발신자는 등록되었으나 인증 이메일 발송에 실패했습니다.');
+            }
           } catch {
             void message.warning('테넌트는 생성되었으나 발신자 등록에 실패했습니다.');
           }
