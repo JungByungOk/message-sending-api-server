@@ -2,24 +2,88 @@
 
 ## 사전 준비
 
-### 1. AWS CLI 설정
+### 1. AWS 계정 생성
+
+AWS 계정이 없다면 먼저 생성합니다.
+
+1. https://aws.amazon.com/ 접속 → **"AWS 계정 생성"** 클릭
+2. 이메일, 비밀번호, 계정 이름 입력
+3. 결제 정보 (신용카드) 등록 — Free Tier 범위 내 사용 시 과금 없음
+4. 본인 인증 (휴대폰 SMS/음성)
+5. Support 플랜 선택 → **"Basic Support - 무료"** 선택
+6. 계정 생성 완료 → AWS Console 로그인
+
+### 2. IAM 사용자 생성 (Access Key 발급)
+
+> **루트 계정으로 직접 작업하지 마세요.** IAM 사용자를 생성하여 사용합니다.
+
+1. AWS Console → **IAM** 서비스 이동
+2. 좌측 메뉴 **"사용자"** → **"사용자 생성"**
+3. 사용자 이름: `ems-deploy` (원하는 이름)
+4. **"다음"** → 권한 설정:
+   - **"직접 정책 연결"** 선택
+   - `AdministratorAccess` 검색 후 체크 (CDK 배포에 필요)
+   - > 운영 환경에서는 최소 권한 원칙에 따라 필요한 권한만 부여하세요
+5. **"다음"** → **"사용자 생성"**
+6. 생성된 사용자 클릭 → **"보안 자격 증명"** 탭
+7. **"액세스 키 만들기"** → **"Command Line Interface(CLI)"** 선택
+8. **Access Key ID**와 **Secret Access Key**를 안전하게 저장
+   - > Secret Access Key는 이 화면에서만 확인 가능합니다. 반드시 저장하세요.
+
+### 3. AWS CLI 설치 및 설정
+
+**AWS CLI 설치:**
 ```bash
-aws configure
-# AWS Access Key ID: [입력]
-# AWS Secret Access Key: [입력]
-# Default region name: ap-northeast-2
-# Default output format: json
+# Windows (MSI 설치)
+# https://awscli.amazonaws.com/AWSCLIV2.msi 다운로드 후 실행
+
+# Mac
+brew install awscli
+
+# Linux
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip && sudo ./aws/install
 ```
 
-### 2. AWS CDK CLI 설치
+설치 확인:
+```bash
+aws --version
+# aws-cli/2.x.x ...
+```
+
+**AWS CLI 설정** (Step 2에서 발급받은 Access Key 입력):
+```bash
+aws configure
+```
+```
+AWS Access Key ID [None]: AKIA...          ← Step 2에서 발급받은 Access Key ID
+AWS Secret Access Key [None]: wJalr...     ← Step 2에서 발급받은 Secret Access Key
+Default region name [None]: ap-northeast-2 ← 서울 리전
+Default output format [None]: json
+```
+
+설정 확인:
+```bash
+aws sts get-caller-identity
+# 계정 ID, IAM 사용자 정보가 출력되면 성공
+```
+
+### 4. Node.js 18+ 설치
+
+```bash
+# 설치 확인
+node --version
+# v18.x.x 이상 필요
+
+# 미설치 시: https://nodejs.org/ 에서 LTS 버전 다운로드
+```
+
+### 5. AWS CDK CLI 설치
+
 ```bash
 npm install -g aws-cdk
 cdk --version
-```
-
-### 3. Node.js 18+ 확인
-```bash
-node --version
+# 2.x.x 출력 확인
 ```
 
 ## 배포 절차
