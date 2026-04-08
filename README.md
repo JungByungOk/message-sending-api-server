@@ -1,4 +1,4 @@
-# Joins ESM (Email Sending Management)
+# Joins EMS (Email Management System)
 
 멀티테넌트 이메일 발송 관리 플랫폼 - AWS SES 기반 이메일 발송, 테넌트 온보딩, 수신 거부 관리를 제공하는 Spring Boot + React 풀스택 SaaS 서버
 
