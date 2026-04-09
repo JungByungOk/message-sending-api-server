@@ -1,8 +1,7 @@
 package com.msas.scheduler.job;
 
 import com.google.common.util.concurrent.RateLimiter;
-import com.msas.common.utils.ForeachUtils;
-import com.msas.pollingchecker.repository.SESMariaDBRepository;
+import com.msas.pollingchecker.repository.EmailSendRepository;
 import com.msas.pollingchecker.types.EnumEmailSendStatusCode;
 import com.msas.pollingchecker.types.EnumSESEventTypeCode;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
@@ -26,16 +25,16 @@ import java.util.Locale;
 @DisallowConcurrentExecution
 public class SendTemplatedEmailWithPollingJob extends AbstractSendTemplatedEmailJob {
 
-    private final RateLimiter rateLimiter = RateLimiter.create(7.0);
+    private final RateLimiter rateLimiter = RateLimiter.create(50.0);
 
     @Value("${spring.application.name}")
     private String serverName;
 
-    private SESMariaDBRepository sesMariaDBRepository;
+    private EmailSendRepository emailSendRepository;
 
     @Autowired
-    public void setSESMariaDBRepository(SESMariaDBRepository sesMariaDBRepository) {
-        this.sesMariaDBRepository = sesMariaDBRepository;
+    public void setEmailSendRepository(EmailSendRepository emailSendRepository) {
+        this.emailSendRepository = emailSendRepository;
     }
 
     @Override
@@ -43,40 +42,53 @@ public class SendTemplatedEmailWithPollingJob extends AbstractSendTemplatedEmail
         JobKey jobKey = context.getJobDetail().getKey();
         deleteJobIfNotInterrupted(context);
 
-        log.info("@SendTemplatedEmailWithPollingJob - started :: jobKey={}", jobKey);
+        log.info("[SendTemplatedEmailWithPollingJob] 작업 시작. (jobKey: {})", jobKey);
 
         RequestTemplatedEmailScheduleJobDTO dto = deserializeJobData(context);
 
-        dto.getTemplatedEmailList().forEach(ForeachUtils.withCounter((count, templatedEmail) -> {
-            int emailSendDtlSeq = Integer.parseInt(dto.getTemplatedEmailList().get(count).getId());
-            EnumEmailSendStatusCode successCode = EnumEmailSendStatusCode.SM;
+        int total = dto.getTemplatedEmailList().size();
+        int successCount = 0;
+        int failCount = 0;
+
+        for (int i = 0; i < total; i++) {
+            int emailSendDtlSeq = Integer.parseInt(dto.getTemplatedEmailList().get(i).getId());
+            EnumEmailSendStatusCode successCode = EnumEmailSendStatusCode.Sending;
             EnumSESEventTypeCode failCode = EnumSESEventTypeCode.SESFail;
 
             try {
                 rateLimiter.acquire();
 
-                String messageId = sendTemplatedEmail(getTemplatedEmailDto(dto, count));
+                String correlationId = dto.getTemplatedEmailList().get(i).getCorrelationId();
+                String messageId = sendTemplatedEmail(getTemplatedEmailDto(dto, i), correlationId, dto.getTenantId());
 
-                log.info("@SendTemplatedEmailWithPollingJob - Email sending ({}/{}) : templateName = {}, messageId = {}",
-                        count + 1, dto.getTemplatedEmailList().size(), dto.getTemplateName(), messageId);
+                successCount++;
+                updateSendEmailStatus(emailSendDtlSeq, successCode.name(), null, messageId);
 
-                updateSendEmailStatus(emailSendDtlSeq, successCode.name().toUpperCase(Locale.ENGLISH), null, messageId);
+                if ((i + 1) % 100 == 0 || i + 1 == total) {
+                    log.info("[SendTemplatedEmailWithPollingJob] 발송 진행중. ({}/{}, 성공: {}, 실패: {}, template: {})",
+                            i + 1, total, successCount, failCount, dto.getTemplateName());
+                }
 
             } catch (Exception e) {
-                log.error("@SendTemplatedEmailWithPollingJob - {}", e.getMessage());
+                failCount++;
+                log.error("[SendTemplatedEmailWithPollingJob] 이메일 발송 실패. (dtlSeq: {}, message: {})",
+                        emailSendDtlSeq, e.getMessage());
 
                 updateSendEmailStatus(emailSendDtlSeq,
                         failCode.getEmailSendStatusCode().name(),
-                        failCode.name().toUpperCase(Locale.ENGLISH),
+                        failCode.name(),
                         null);
             }
-        }));
+        }
 
-        log.info("@SendTemplatedEmailWithPollingJob - ended :: jobKey={}", jobKey);
+        completeBatch(context, failCount > 0 ? "COMPLETED_WITH_ERRORS" : "COMPLETED");
+
+        log.info("[SendTemplatedEmailWithPollingJob] 작업 종료. (jobKey: {}, 성공: {}, 실패: {}, 총: {})",
+                jobKey, successCount, failCount, total);
     }
 
     private void updateSendEmailStatus(int emailSendDtlSeq, String sendStsCd, String sendRsltTypCd, String messageId) {
-        sesMariaDBRepository.UpdateSendEmailStatus2AWSSES(emailSendDtlSeq, sendStsCd, sendRsltTypCd, messageId, serverName);
-        log.info("@SendTemplatedEmailWithPollingJob - Email status update with [ SQ->{} ].", sendStsCd);
+        emailSendRepository.UpdateSendEmailStatus2AWSSES(emailSendDtlSeq, sendStsCd, sendRsltTypCd, messageId, serverName);
+        log.info("[SendTemplatedEmailWithPollingJob] 이메일 상태 변경. (Queued -> {}, dtlSeq: {})", sendStsCd, emailSendDtlSeq);
     }
 }

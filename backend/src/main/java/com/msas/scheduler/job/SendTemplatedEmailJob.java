@@ -74,7 +74,7 @@ public class SendTemplatedEmailJob extends AbstractSendTemplatedEmailJob {
             emailResultRepository.insertEmailSendDetail(detail);
 
             try {
-                String messageId = sendTemplatedEmail(getTemplatedEmailDto(dto, i), correlationId);
+                String messageId = sendTemplatedEmail(getTemplatedEmailDto(dto, i), correlationId, dto.getTenantId());
 
                 emailResultRepository.updateEmailSendDetailAfterSend(
                         detail.getEmailSendDtlSeq(), "Sending", correlationId, messageId);

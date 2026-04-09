@@ -151,7 +151,7 @@ public abstract class AbstractSendTemplatedEmailJob extends QuartzJobBean implem
     /**
      * API Gateway를 통해 이메일 발송
      */
-    protected String sendTemplatedEmail(RequestTemplatedEmailDto dto, String correlationId) {
+    protected String sendTemplatedEmail(RequestTemplatedEmailDto dto, String correlationId, String tenantId) {
         try {
             Gson gson = new Gson();
             // correlationId가 없으면 자동 생성
@@ -160,6 +160,7 @@ public abstract class AbstractSendTemplatedEmailJob extends QuartzJobBean implem
             }
             // correlationId와 correlation_id tag를 payload에 주입
             java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
+            if (tenantId != null) payload.put("tenantId", tenantId);
             payload.put("correlationId", correlationId);
             payload.put("from", dto.getFrom());
             payload.put("to", dto.getTo());
