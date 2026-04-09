@@ -243,7 +243,7 @@ export default function DashboardPage() {
               <ThunderboltFilled style={{ color: 'rgba(255,255,255,0.85)', fontSize: 18 }} />
               <span style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>SES 발송 한도</span>
               {!sesQuota.productionAccess && (
-                <Tag style={{ fontSize: 11, borderRadius: 4, background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff' }}>Sandbox</Tag>
+                <Tag style={{ fontSize: 11, borderRadius: 4, background: '#fff', border: 'none', color: '#f5222d', fontWeight: 700 }}>Sandbox</Tag>
               )}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
@@ -258,14 +258,19 @@ export default function DashboardPage() {
                   <span style={{ fontSize: 12, fontWeight: 400 }}> / {sesQuota.max24HourSend?.toFixed(0) ?? 0}건</span>
                 </div>
               </div>
-              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 28, minWidth: 160 }}>
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 28, minWidth: 280, flex: 1 }}>
                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>사용률</span>
                 <Progress
-                  percent={sesQuota.max24HourSend ? Math.round((sesQuota.sentLast24Hours / sesQuota.max24HourSend) * 100) : 0}
+                  percent={sesQuota.max24HourSend ? Math.min(Math.round((sesQuota.sentLast24Hours / sesQuota.max24HourSend) * 100), 100) : 0}
                   size="small"
                   strokeColor="#fff"
                   trailColor="rgba(255,255,255,0.2)"
-                  format={(p) => <span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>{p}%</span>}
+                  format={() => {
+                    const pct = sesQuota.max24HourSend ? Math.round((sesQuota.sentLast24Hours / sesQuota.max24HourSend) * 100) : 0;
+                    return pct >= 100
+                      ? <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>100% 사용됨</span>
+                      : <span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>{pct}%</span>;
+                  }}
                 />
               </div>
               <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 28 }}>
