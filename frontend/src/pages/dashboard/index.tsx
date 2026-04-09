@@ -224,7 +224,7 @@ export default function DashboardPage() {
         </div>
       </Card>
 
-      {/* ─── SES 발송 한도 ─── */}
+      {/* ─── 이메일 발송 일일 한도 ─── */}
       {sesQuota && (
         <Card
           size="small"
@@ -241,7 +241,7 @@ export default function DashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <ThunderboltFilled style={{ color: 'rgba(255,255,255,0.85)', fontSize: 18 }} />
-              <span style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>SES 발송 한도</span>
+              <span style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>이메일 발송 일일 한도</span>
               {!sesQuota.productionAccess && (
                 <Tag style={{ fontSize: 11, borderRadius: 4, background: '#fff', border: 'none', color: '#f5222d', fontWeight: 700 }}>Sandbox</Tag>
               )}
