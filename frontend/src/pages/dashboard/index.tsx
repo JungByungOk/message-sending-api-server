@@ -224,6 +224,61 @@ export default function DashboardPage() {
         </div>
       </Card>
 
+      {/* ─── SES 발송 한도 ─── */}
+      {sesQuota && (
+        <Card
+          size="small"
+          style={{
+            marginBottom: 20,
+            background: sesQuota.remaining24Hours < 20
+              ? 'linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%)'
+              : 'linear-gradient(135deg, #1677ff 0%, #0958d9 100%)',
+            border: 'none',
+            borderRadius: 14,
+          }}
+          styles={{ body: { padding: '16px 28px' } }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <ThunderboltFilled style={{ color: 'rgba(255,255,255,0.85)', fontSize: 18 }} />
+              <span style={{ color: '#fff', fontWeight: 600, fontSize: 14 }}>SES 발송 한도</span>
+              {!sesQuota.productionAccess && (
+                <Tag style={{ fontSize: 11, borderRadius: 4, background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff' }}>Sandbox</Tag>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+              <div>
+                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>초당 발송</span>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 18 }}>{sesQuota.maxSendRate}<span style={{ fontSize: 12, fontWeight: 400 }}>건/초</span></div>
+              </div>
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 28 }}>
+                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>24시간 사용량</span>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 18 }}>
+                  {sesQuota.sentLast24Hours?.toFixed(0) ?? 0}
+                  <span style={{ fontSize: 12, fontWeight: 400 }}> / {sesQuota.max24HourSend?.toFixed(0) ?? 0}건</span>
+                </div>
+              </div>
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 28, minWidth: 160 }}>
+                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>사용률</span>
+                <Progress
+                  percent={sesQuota.max24HourSend ? Math.round((sesQuota.sentLast24Hours / sesQuota.max24HourSend) * 100) : 0}
+                  size="small"
+                  strokeColor="#fff"
+                  trailColor="rgba(255,255,255,0.2)"
+                  format={(p) => <span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>{p}%</span>}
+                />
+              </div>
+              <div style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', paddingLeft: 28 }}>
+                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12 }}>잔여</span>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 18 }}>
+                  {sesQuota.remaining24Hours?.toFixed(0) ?? 0}<span style={{ fontSize: 12, fontWeight: 400 }}>건</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* ─── KPI 카드 4개 ─── */}
       <Row gutter={[14, 14]} style={{ marginBottom: 20 }}>
         <Col xs={24} sm={12} lg={6}>
@@ -269,55 +324,6 @@ export default function DashboardPage() {
           />
         </Col>
       </Row>
-
-      {/* ─── SES 발송 한도 ─── */}
-      {sesQuota && (
-        <Card
-          size="small"
-          style={{ marginBottom: 20, borderRadius: 10 }}
-          bodyStyle={{ padding: '12px 20px' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ThunderboltFilled style={{ color: sesQuota.remaining24Hours < 20 ? '#f5222d' : '#1677ff', fontSize: 16 }} />
-              <Text strong style={{ fontSize: 13 }}>SES 발송 한도</Text>
-              {!sesQuota.productionAccess && (
-                <Tag color="orange" style={{ fontSize: 11, borderRadius: 4, marginLeft: 4 }}>Sandbox</Tag>
-              )}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-              <div style={{ fontSize: 13 }}>
-                <Text type="secondary">초당 발송: </Text>
-                <Text strong>{sesQuota.maxSendRate}건/초</Text>
-              </div>
-              <div style={{ fontSize: 13 }}>
-                <Text type="secondary">24시간: </Text>
-                <Text strong>{sesQuota.sentLast24Hours?.toFixed(0) ?? 0}</Text>
-                <Text type="secondary"> / {sesQuota.max24HourSend?.toFixed(0) ?? 0}건</Text>
-              </div>
-              <div style={{ width: 150 }}>
-                <Progress
-                  percent={sesQuota.max24HourSend ? Math.round((sesQuota.sentLast24Hours / sesQuota.max24HourSend) * 100) : 0}
-                  size="small"
-                  strokeColor={
-                    sesQuota.max24HourSend && (sesQuota.sentLast24Hours / sesQuota.max24HourSend) > 0.8
-                      ? '#f5222d'
-                      : sesQuota.max24HourSend && (sesQuota.sentLast24Hours / sesQuota.max24HourSend) > 0.5
-                        ? '#faad14'
-                        : '#52c41a'
-                  }
-                />
-              </div>
-              <div style={{ fontSize: 13 }}>
-                <Text type="secondary">잔여: </Text>
-                <Text strong style={{ color: sesQuota.remaining24Hours < 20 ? '#f5222d' : undefined }}>
-                  {sesQuota.remaining24Hours?.toFixed(0) ?? 0}건
-                </Text>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
 
       {/* ─── 하단 2컬럼 ─── */}
       <Row gutter={[14, 14]}>
