@@ -3,6 +3,7 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
@@ -15,6 +16,11 @@ import { Construct } from 'constructs';
 export class EmsCdkStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
+
+    // ============================================================
+    // Tags (비용 추적용)
+    // ============================================================
+    cdk.Tags.of(this).add('Project', 'ems');
 
     // ============================================================
     // Parameters
@@ -78,8 +84,8 @@ export class EmsCdkStack extends cdk.Stack {
 
     const ssmCallbackUrl = new ssm.StringParameter(this, 'EmsCallbackUrl', {
       parameterName: '/ems/callback_url',
-      stringValue: '',
-      description: 'ESM Callback URL',
+      stringValue: 'REPLACE_ME',
+      description: '배포 후 교체 필요: ESM 설정 페이지에서 Callback URL을 입력하세요',
     });
 
     const ssmCallbackSecret = new ssm.StringParameter(this, 'EmsCallbackSecret', {
@@ -127,6 +133,8 @@ export class EmsCdkStack extends cdk.Stack {
       code: lambda.Code.fromAsset('lambda/email-sender'),
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
+      logRetention: logs.RetentionDays.ONE_WEEK,
+      reservedConcurrentExecutions: 5, // SES rate limit 초과 방지 (batchSize 10 x 5 = 최대 50건 동시 처리)
       environment: {
         TENANT_CONFIG_TABLE: tenantConfigTable.tableName,
         IDEMPOTENCY_TABLE: idempotencyTable.tableName,
@@ -160,6 +168,7 @@ export class EmsCdkStack extends cdk.Stack {
       code: lambda.Code.fromAsset('lambda/event-processor'),
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
+      logRetention: logs.RetentionDays.ONE_WEEK,
       deadLetterQueue: eventProcessorDlq,
       environment: {
         SEND_RESULTS_TABLE: sendResultsTable.tableName,
@@ -185,6 +194,7 @@ export class EmsCdkStack extends cdk.Stack {
       code: lambda.Code.fromAsset('lambda/event-query'),
       timeout: cdk.Duration.seconds(15),
       memorySize: 256,
+      logRetention: logs.RetentionDays.ONE_WEEK,
       environment: {
         SEND_RESULTS_TABLE: sendResultsTable.tableName,
       },
@@ -202,20 +212,25 @@ export class EmsCdkStack extends cdk.Stack {
       code: lambda.Code.fromAsset('lambda/tenant-setup'),
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
+      logRetention: logs.RetentionDays.ONE_WEEK,
       environment: {
         TENANT_CONFIG_TABLE: tenantConfigTable.tableName,
+        SEND_RESULTS_TABLE: sendResultsTable.tableName,
+        IDEMPOTENCY_TABLE: idempotencyTable.tableName,
         SES_EVENT_TOPIC_ARN: sesEventTopic.topicArn,
         SES_REGION: this.region,
         TENANT_CONFIG_TTL_SECONDS: String(365 * 10 * 86400), // 10년 (실질적 무제한)
       },
     });
     tenantConfigTable.grantReadWriteData(tenantSetupFn);
+    sendResultsTable.grantReadWriteData(tenantSetupFn);
+    idempotencyTable.grantReadWriteData(tenantSetupFn);
     tenantSetupFn.addToRolePolicy(new iam.PolicyStatement({
       actions: [
         'ses:CreateEmailIdentity', 'ses:DeleteEmailIdentity', 'ses:GetEmailIdentity',
         'ses:CreateConfigurationSet', 'ses:DeleteConfigurationSet', 'ses:GetConfigurationSet',
         'ses:CreateConfigurationSetEventDestination',
-        'ses:CreateEmailTemplate', 'ses:UpdateEmailTemplate', 'ses:DeleteEmailTemplate', 'ses:ListEmailTemplates',
+        'ses:CreateEmailTemplate', 'ses:GetEmailTemplate', 'ses:UpdateEmailTemplate', 'ses:DeleteEmailTemplate', 'ses:ListEmailTemplates',
       ],
       resources: ['*'],
     }));
@@ -321,6 +336,7 @@ export class EmsCdkStack extends cdk.Stack {
       code: lambda.Code.fromAsset('lambda/config-updater'),
       timeout: cdk.Duration.seconds(10),
       memorySize: 128,
+      logRetention: logs.RetentionDays.ONE_WEEK,
       environment: {
         SSM_MODE_PARAM: ssmMode.parameterName,
         SSM_CALLBACK_URL_PARAM: ssmCallbackUrl.parameterName,

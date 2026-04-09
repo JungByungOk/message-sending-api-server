@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.msas.settings.repository.ResetRepository">
+
+    <delete id="truncateEmailEventLog">
+        TRUNCATE TABLE ADM_EMAIL_EVENT_LOG
+    </delete>
+
+    <delete id="truncateEmailAttachFiles">
+        TRUNCATE TABLE ADM_EMAIL_ATTCH_FILE_LST
+    </delete>
+
+    <delete id="truncateEmailSendDetail">
+        TRUNCATE TABLE ADM_EMAIL_SEND_DTL CASCADE
+    </delete>
+
+    <delete id="truncateEmailSendMaster">
+        TRUNCATE TABLE ADM_EMAIL_SEND_MST CASCADE
+    </delete>
+
+    <delete id="truncateEmailSendBatch">
+        TRUNCATE TABLE ADM_EMAIL_SEND_BATCH CASCADE
+    </delete>
+
+    <delete id="truncateTenantSender">
+        TRUNCATE TABLE TENANT_SENDER
+    </delete>
+
+    <delete id="truncateTenantRegistry">
+        TRUNCATE TABLE TENANT_REGISTRY CASCADE
+    </delete>
+
+    <delete id="truncateTemplateTenantMap">
+        TRUNCATE TABLE ADM_TEMPLATE_TENANT_MAP
+    </delete>
+
+    <select id="countEmailSendMaster" resultType="int">
+        SELECT COUNT(*) FROM ADM_EMAIL_SEND_MST
+    </select>
+
+    <select id="countEmailSendDetail" resultType="int">
+        SELECT COUNT(*) FROM ADM_EMAIL_SEND_DTL
+    </select>
+
+    <select id="countEmailEventLog" resultType="int">
+        SELECT COUNT(*) FROM ADM_EMAIL_EVENT_LOG
+    </select>
+
+    <select id="countTenantRegistry" resultType="int">
+        SELECT COUNT(*) FROM TENANT_REGISTRY
+    </select>
+
+</mapper>

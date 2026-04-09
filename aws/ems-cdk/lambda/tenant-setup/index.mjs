@@ -1,13 +1,15 @@
 import { SESv2Client, CreateEmailIdentityCommand, DeleteEmailIdentityCommand, GetEmailIdentityCommand,
   CreateConfigurationSetCommand, DeleteConfigurationSetCommand, GetConfigurationSetCommand,
   CreateConfigurationSetEventDestinationCommand,
-  CreateEmailTemplateCommand, UpdateEmailTemplateCommand, DeleteEmailTemplateCommand, ListEmailTemplatesCommand,
+  CreateEmailTemplateCommand, GetEmailTemplateCommand, UpdateEmailTemplateCommand, DeleteEmailTemplateCommand, ListEmailTemplatesCommand,
 } from '@aws-sdk/client-sesv2';
-import { DynamoDBClient, PutItemCommand, GetItemCommand, DeleteItemCommand } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, PutItemCommand, GetItemCommand, DeleteItemCommand, ScanCommand, BatchWriteItemCommand } from '@aws-sdk/client-dynamodb';
 
 const ses = new SESv2Client({});
 const dynamo = new DynamoDBClient({});
 const TENANT_CONFIG_TABLE = process.env.TENANT_CONFIG_TABLE;
+const SEND_RESULTS_TABLE = process.env.SEND_RESULTS_TABLE;
+const IDEMPOTENCY_TABLE = process.env.IDEMPOTENCY_TABLE;
 const SES_EVENT_TOPIC_ARN = process.env.SES_EVENT_TOPIC_ARN;
 const TENANT_TTL = parseInt(process.env.TENANT_CONFIG_TTL_SECONDS || String(365 * 10 * 86400), 10);
 
@@ -30,10 +32,13 @@ export const handler = async (event) => {
       case 'CREATE_CONFIGSET': return await createConfigSet(body.tenantId);
       case 'GET_CONFIGSET': return await getConfigSet(params.tenantId || body.tenantId);
       case 'DELETE_CONFIGSET': return await deleteConfigSet(params.tenantId || body.tenantId);
+      case 'DELETE_TENANT_CONFIG': return await deleteTenantConfig(params.tenantId || body.tenantId);
       case 'CREATE_TEMPLATE': return await createTemplate(body);
+      case 'GET_TEMPLATE': return await getTemplate(params.templateName || body.templateName);
       case 'UPDATE_TEMPLATE': return await updateTemplate(body);
       case 'DELETE_TEMPLATE': return await deleteTemplate(body);
       case 'LIST_TEMPLATES': return await listTemplates();
+      case 'CLEAR_EVENTS': return await clearEvents();
       default:
         return respond(400, { message: `Unknown action: ${action}` });
     }
@@ -47,19 +52,57 @@ export const handler = async (event) => {
 
 async function createTenant(body) {
   const { tenantId, tenantName, domain } = body;
+  const configSetName = `tenant-${tenantId}`;
 
-  // 1. SES Identity 생성
-  const identityResult = await ses.send(new CreateEmailIdentityCommand({ EmailIdentity: domain }));
-  const verified = identityResult.VerifiedForSendingStatus || false;
-  const dkimTokens = identityResult.DkimAttributes?.Tokens || [];
+  // 1. SES Identity 생성 (이미 존재하면 현재 상태 조회)
+  let verified = false;
+  let dkimTokens = [];
+  try {
+    const identityResult = await ses.send(new CreateEmailIdentityCommand({ EmailIdentity: domain }));
+    verified = identityResult.VerifiedForSendingStatus || false;
+    dkimTokens = identityResult.DkimAttributes?.Tokens || [];
+  } catch (e) {
+    if (e.name === 'AlreadyExistsException') {
+      const existing = await ses.send(new GetEmailIdentityCommand({ EmailIdentity: domain }));
+      verified = existing.VerifiedForSendingStatus || false;
+      dkimTokens = existing.DkimAttributes?.Tokens || [];
+    } else {
+      throw e;
+    }
+  }
 
-  // 2. DynamoDB에 테넌트 설정 저장
+  // 2. Configuration Set 생성 (이메일 이벤트 추적용)
+  try {
+    await ses.send(new CreateConfigurationSetCommand({ ConfigurationSetName: configSetName }));
+  } catch (e) {
+    if (e.name !== 'AlreadyExistsException') throw e;
+  }
+
+  // 3. SNS 이벤트 연결
+  if (SES_EVENT_TOPIC_ARN) {
+    try {
+      await ses.send(new CreateConfigurationSetEventDestinationCommand({
+        ConfigurationSetName: configSetName,
+        EventDestinationName: `${configSetName}-sns`,
+        EventDestination: {
+          MatchingEventTypes: ['SEND', 'DELIVERY', 'BOUNCE', 'COMPLAINT', 'OPEN', 'CLICK', 'REJECT', 'DELIVERY_DELAY', 'RENDERING_FAILURE'],
+          Enabled: true,
+          SnsDestination: { TopicArn: SES_EVENT_TOPIC_ARN },
+        },
+      }));
+    } catch (e) {
+      if (e.name !== 'AlreadyExistsException') throw e;
+    }
+  }
+
+  // 4. DynamoDB에 테넌트 설정 저장 (ConfigSet 포함)
   await dynamo.send(new PutItemCommand({
     TableName: TENANT_CONFIG_TABLE,
     Item: {
       tenant_id: { S: tenantId },
       tenant_name: { S: tenantName || '' },
       domain: { S: domain },
+      config_set_name: { S: configSetName },
       verification_status: { S: verified ? 'SUCCESS' : 'PENDING' },
       ttl: { N: String(Math.floor(Date.now() / 1000) + TENANT_TTL) },
     },
@@ -73,6 +116,7 @@ async function createTenant(body) {
 
   return respond(200, {
     tenantId,
+    configSetName,
     verificationStatus: verified ? 'SUCCESS' : 'PENDING',
     dkimRecords,
   });
@@ -96,7 +140,7 @@ async function activateTenant(body) {
         ConfigurationSetName: configSetName,
         EventDestinationName: `${configSetName}-sns`,
         EventDestination: {
-          MatchingEventTypes: ['SEND', 'DELIVERY', 'BOUNCE', 'COMPLAINT'],
+          MatchingEventTypes: ['SEND', 'DELIVERY', 'BOUNCE', 'COMPLAINT', 'OPEN', 'CLICK', 'REJECT', 'DELIVERY_DELAY', 'RENDERING_FAILURE'],
           Enabled: true,
           SnsDestination: { TopicArn: SES_EVENT_TOPIC_ARN },
         },
@@ -154,7 +198,17 @@ async function deleteIdentity(domain) {
 // === Email Identity (개별 이메일 인증) ===
 
 async function verifyEmail(email) {
-  await ses.send(new CreateEmailIdentityCommand({ EmailIdentity: email }));
+  try {
+    await ses.send(new CreateEmailIdentityCommand({ EmailIdentity: email }));
+  } catch (e) {
+    if (e.name === 'AlreadyExistsException') {
+      // 이미 등록된 이메일이면 현재 상태를 조회하여 반환
+      const result = await ses.send(new GetEmailIdentityCommand({ EmailIdentity: email }));
+      const status = result.VerifiedForSendingStatus ? 'SUCCESS' : 'PENDING';
+      return respond(200, { email, verificationStatus: status });
+    }
+    throw e;
+  }
   return respond(200, { email, verificationStatus: 'PENDING' });
 }
 
@@ -195,11 +249,37 @@ async function getConfigSet(tenantId) {
 
 async function deleteConfigSet(tenantId) {
   const name = `tenant-${tenantId}`;
-  await ses.send(new DeleteConfigurationSetCommand({ ConfigurationSetName: name }));
+  try {
+    await ses.send(new DeleteConfigurationSetCommand({ ConfigurationSetName: name }));
+  } catch (e) {
+    if (e.name !== 'NotFoundException') throw e;
+  }
   return respond(200, { message: 'Deleted', configSetName: name });
 }
 
+async function deleteTenantConfig(tenantId) {
+  try {
+    await dynamo.send(new DeleteItemCommand({
+      TableName: TENANT_CONFIG_TABLE,
+      Key: { tenant_id: { S: tenantId } },
+    }));
+  } catch (e) {
+    console.warn(`deleteTenantConfig: ${e.message}`);
+  }
+  return respond(200, { message: 'Deleted', tenantId });
+}
+
 // === Template ===
+
+async function getTemplate(templateName) {
+  const result = await ses.send(new GetEmailTemplateCommand({ TemplateName: templateName }));
+  return respond(200, {
+    templateName: result.TemplateName,
+    subjectPart: result.TemplateContent?.Subject || '',
+    htmlPart: result.TemplateContent?.Html || '',
+    textPart: result.TemplateContent?.Text || '',
+  });
+}
 
 async function createTemplate(body) {
   await ses.send(new CreateEmailTemplateCommand({
@@ -240,6 +320,43 @@ async function listTemplates() {
 }
 
 // === Util ===
+
+// === Clear Events (발송 결과 초기화) ===
+
+async function clearEvents() {
+  let totalDeleted = 0;
+
+  for (const tableName of [SEND_RESULTS_TABLE, IDEMPOTENCY_TABLE]) {
+    if (!tableName) continue;
+    let lastKey = undefined;
+    do {
+      const scanParams = { TableName: tableName, Limit: 500 };
+      if (lastKey) scanParams.ExclusiveStartKey = lastKey;
+      const result = await dynamo.send(new ScanCommand(scanParams));
+      const items = result.Items || [];
+      lastKey = result.LastEvaluatedKey;
+
+      if (items.length === 0) break;
+
+      // DynamoDB BatchWriteItem은 25개씩
+      for (let i = 0; i < items.length; i += 25) {
+        const batch = items.slice(i, i + 25);
+        const keyName = tableName === IDEMPOTENCY_TABLE ? 'message_id' : 'message_id';
+        await dynamo.send(new BatchWriteItemCommand({
+          RequestItems: {
+            [tableName]: batch.map(item => ({
+              DeleteRequest: { Key: { message_id: item.message_id } },
+            })),
+          },
+        }));
+        totalDeleted += batch.length;
+      }
+    } while (lastKey);
+  }
+
+  console.log(`CLEAR_EVENTS completed. Total deleted: ${totalDeleted}`);
+  return respond(200, { message: 'Events cleared', totalDeleted });
+}
 
 function respond(statusCode, body) {
   return {
