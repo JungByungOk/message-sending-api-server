@@ -8,6 +8,9 @@ import com.msas.scheduler.dto.ResponseAllJobStatusDTO;
 import com.msas.scheduler.dto.ResponseScheduleDTO;
 import com.msas.scheduler.job.SendTemplatedEmailJob;
 import com.msas.scheduler.service.ScheduleService;
+import com.msas.common.tenant.TenantContext;
+import com.msas.tenant.entity.TenantEntity;
+import com.msas.tenant.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.JobKey;
@@ -16,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -27,16 +31,21 @@ import java.util.List;
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
+    private final TenantRepository tenantRepository;
 
     @Operation(summary = "예약 작업 생성", description = "템플릿 이메일 예약 발송 작업을 등록합니다.")
     @PostMapping("/job")
-    public ResponseEntity<?> addScheduleJob(@Valid @RequestBody RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO) throws SchedulerException {
+    public ResponseEntity<?> addScheduleJob(@Valid @RequestBody RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO,
+                                               HttpServletRequest request) throws SchedulerException {
 
         // 이미 등록된 작업인지 확인
         if (scheduleService.isJobExists(new JobKey(requestTemplatedEmailScheduleJobDTO.getJobName(), requestTemplatedEmailScheduleJobDTO.getJobGroup()))) {
             return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job already exits"),
                     HttpStatus.BAD_REQUEST);
         }
+
+        // tenantId 설정: TenantContext 우선, 없으면 Authorization 헤더에서 조회
+        requestTemplatedEmailScheduleJobDTO.setTenantId(resolveTenantId(request));
 
         // 스케쥴 등록
         scheduleService.addJob(requestTemplatedEmailScheduleJobDTO, SendTemplatedEmailJob.class);
@@ -129,5 +138,18 @@ public class ScheduleController {
 
         scheduleService.stopJob(jobKey);
         return new ResponseEntity<>(new ResponseScheduleDTO(true, "Job stop successfully"), HttpStatus.OK);
+    }
+
+    private String resolveTenantId(HttpServletRequest request) {
+        String tenantId = TenantContext.getTenantId();
+        if (tenantId != null) return tenantId;
+
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null) {
+            String apiKey = authHeader.startsWith("Bearer ") ? authHeader.substring(7).trim() : authHeader.trim();
+            TenantEntity tenant = tenantRepository.selectTenantByApiKey(apiKey);
+            if (tenant != null) return tenant.getTenantId();
+        }
+        return null;
     }
 }

@@ -23,7 +23,8 @@ export const useJobs = () => {
 export const useCreateJob = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: ScheduleJobRequest) => createJob(payload),
+    mutationFn: ({ payload, tenantApiKey }: { payload: ScheduleJobRequest; tenantApiKey?: string }) =>
+      createJob(payload, tenantApiKey),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['jobs'] });
     },

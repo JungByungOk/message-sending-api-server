@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.msas.ses.repository.TemplateTenantRepository">
+
+    <insert id="insertMapping">
+        INSERT INTO ADM_TEMPLATE_TENANT_MAP (TEMPLATE_NAME, TENANT_ID, SUBJECT)
+        VALUES (#{templateName}, #{tenantId}, #{subject})
+        ON CONFLICT (TEMPLATE_NAME, TENANT_ID) DO UPDATE SET SUBJECT = EXCLUDED.SUBJECT
+    </insert>
+
+    <delete id="deleteMapping">
+        DELETE FROM ADM_TEMPLATE_TENANT_MAP
+        WHERE TEMPLATE_NAME = #{templateName} AND TENANT_ID = #{tenantId}
+    </delete>
+
+    <delete id="deleteMappingsByTemplate">
+        DELETE FROM ADM_TEMPLATE_TENANT_MAP
+        WHERE TEMPLATE_NAME = #{templateName}
+    </delete>
+
+    <select id="selectTenantsByTemplate" resultType="string">
+        SELECT TENANT_ID
+        FROM ADM_TEMPLATE_TENANT_MAP
+        WHERE TEMPLATE_NAME = #{templateName}
+        ORDER BY CREATED_AT
+    </select>
+
+    <select id="selectTemplatesByTenant" resultType="string">
+        SELECT TEMPLATE_NAME
+        FROM ADM_TEMPLATE_TENANT_MAP
+        WHERE TENANT_ID = #{tenantId}
+        ORDER BY CREATED_AT
+    </select>
+
+    <select id="selectAllMappings" resultType="map">
+        SELECT TEMPLATE_NAME AS templatename, TENANT_ID AS tenantid, SUBJECT AS subject
+        FROM ADM_TEMPLATE_TENANT_MAP
+        ORDER BY TEMPLATE_NAME, TENANT_ID
+    </select>
+
+    <select id="selectSubjectByTemplate" resultType="string">
+        SELECT SUBJECT
+        FROM ADM_TEMPLATE_TENANT_MAP
+        WHERE TEMPLATE_NAME = #{templateName}
+        LIMIT 1
+    </select>
+
+    <update id="updateSubjectByTemplate">
+        UPDATE ADM_TEMPLATE_TENANT_MAP
+        SET SUBJECT = #{subject}
+        WHERE TEMPLATE_NAME = #{templateName}
+    </update>
+
+</mapper>

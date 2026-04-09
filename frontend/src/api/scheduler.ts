@@ -7,8 +7,12 @@ import type {
 import apiClient from './client';
 
 // 스케줄 작업 생성
-export const createJob = async (payload: ScheduleJobRequest): Promise<ScheduleResponse> => {
-  const { data } = await apiClient.post<ScheduleResponse>('/scheduler/job', payload);
+export const createJob = async (
+  payload: ScheduleJobRequest,
+  tenantApiKey?: string,
+): Promise<ScheduleResponse> => {
+  const headers = tenantApiKey ? { Authorization: `Bearer ${tenantApiKey}` } : undefined;
+  const { data } = await apiClient.post<ScheduleResponse>('/scheduler/job', payload, { headers });
   return data;
 };
 

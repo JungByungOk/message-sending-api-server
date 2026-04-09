@@ -83,6 +83,8 @@ public class RequestTemplatedEmailScheduleJobDTO {
 
     private String description;
 
+    private String tenantId; // Controller에서 TenantContext로부터 설정
+
     @Future(message = "Invalid scheduling datetime. The past time cannot be set.")
     @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime startDateAt;
@@ -95,8 +97,10 @@ public class RequestTemplatedEmailScheduleJobDTO {
     public static class TemplatedEmailDto {
 
         // 이메일 건당 식별
-        // id = aws ses messageId 맵핑하여 기록 추적용
         String id;
+
+        // Backend 생성 추적 ID (SES tag로 전달, 결과 매칭용)
+        String correlationId;
 
         @NotNull
         @NotEmpty(message = "Email (to) receivers cannot be Null")

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.msas.scheduler.repository.BatchRepository">
+
+    <insert id="insertBatch">
+        INSERT INTO ADM_EMAIL_SEND_BATCH (BATCH_ID, TEMPLATE_NAME, FROM_ADDR, TAGS, JOB_NAME, JOB_GROUP, DESCRIPTION, START_DATE_AT, TOTAL_COUNT, TENANT_ID)
+        VALUES (#{batch_id}, #{template_name}, #{from_addr}, #{tags}, #{job_name}, #{job_group}, #{description}, #{start_date_at}, #{total_count}, #{tenant_id})
+    </insert>
+
+    <insert id="insertBatchItem">
+        INSERT INTO ADM_EMAIL_SEND_BATCH_ITEM (BATCH_ID, ITEM_INDEX, CORRELATION_ID, EMAIL_SEND_DTL_SEQ, TO_ADDRS, CC_ADDRS, BCC_ADDRS, TEMPLATE_PARAMETERS)
+        VALUES (#{batch_id}, #{item_index}, #{correlation_id}, #{email_send_dtl_seq}, #{to_addrs}, #{cc_addrs}, #{bcc_addrs}, #{template_parameters})
+    </insert>
+
+    <insert id="insertBatchItems">
+        INSERT INTO ADM_EMAIL_SEND_BATCH_ITEM (BATCH_ID, ITEM_INDEX, CORRELATION_ID, EMAIL_SEND_DTL_SEQ, TO_ADDRS, CC_ADDRS, BCC_ADDRS, TEMPLATE_PARAMETERS)
+        VALUES
+        <foreach collection="items" item="item" separator=",">
+            (#{item.batch_id}, #{item.item_index}, #{item.correlation_id}, #{item.email_send_dtl_seq}, #{item.to_addrs}, #{item.cc_addrs}, #{item.bcc_addrs}, #{item.template_parameters})
+        </foreach>
+    </insert>
+
+    <select id="selectBatch" resultType="map">
+        SELECT BATCH_ID AS batch_id, TEMPLATE_NAME AS template_name, FROM_ADDR AS from_addr,
+               TAGS AS tags, JOB_NAME AS job_name, JOB_GROUP AS job_group,
+               DESCRIPTION AS description, START_DATE_AT AS start_date_at,
+               STATUS AS status, TOTAL_COUNT AS total_count,
+               TENANT_ID AS tenant_id
+        FROM ADM_EMAIL_SEND_BATCH
+        WHERE BATCH_ID = #{batch_id}
+    </select>
+
+    <select id="selectBatchItems" resultType="map">
+        SELECT ITEM_ID AS item_id, BATCH_ID AS batch_id, ITEM_INDEX AS item_index,
+               CORRELATION_ID AS correlation_id, EMAIL_SEND_DTL_SEQ AS email_send_dtl_seq,
+               TO_ADDRS AS to_addrs, CC_ADDRS AS cc_addrs, BCC_ADDRS AS bcc_addrs,
+               TEMPLATE_PARAMETERS AS template_parameters
+        FROM ADM_EMAIL_SEND_BATCH_ITEM
+        WHERE BATCH_ID = #{batch_id}
+        ORDER BY ITEM_INDEX
+    </select>
+
+    <update id="updateBatchStatus">
+        UPDATE ADM_EMAIL_SEND_BATCH
+        SET STATUS = #{status}
+        WHERE BATCH_ID = #{batch_id}
+    </update>
+
+    <delete id="deleteBatch">
+        DELETE FROM ADM_EMAIL_SEND_BATCH
+        WHERE BATCH_ID = #{batch_id}
+    </delete>
+
+</mapper>
