@@ -26,6 +26,9 @@
 │  │Onboarding│ │Suppression│ │ Scheduler │ │ SES Identity  │  │
 │  │ Module   │ │ Module   │ │ Module    │ │ / ConfigSet    │  │
 │  └──────────┘ └──────────┘ └───────────┘ └────────────────┘  │
+│  ┌────────────────────────────────────────────────────────┐   │
+│  │ ResultPollingService (DynamoDB 폴링 → 로컬 DB 보정)    │   │
+│  └────────────────────────────────────────────────────────┘   │
 │                                                                │
 │  [Spring Security]                                             │
 │   - ApiKeyAuthenticationFilter (Tenant API Key / 레거시 Key)  │
@@ -50,11 +53,12 @@
      │   Lambda    │  │ Lambda          │      │ems-send-     │
      │email-sender │  │ event-processor │      │results       │
      └──────┬──────┘  └────────┬────────┘      └──────────────┘
-            │          callback │                      ▲
+            │    correlationId  │                      ▲
+            │    in EmailTag    │callback              │
      ┌──────▼──────┐    ┌──────▼──────────┐           │
      │  Amazon SES │    │ESM /ses/callback│           │
-     │             │    │/event           │───────────┘
-     └──────┬──────┘    └─────────────────┘  (보정 폴링 5~10분)
+     │             │    │/event           │─────────── ┘
+     └──────┬──────┘    └─────────────────┘  (ResultPollingService 5분 주기)
             │ SNS
             └──────────────────────────────▶ Lambda event-processor
 ```
@@ -63,15 +67,16 @@
 
 | Module | Description | 외부 연동 |
 |--------|-------------|-----------|
-| SES Module | 이메일/템플릿 발송 요청 | AWS API Gateway → SQS → Lambda → SES |
+| SES Module | 이메일/템플릿 발송 요청, correlationId 생성 및 EmailTag 주입 | AWS API Gateway → SQS → Lambda → SES |
 | Tenant Module | 멀티테넌트 고객사 관리, API Key 발급, 할당량, 발신자 이메일 관리 | PostgreSQL |
-| Scheduler Module | Quartz 기반 예약 발송 관리 | PostgreSQL |
-| Callback Module | SES 이벤트 콜백 수신 및 PostgreSQL 상태 업데이트 | - |
+| Scheduler Module | Quartz 기반 예약 발송 관리, correlationId 생성 및 EmailTag 주입, tenantId Lambda 페이로드 포함, SesRateLimiterConfig 공유 Bean 적용, 배치 이메일 목록을 ADM_EMAIL_SEND_BATCH 테이블로 분리 관리 | PostgreSQL |
+| Callback Module | SES 이벤트 콜백 수신, correlationId로 로컬 DB 매칭, 이벤트 이력 기록 | - |
+| ResultPollingService | DynamoDB 발송결과 주기 폴링(5분), correlationId 매칭, 이벤트 이력 기록 | AWS API Gateway → Lambda → DynamoDB |
 | Onboarding Module | 테넌트 온보딩 (생성→도메인/이메일 인증→활성화) | AWS API Gateway |
 | Suppression Module | 수신 거부(Bounce/Complaint) 목록 관리 | PostgreSQL |
 | SES Identity Module | SES 도메인 아이덴티티 등록 및 DKIM 관리 | AWS API Gateway |
 | SES ConfigSet Module | 테넌트별 SES 구성 세트 관리 | AWS API Gateway |
-| Settings Module | API Gateway 연결 설정, Callback URL/Secret, 수신 모드 관리 | PostgreSQL, SSM (API Gateway 경유) |
+| Settings Module | API Gateway 연결 설정, Callback URL/Secret, 수신 모드 관리, 빈 값 SSM 전송 방지 | PostgreSQL, SSM (API Gateway 경유) |
 
 ### 기술 스택
 
@@ -107,16 +112,45 @@
 ```
 [실시간 - Callback 모드]
 1. [SES] → SNS ems-ses-events → Lambda ems-event-processor
-2. [Lambda] → DynamoDB ems-send-results 저장 (항상 실행)
+   (9가지 이벤트: SEND/DELIVERY/BOUNCE/COMPLAINT/OPEN/CLICK/REJECT/DELIVERY_DELAY/RENDERING_FAILURE)
+2. [Lambda] → SES EmailTag에서 correlationId 추출 → DynamoDB ems-send-results 저장 (항상 실행)
 3. [Lambda] → SSM 캐시(30초)에서 모드 확인 → callback 모드이면 ESM 호출
 4. [ESM] POST /ses/callback/event → X-Callback-Secret 헤더 검증
-5. [ESM] → PostgreSQL ADM_EMAIL_SEND_DTL 상태 업데이트
+5. [ESM SESCallbackService] → correlationId로 ADM_EMAIL_SEND_DTL 매칭 → 상태 업데이트
+   - DELIVERY        → Delivered
+   - BOUNCE          → Bounced + 수신거부 목록 자동 등록
+   - COMPLAINT       → Complained + 수신거부 목록 자동 등록
+   - OPEN / CLICK    → Delivered 유지 (Engagement 이벤트, send_rslt_typ_cd만 업데이트)
+   - REJECT          → Rejected
+   - DELIVERY_DELAY  → Delayed
+   - RENDERING_FAILURE → Error
+6. [ESM] → ADM_EMAIL_EVENT_LOG 이벤트 이력 기록 (모든 이벤트)
 
-[보정 폴링 - 항상 동작]
-1. [ESM PollingChecker] → API Gateway GET /results?tenant_id=X&after=T (5~10분 주기)
+[보정 폴링 - 항상 동작, ResultPollingService]
+1. [ESM ResultPollingService] → API Gateway GET /results?tenant_id=X&after=T (5분 주기)
 2. [Lambda ems-event-query] → DynamoDB ems-send-results GSI Query
-3. [ESM] → 멱등성 처리 후 PostgreSQL 상태 업데이트
+3. [ESM] → correlationId로 Terminal 상태 보호 조건부 UPDATE (멱등)
+4. [ESM] → ADM_EMAIL_EVENT_LOG 이벤트 이력 기록
 ```
+
+#### Correlation ID 기반 이메일 추적
+
+```
+[발송 시점 - 3경로 모두 동일]
+Backend (EmailController / SendTemplatedEmailJob / SendTemplatedEmailWithPollingJob)
+  → UUID 생성 → correlation_id 로컬 DB 저장
+  → SES EmailTag: { name: "correlation_id", value: "<uuid>" } 주입
+  → API Gateway → Lambda email-sender → SES 발송
+
+[결과 수신 시점]
+SES EmailTag → event-processor 추출 → correlationId DynamoDB/콜백에 포함
+  → SESCallbackService 또는 ResultPollingService
+  → WHERE correlation_id = ? 로 ADM_EMAIL_SEND_DTL 1-hop 매칭
+  → ses_message_id 별도 컬럼에 저장
+```
+
+- **배경**: SQS Message ID ≠ SES Message ID 불일치로 기존 매칭 불가
+- **해결**: Backend가 UUID를 생성하여 SES EmailTag로 전달하는 1-hop 추적 체계
 
 #### 설정 동기화 흐름
 
@@ -168,7 +202,7 @@
 | Lambda | ems-email-sender | SQS 트리거 → SES 발송 |
 | Lambda | ems-event-processor | SNS 트리거 → DynamoDB 저장 + ESM 콜백 |
 | Lambda | ems-event-query | DynamoDB 발송결과 조회 (보정 폴링) |
-| Lambda | ems-tenant-setup | Identity/ConfigSet/템플릿 CRUD |
+| Lambda | ems-tenant-setup | Identity/ConfigSet/템플릿 CRUD, `GET_ACCOUNT` 액션(SES 계정 정보 조회), `CLEAR_EVENTS` 액션(DynamoDB ems-send-results + ems-idempotency 초기화) |
 | Lambda | ems-config-updater | SSM Parameter Store 설정 업데이트 |
 | SQS | ems-send-queue (+DLQ) | 비동기 발송 큐 |
 | SNS | ems-ses-events | SES 이벤트 수신 토픽 |
@@ -178,3 +212,24 @@
 | SSM Parameter | /ems/mode | 수신 모드 (callback/polling) |
 | SSM Parameter | /ems/callback_url | ESM 콜백 URL |
 | SSM Parameter | /ems/callback_secret | 콜백 무결성 검증 시크릿 |
+
+### 모니터링 API
+
+| Endpoint | 설명 |
+|----------|------|
+| `GET /monitoring/ses-quota` | SES 일간 발송 한도 조회 — Lambda `tenant-setup GET_ACCOUNT` 액션으로 MaxSendRate, Max24HourSend, SentLast24Hours 반환. Frontend 대시보드 "이메일 발송 일간 한도" 카드에 사용률 Progress bar + 잔여 건수 표시 |
+
+### PostgreSQL 주요 테이블
+
+| 테이블 | 설명 |
+|--------|------|
+| `ADM_EMAIL_SEND_MST` | 이메일 발송 마스터 (1건 발송 요청 단위) |
+| `ADM_EMAIL_SEND_DTL` | 이메일 발송 상세 (수신자 1명 단위, correlation_id + ses_message_id 컬럼 포함) |
+| `ADM_EMAIL_SEND_BATCH` | 예약 발송 배치 메타 (batchId, tenantId, 발송 건수 등) — JobDataMap 크기 제한 해소 |
+| `ADM_EMAIL_SEND_BATCH_ITEM` | 예약 발송 배치 수신자 목록 (ADM_EMAIL_SEND_BATCH 1:N) |
+| `ADM_EMAIL_EVENT_LOG` | SES 이벤트 이력 (Delivery, Bounce, Open, Click 등 모든 이벤트 기록) |
+| `ADM_EMAIL_BL_MST` | 수신 거부/블랙리스트 목록 |
+| `TENANT` | 테넌트 정보 및 API Key |
+| `TENANT_SENDER` | 테넌트별 허용 발신자 이메일 목록 |
+| `ADM_TEMPLATE_TENANT_MAP` | 테넌트별 템플릿 매핑 (SUBJECT 컬럼 포함 — 예약 발송 결과에 실제 제목 표시) |
+| `SYSTEM_CONFIG` | API Gateway 설정, Callback URL/Secret, 수신 모드 등 |

@@ -218,6 +218,12 @@ message-sending-api-server/
 | `DELETE` | `/scheduler/job` | 작업 삭제 |
 | `DELETE` | `/scheduler/job/all` | 전체 작업 삭제 |
 
+### Monitoring - 모니터링
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/monitoring/ses-quota` | SES 일간 발송 한도 조회 (MaxSendRate, Max24HourSend, SentLast24Hours) |
+
 ## Key Features
 
 ### 멀티테넌트 API Key 인증
@@ -237,6 +243,25 @@ message-sending-api-server/
 ### 발송결과 수신 2-path
 - **실시간 Callback**: SES → SNS → Lambda → ESM `/ses/callback/event` 호출 (X-Callback-Secret 검증)
 - **보정 폴링**: ESM → API Gateway `GET /results` → DynamoDB 조회 (5~10분 주기, 멱등 처리)
+
+### 이메일 발송 상태 관리
+- `Queued` → `Sending` → `Delivered` / `Bounced` / `Complained` / `Rejected` / `Error` / `Blocked` 상태 전이
+- **`Timeout` 상태**: 1시간 이상 `Sending` 유지 시 `SendingTimeoutChecker`(10분 주기)가 자동 전환
+- 즉시 발송 다중 수신자: 수신자별 개별 발송 루프 — correlationId + 발송 결과 레코드 개별 생성
+
+### SES Rate Limiter 공유 Bean
+- `SesRateLimiterConfig.java` 공유 Bean: `application.yml`의 `ses.max-send-rate` 설정값 사용
+- Sandbox 기본 1 TPS, Production 전환 시 yml 값만 수정하면 전체 발송 경로 일괄 적용
+- 예약 발송(`SendTemplatedEmailJob`, `SendTemplatedEmailWithPollingJob`) + 즉시 발송(`EmailController`) 공통 적용
+
+### 예약 발송 배치 테이블 분리 (`ADM_EMAIL_SEND_BATCH`)
+- Quartz JobDataMap의 전체 이메일 목록 JSON 직렬화 → `ADM_EMAIL_SEND_BATCH` / `ADM_EMAIL_SEND_BATCH_ITEM` 테이블로 분리
+- JobDataMap에는 `batchId`만 전달, `deserializeJobData()`에서 DB 조회로 복원
+- 대용량 발송(10,000건+)에서도 JobDataMap 크기 제한 없음
+
+### SES 일간 쿼터 모니터링
+- `GET /monitoring/ses-quota` API: Lambda `tenant-setup GET_ACCOUNT` 액션으로 SES 계정 정보 조회
+- Frontend 대시보드 "이메일 발송 일간 한도" 카드 — 사용률 Progress bar + 잔여 건수 표시
 
 ### 설정 UI → SSM 동기화
 - `PUT /settings/aws` 저장 시 ESM DB + API Gateway `PUT /config` 경유로 SSM Parameter Store 자동 동기화
