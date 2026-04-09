@@ -2,6 +2,7 @@ import { SESv2Client, CreateEmailIdentityCommand, DeleteEmailIdentityCommand, Ge
   CreateConfigurationSetCommand, DeleteConfigurationSetCommand, GetConfigurationSetCommand,
   CreateConfigurationSetEventDestinationCommand,
   CreateEmailTemplateCommand, GetEmailTemplateCommand, UpdateEmailTemplateCommand, DeleteEmailTemplateCommand, ListEmailTemplatesCommand,
+  GetAccountCommand,
 } from '@aws-sdk/client-sesv2';
 import { DynamoDBClient, PutItemCommand, GetItemCommand, DeleteItemCommand, ScanCommand, BatchWriteItemCommand } from '@aws-sdk/client-dynamodb';
 
@@ -39,6 +40,7 @@ export const handler = async (event) => {
       case 'DELETE_TEMPLATE': return await deleteTemplate(body);
       case 'LIST_TEMPLATES': return await listTemplates();
       case 'CLEAR_EVENTS': return await clearEvents();
+      case 'GET_ACCOUNT': return await getAccount();
       default:
         return respond(400, { message: `Unknown action: ${action}` });
     }
@@ -320,6 +322,20 @@ async function listTemplates() {
 }
 
 // === Util ===
+
+// === Account ===
+
+async function getAccount() {
+  const result = await ses.send(new GetAccountCommand({}));
+  const quota = result.SendQuota || {};
+  return respond(200, {
+    maxSendRate: quota.MaxSendRate,
+    max24HourSend: quota.Max24HourSend,
+    sentLast24Hours: quota.SentLast24Hours,
+    remaining24Hours: (quota.Max24HourSend || 0) - (quota.SentLast24Hours || 0),
+    productionAccess: result.ProductionAccessEnabled || false,
+  });
+}
 
 // === Clear Events (발송 결과 초기화) ===
 

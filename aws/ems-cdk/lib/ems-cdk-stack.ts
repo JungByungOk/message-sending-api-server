@@ -231,6 +231,7 @@ export class EmsCdkStack extends cdk.Stack {
         'ses:CreateConfigurationSet', 'ses:DeleteConfigurationSet', 'ses:GetConfigurationSet',
         'ses:CreateConfigurationSetEventDestination',
         'ses:CreateEmailTemplate', 'ses:GetEmailTemplate', 'ses:UpdateEmailTemplate', 'ses:DeleteEmailTemplate', 'ses:ListEmailTemplates',
+        'ses:GetAccount',
       ],
       resources: ['*'],
     }));
