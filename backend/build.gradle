@@ -8,6 +8,8 @@ group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '17'
 
+ext['quartz.version'] = '2.5.0'
+
 configurations {
     compileOnly {
         extendsFrom annotationProcessor
@@ -69,6 +71,6 @@ tasks.named('test') {
 bootJar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    archivesBaseName = 'nte'
-    archiveFileName = 'nte.jar'
+    archivesBaseName = 'ems'
+    archiveFileName = 'ems.jar'
 }

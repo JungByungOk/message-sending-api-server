@@ -1,4 +1,4 @@
-package com.msas.onboarding;
+package com.msas.tenantsetup;
 
 import com.msas.ses.identity.DkimRecordsDTO;
 import com.msas.tenant.dto.ResponseTenantDTO;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OnboardingResultDTO {
+public class TenantSetupResultDTO {
     private ResponseTenantDTO tenant;
     private DkimRecordsDTO dkimRecords;
 }

@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * HTTP Request 와 Response 로깅 인터셉터
@@ -29,18 +30,24 @@ public class HttpLogInterceptor implements HandlerInterceptor {
 
     private final ObjectMapper objectMapper;
 
+    /** 로그에서 제외할 헤더 (소문자 기준) */
+    private static final Set<String> EXCLUDED_HEADERS = Set.of(
+            "user-agent", "accept-encoding", "accept-language",
+            "cache-control", "connection", "sec-fetch-dest",
+            "sec-fetch-mode", "sec-fetch-site", "sec-ch-ua",
+            "sec-ch-ua-mobile", "sec-ch-ua-platform", "upgrade-insecure-requests"
+    );
+
+    /** 마스킹 대상 헤더 (소문자 기준) */
+    private static final Set<String> SENSITIVE_HEADERS = Set.of(
+            "authorization", "x-api-key", "x-callback-secret"
+    );
+
+    /** 요청/응답 본문 최대 로깅 길이 */
+    private static final int MAX_BODY_LENGTH = 2000;
+
     @Override
     public boolean preHandle(@NotNull HttpServletRequest request, @NotNull HttpServletResponse response, @NotNull Object handler) throws Exception {
-        final ContentCachingRequestWrapper cachingRequest;
-        ContentCachingRequestWrapper cachingRequest1;
-
-        try {
-            cachingRequest1 = (ContentCachingRequestWrapper) request;
-        } catch (ClassCastException e) {
-            cachingRequest1 = null;
-        }
-
-        cachingRequest = cachingRequest1;
         return true;
     }
 
@@ -78,12 +85,13 @@ public class HttpLogInterceptor implements HandlerInterceptor {
             httpLogDTO.setQueryParameters(getQueryParameter(request));
 
             if (cachingRequest != null)
-                httpLogDTO.setRequest_body(contentBody(cachingRequest.getContentAsByteArray()));
+                httpLogDTO.setRequest_body(truncateBody(contentBody(cachingRequest.getContentAsByteArray())));
 
             if (cachingResponse != null)
-                httpLogDTO.setResponse_body(contentBody(cachingResponse.getContentAsByteArray()));
+                httpLogDTO.setResponse_body(truncateBody(contentBody(cachingResponse.getContentAsByteArray())));
         }
-        log.info("{} {}\n{}\n", httpLogDTO.getMethod(), httpLogDTO.getUri(), new GsonBuilder().setPrettyPrinting().create().toJson(httpLogDTO).toString());
+        log.info("[HttpLog] {} {} (status={})\n{}", httpLogDTO.getMethod(), httpLogDTO.getUri(),
+                response.getStatus(), new GsonBuilder().setPrettyPrinting().create().toJson(httpLogDTO));
     }
 
     private Map<String, String> getHeaders(HttpServletRequest request) {
@@ -92,7 +100,17 @@ public class HttpLogInterceptor implements HandlerInterceptor {
         Enumeration<String> headerArray = request.getHeaderNames();
         while (headerArray.hasMoreElements()) {
             String headerName = headerArray.nextElement();
-            headerMap.put(headerName, request.getHeader(headerName));
+            String lowerName = headerName.toLowerCase();
+
+            if (EXCLUDED_HEADERS.contains(lowerName)) {
+                continue;
+            }
+
+            if (SENSITIVE_HEADERS.contains(lowerName)) {
+                headerMap.put(headerName, maskValue(request.getHeader(headerName)));
+            } else {
+                headerMap.put(headerName, request.getHeader(headerName));
+            }
         }
         return headerMap;
     }
@@ -106,10 +124,22 @@ public class HttpLogInterceptor implements HandlerInterceptor {
 
     private String contentBody(final byte[] contents) {
         StringBuilder sb = new StringBuilder("\n");
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(contents)));
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(contents), java.nio.charset.StandardCharsets.UTF_8));
         bufferedReader.lines().forEach(str -> sb.append(str).append("\n"));
         sb.deleteCharAt(sb.length() - 1);
         return sb.toString();
+    }
+
+    private String truncateBody(String body) {
+        if (body == null) return null;
+        if (body.length() <= MAX_BODY_LENGTH) return body;
+        return body.substring(0, MAX_BODY_LENGTH) + "... (truncated, total=" + body.length() + ")";
+    }
+
+    private String maskValue(String value) {
+        if (value == null || value.isEmpty()) return "";
+        if (value.length() <= 8) return "****";
+        return value.substring(0, 4) + "****" + value.substring(value.length() - 4);
     }
 
 }

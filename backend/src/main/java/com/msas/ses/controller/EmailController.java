@@ -1,5 +1,6 @@
 package com.msas.ses.controller;
 
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
 import com.msas.common.tenant.TenantContext;
 import com.msas.ses.dto.*;
@@ -12,7 +13,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +34,7 @@ public class EmailController {
     private final EmailResultRepository emailResultRepository;
     private final TenantRepository tenantRepository;
     private final com.msas.ses.repository.TemplateTenantRepository templateTenantRepository;
+    private final RateLimiter sesRateLimiter;
     private final Gson gson = new Gson();
 
     /**
@@ -156,6 +157,7 @@ public class EmailController {
         int failCount = 0;
 
         for (String recipient : requestTemplatedEmailDto.getTo()) {
+            sesRateLimiter.acquire();
             String correlationId = java.util.UUID.randomUUID().toString();
 
             EmailSendDetailInsertDTO detail = new EmailSendDetailInsertDTO();

@@ -10,6 +10,7 @@ import {
   StopFilled,
 } from '@ant-design/icons';
 import type { CSSProperties } from 'react';
+import type { EmailResultStatus } from '@/types/emailResults';
 
 // ─── Adobe Spectrum 스타일 색상 팔레트 ─────────────────────────────────────────
 const palette = {
@@ -27,9 +28,8 @@ type TenantStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
 type VerificationStatus = 'VERIFIED' | 'PENDING' | 'FAILED';
 type JobStatus = 'RUNNING' | 'SCHEDULED' | 'PAUSED' | 'COMPLETE';
 type SuppressionReason = 'BOUNCE' | 'COMPLAINT';
-
 interface StatusTagProps {
-  type: 'tenant' | 'verification' | 'job' | 'suppression';
+  type: 'tenant' | 'verification' | 'job' | 'suppression' | 'emailResult';
   status: string;
   style?: CSSProperties;
 }
@@ -64,6 +64,19 @@ const suppressionConfig: Record<SuppressionReason, TagConfig> = {
   COMPLAINT: { palette: 'warning',  label: '스팸 신고', icon: <CloseCircleFilled /> },
 };
 
+const emailResultConfig: Record<EmailResultStatus, TagConfig> = {
+  Queued:     { palette: 'neutral',  label: '대기',      icon: <ClockCircleFilled /> },
+  Sending:    { palette: 'info',     label: '발송중',    icon: <PlayCircleFilled /> },
+  Delayed:    { palette: 'warning',  label: '지연',      icon: <PauseCircleFilled /> },
+  Delivered:  { palette: 'positive', label: '전달완료',  icon: <CheckCircleFilled /> },
+  Bounced:    { palette: 'warning',  label: '반송',      icon: <ExclamationCircleFilled /> },
+  Complained: { palette: 'negative', label: '수신거부',  icon: <CloseCircleFilled /> },
+  Rejected:   { palette: 'negative', label: '발송거부',  icon: <StopFilled /> },
+  Error:      { palette: 'negative', label: '오류',      icon: <CloseCircleFilled /> },
+  Blocked:    { palette: 'negative', label: '차단',      icon: <StopFilled /> },
+  Timeout:    { palette: 'warning',  label: '타임아웃',  icon: <ExclamationCircleFilled /> },
+};
+
 export default function StatusTag({ type, status, style }: StatusTagProps) {
   let config: TagConfig | undefined;
 
@@ -75,6 +88,8 @@ export default function StatusTag({ type, status, style }: StatusTagProps) {
     config = jobConfig[status as JobStatus];
   } else if (type === 'suppression') {
     config = suppressionConfig[status as SuppressionReason];
+  } else if (type === 'emailResult') {
+    config = emailResultConfig[status as EmailResultStatus];
   }
 
   if (!config) {

@@ -2,8 +2,15 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ConfigProvider, App as AntApp } from 'antd';
 import koKR from 'antd/locale/ko_KR';
+import { ProConfigProvider } from '@ant-design/pro-provider';
+import { koKRIntl } from '@ant-design/pro-provider/es/intl';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import 'dayjs/locale/ko';
 import App from './App';
+
+dayjs.extend(utc);
+dayjs.locale('ko');
 import './index.css';
 import { useThemeStore } from './stores/theme';
 
@@ -19,9 +26,11 @@ function Root() {
 
   return (
     <ConfigProvider theme={theme.antd} locale={koKR}>
-      <AntApp>
-        <App />
-      </AntApp>
+      <ProConfigProvider intl={koKRIntl}>
+        <AntApp>
+          <App />
+        </AntApp>
+      </ProConfigProvider>
     </ConfigProvider>
   );
 }

@@ -42,33 +42,69 @@ export const handler = async (event) => {
       tenantId = Array.isArray(mail.tags.tenant_id) ? mail.tags.tenant_id[0] : mail.tags.tenant_id;
     }
 
+    let correlationId = '';
+    if (mail.tags && mail.tags.correlation_id) {
+      correlationId = Array.isArray(mail.tags.correlation_id) ? mail.tags.correlation_id[0] : mail.tags.correlation_id;
+    }
+
     // 수신자 추출
     let recipients = [];
-    if (eventType === 'Bounce' && snsMessage.bounce) {
+    let extraFields = {};
+    if (eventType === 'Send') {
+      recipients = mail.destination || [];
+    } else if (eventType === 'Bounce' && snsMessage.bounce) {
       recipients = snsMessage.bounce.bouncedRecipients?.map(r => r.emailAddress) || [];
     } else if (eventType === 'Complaint' && snsMessage.complaint) {
       recipients = snsMessage.complaint.complainedRecipients?.map(r => r.emailAddress) || [];
     } else if (eventType === 'Delivery' && snsMessage.delivery) {
       recipients = snsMessage.delivery.recipients || [];
+    } else if (eventType === 'Open') {
+      recipients = mail.destination || [];
+    } else if (eventType === 'Click' && snsMessage.click) {
+      recipients = mail.destination || [];
+      extraFields.click_link = snsMessage.click.link || '';
+    } else if (eventType === 'Reject') {
+      recipients = mail.destination || [];
+    } else if (eventType === 'DeliveryDelay' && snsMessage.deliveryDelay) {
+      recipients = snsMessage.deliveryDelay.delayedRecipients?.map(r => r.emailAddress) || [];
+    } else if (eventType === 'RenderingFailure') {
+      recipients = mail.destination || [];
     }
 
-    // 상태 매핑
-    const statusMap = { Delivery: 'DELIVERED', Bounce: 'BOUNCED', Complaint: 'COMPLAINED' };
+    // 상태 매핑 (DynamoDB 저장용)
+    const statusMap = {
+      Send: 'SENDING',
+      Delivery: 'DELIVERED',
+      Bounce: 'BOUNCED',
+      Complaint: 'COMPLAINED',
+      Open: 'OPENED',
+      Click: 'CLICKED',
+      Reject: 'REJECTED',
+      DeliveryDelay: 'DELAYED',
+      RenderingFailure: 'RENDER_FAILED',
+      Subscription: 'DELIVERED',
+    };
     const status = statusMap[eventType] || eventType;
 
     // ① DynamoDB 저장 (항상)
     try {
+      const item = {
+        tenant_id: { S: tenantId || 'unknown' },
+        message_id: { S: messageId },
+        status: { S: status },
+        event_type: { S: eventType },
+        recipients: { SS: recipients.length > 0 ? recipients : ['unknown'] },
+        timestamp: { S: timestamp },
+        ttl: { N: String(Math.floor(Date.now() / 1000) + 604800) }, // 7일
+      };
+      if (correlationId) item.correlation_id = { S: correlationId };
+      // 추가 필드 저장 (click link 등)
+      for (const [key, value] of Object.entries(extraFields)) {
+        if (value) item[key] = { S: value };
+      }
       await dynamo.send(new PutItemCommand({
         TableName: SEND_RESULTS_TABLE,
-        Item: {
-          tenant_id: { S: tenantId || 'unknown' },
-          message_id: { S: messageId },
-          status: { S: status },
-          event_type: { S: eventType },
-          recipients: { SS: recipients.length > 0 ? recipients : ['unknown'] },
-          timestamp: { S: timestamp },
-          ttl: { N: String(Math.floor(Date.now() / 1000) + 604800) }, // 7일
-        },
+        Item: item,
       }));
       console.log(`Event saved: ${messageId} -> ${status}`);
     } catch (e) {
@@ -89,7 +125,19 @@ export const handler = async (event) => {
         const callbackBody = JSON.stringify({
           tenantId,
           messageId,
-          eventType: eventType.toUpperCase(),
+          correlationId,
+          eventType: {
+            Send: 'SEND',
+            Delivery: 'DELIVERY',
+            Bounce: 'BOUNCE',
+            Complaint: 'COMPLAINT',
+            Open: 'OPEN',
+            Click: 'CLICK',
+            Reject: 'REJECT',
+            DeliveryDelay: 'DELIVERY_DELAY',
+            RenderingFailure: 'RENDERING_FAILURE',
+            Subscription: 'SUBSCRIPTION',
+          }[eventType] || eventType.toUpperCase(),
           timestamp,
           recipients,
           details: {},

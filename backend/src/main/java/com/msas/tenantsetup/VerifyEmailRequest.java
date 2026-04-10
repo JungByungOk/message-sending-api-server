@@ -1,4 +1,4 @@
-package com.msas.onboarding;
+package com.msas.tenantsetup;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;

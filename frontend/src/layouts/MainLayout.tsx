@@ -1,20 +1,21 @@
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ProLayout } from '@ant-design/pro-components';
-import { Avatar, Badge, Button, Tooltip, Typography } from 'antd';
+import { Avatar, Typography } from 'antd';
 import {
+  BarChartOutlined,
   ClockCircleOutlined,
   DashboardOutlined,
+  DollarOutlined,
   FileTextOutlined,
-  KeyOutlined,
+  FundOutlined,
   MailOutlined,
   SettingOutlined,
   StopOutlined,
   TeamOutlined,
-  UserAddOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { useAuthStore } from '@/stores/auth';
+
 import { useThemeStore } from '@/stores/theme';
 
 const { Text } = Typography;
@@ -32,8 +33,13 @@ const menuItems = [
     children: [
       {
         path: '/email/send',
-        name: '이메일 발송 테스트',
+        name: '테스트 이메일 발송',
         icon: <MailOutlined />,
+      },
+      {
+        path: '/email/results',
+        name: '발송 결과 조회',
+        icon: <BarChartOutlined />,
       },
       {
         path: '/template',
@@ -57,16 +63,21 @@ const menuItems = [
         icon: <TeamOutlined />,
       },
       {
-        path: '/onboarding',
-        name: '온보딩',
-        icon: <UserAddOutlined />,
-      },
-      {
         path: '/suppression',
         name: '수신 거부',
         icon: <StopOutlined />,
       },
     ],
+  },
+  {
+    path: '/monitoring',
+    name: '모니터링',
+    icon: <FundOutlined />,
+  },
+  {
+    path: '/cost',
+    name: 'AWS 비용',
+    icon: <DollarOutlined />,
   },
   {
     path: '/settings',
@@ -75,43 +86,10 @@ const menuItems = [
   },
 ];
 
-// ─── API Key 상태 표시기 ────────────────────────────────────────────────────────
-function ApiKeyIndicator({ hasKey, onClick }: { hasKey: boolean; onClick: () => void }) {
-  return (
-    <Tooltip title={hasKey ? 'API Key 설정됨' : 'API Key 미설정 — 설정 페이지에서 입력'}>
-      <Button
-        type="text"
-        size="small"
-        onClick={onClick}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          height: 32,
-          padding: '0 10px',
-          borderRadius: 8,
-          color: hasKey ? '#12b76a' : '#f04438',
-          background: hasKey ? 'rgba(18,183,106,0.08)' : 'rgba(240,68,56,0.08)',
-          border: `1px solid ${hasKey ? 'rgba(18,183,106,0.2)' : 'rgba(240,68,56,0.2)'}`,
-          fontWeight: 500,
-          fontSize: 13,
-        }}
-      >
-        <Badge
-          status={hasKey ? 'success' : 'error'}
-          style={{ marginRight: 0 }}
-        />
-        <KeyOutlined />
-        <span>API Key</span>
-      </Button>
-    </Tooltip>
-  );
-}
 
 export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { apiKey } = useAuthStore();
   const { proLayout, antd: antdTheme } = useThemeStore((s) => s.current);
   const primaryColor = (antdTheme.token as Record<string, unknown>)?.colorPrimary as string ?? '#0065FF';
 
@@ -157,7 +135,6 @@ export default function MainLayout() {
           sider: proLayout.sider,
         }}
         actionsRender={() => [
-          <ApiKeyIndicator key="api-key" hasKey={!!apiKey} onClick={() => navigate('/settings')} />,
           <Avatar
             key="user"
             size={32}

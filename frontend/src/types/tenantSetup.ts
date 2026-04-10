@@ -1,6 +1,6 @@
 import type { Tenant } from './tenant';
 
-export interface OnboardingStartRequest {
+export interface TenantSetupStartRequest {
   tenantName: string;
   domain: string;
   contactEmail?: string;
@@ -18,19 +18,15 @@ export interface DkimRecordsDTO {
   dkimRecords: DkimRecord[];
 }
 
-export interface OnboardingResult {
+export interface TenantSetupResult {
   tenant: Tenant;
   dkimRecords: DkimRecordsDTO | null;
 }
 
-export interface OnboardingStep {
+export interface TenantSetupStep {
   step: number;
   name: string;
   status: 'COMPLETED' | 'WAITING' | 'PENDING';
-}
-
-export interface VerifyEmailRequest {
-  email: string;
 }
 
 export interface EmailVerificationStatus {
@@ -38,10 +34,10 @@ export interface EmailVerificationStatus {
   verificationStatus: 'PENDING' | 'SUCCESS' | 'FAILED';
 }
 
-export interface OnboardingStatus {
+export interface TenantSetupStatus {
   tenantId: string;
   domain: string;
-  steps: OnboardingStep[];
+  steps: TenantSetupStep[];
   verificationStatus: string;
   tenantStatus: string;
 }

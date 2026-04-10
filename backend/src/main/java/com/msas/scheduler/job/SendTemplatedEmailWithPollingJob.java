@@ -1,6 +1,5 @@
 package com.msas.scheduler.job;
 
-import com.google.common.util.concurrent.RateLimiter;
 import com.msas.pollingchecker.repository.EmailSendRepository;
 import com.msas.pollingchecker.types.EnumEmailSendStatusCode;
 import com.msas.pollingchecker.types.EnumSESEventTypeCode;
@@ -17,15 +16,13 @@ import org.springframework.stereotype.Component;
 import java.util.Locale;
 
 /**
- * PollingNewEmailFromNFTDB 서비스 통해서 들어온 이메일 전송 예약 작업 처리기
+ * 폴링 방식으로 등록된 이메일 전송 예약 작업 처리기
  * 이메일 등록 테이블의 상태 변경을 위한 이벤트 추가됨
  */
 @Component
 @Slf4j
 @DisallowConcurrentExecution
 public class SendTemplatedEmailWithPollingJob extends AbstractSendTemplatedEmailJob {
-
-    private final RateLimiter rateLimiter = RateLimiter.create(50.0);
 
     @Value("${spring.application.name}")
     private String serverName;
@@ -56,7 +53,7 @@ public class SendTemplatedEmailWithPollingJob extends AbstractSendTemplatedEmail
             EnumSESEventTypeCode failCode = EnumSESEventTypeCode.SESFail;
 
             try {
-                rateLimiter.acquire();
+                sesRateLimiter.acquire();
 
                 String correlationId = dto.getTemplatedEmailList().get(i).getCorrelationId();
                 String messageId = sendTemplatedEmail(getTemplatedEmailDto(dto, i), correlationId, dto.getTenantId());

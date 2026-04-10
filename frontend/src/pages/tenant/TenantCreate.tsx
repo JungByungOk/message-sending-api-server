@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useCreateTenant, useAddSender } from '@/hooks/useTenants';
-import { useVerifyEmail } from '@/hooks/useOnboarding';
+import { useVerifyEmail } from '@/hooks/useTenantSetup';
 import type { CreateTenantRequest } from '@/types/tenant';
 import PageHeader from '@/components/PageHeader';
 
@@ -125,7 +125,7 @@ export default function TenantCreate() {
                 <Input
                   placeholder="예: My Company"
                   prefix={<TeamOutlined style={{ color: '#9ca3af' }} />}
-                  size="large"
+                  size="middle"
                 />
               </Form.Item>
             </Col>
@@ -150,7 +150,7 @@ export default function TenantCreate() {
                 <Input
                   placeholder="example.com"
                   prefix={<GlobalOutlined style={{ color: '#9ca3af' }} />}
-                  size="large"
+                  size="middle"
                 />
               </Form.Item>
             </Col>
@@ -191,7 +191,7 @@ export default function TenantCreate() {
                     <InputNumber<number>
                       min={0}
                       max={1000000}
-                      size="large"
+                      size="middle"
                       style={{ width: '100%' }}
                       formatter={(val) =>
                         `${val ?? 0}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -223,7 +223,7 @@ export default function TenantCreate() {
                     <InputNumber<number>
                       min={0}
                       max={10000000}
-                      size="large"
+                      size="middle"
                       style={{ width: '100%' }}
                       formatter={(val) =>
                         `${val ?? 0}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
@@ -303,7 +303,7 @@ export default function TenantCreate() {
                 <Input
                   placeholder={domainValue ? `no-reply@${domainValue}` : '도메인을 먼저 입력하세요'}
                   prefix={<MailOutlined style={{ color: '#9ca3af' }} />}
-                  size="large"
+                  size="middle"
                   disabled={!domainValue}
                 />
               </Form.Item>
@@ -315,7 +315,7 @@ export default function TenantCreate() {
               >
                 <Input
                   placeholder="예: MyCompany 고객센터"
-                  size="large"
+                  size="middle"
                   disabled={!domainValue}
                 />
               </Form.Item>
@@ -328,7 +328,7 @@ export default function TenantCreate() {
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate('/tenant')}
-            size="large"
+            size="middle"
             style={{ borderRadius: 8 }}
           >
             취소
@@ -338,7 +338,7 @@ export default function TenantCreate() {
             htmlType="submit"
             icon={<CheckOutlined />}
             loading={isPending}
-            size="large"
+            size="middle"
             style={{ borderRadius: 8, minWidth: 100 }}
           >
             테넌트 생성
@@ -348,6 +348,7 @@ export default function TenantCreate() {
 
       {/* 생성 성공 모달 */}
       <Modal
+        centered
         open={successModal.open}
         footer={null}
         closable={false}

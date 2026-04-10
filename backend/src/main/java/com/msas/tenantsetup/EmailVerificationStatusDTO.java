@@ -1,4 +1,4 @@
-package com.msas.onboarding;
+package com.msas.tenantsetup;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
