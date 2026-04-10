@@ -117,3 +117,29 @@ message-sending-api-server/
 ### Phase 1 완료. 다음: Phase 2 (SES Native 전환)
 
 > Phase 2 계획은 `docs/v2/ses-native-migration.md` 참조
+
+---
+
+## Phase 2 완료: Callback 제거 + EventBridge 전환 + SES Tenant
+
+### CDK v2
+- [x] `aws/ems-cdk-v2/` 신규 작성
+  - EventBridge Bus + 3 Rules + Archive (30일)
+  - Lambda 7개 (email-sender, enqueue, event-processor, suppression, tenant-setup, tenant-sync, event-query)
+  - SQS (email-send-queue + DLQ)
+  - DynamoDB 3개 (send-results, tenant-config, suppression)
+  - API Gateway v2 (/email-enqueue, /tenant-setup, /event-query)
+  - S3 (대량 발송 수신자 목록)
+
+### Backend
+- [x] Callback 코드 전면 제거 (6개 파일): SESCallbackService, SESCallbackController, SESCallbackEventDTO, CallbackResponseDTO, CallbackSecretFilter, SESFeedbackNotificationController
+- [x] TenantService SES Tenant 동기화: 생성 시 Identity + ConfigSet 자동 생성, 삭제 시 정리
+- [x] `sesTenantName` 필드 추가 (Entity, DTO, Mapper)
+- [x] 테넌트 일시정지/재개 API: `POST /tenant/{id}/pause`, `POST /tenant/{id}/resume`
+- [x] 폴링 주기 기본값 5분→2분, `/settings/polling-interval` API 추가 (1~10분 설정 가능)
+
+### 빌드 검증
+- [x] Backend: BUILD SUCCESSFUL
+- [x] Frontend: TypeScript 에러 0건
+
+### Phase 2 완료. 다음: Phase 3 (대용량 발송 파이프라인)

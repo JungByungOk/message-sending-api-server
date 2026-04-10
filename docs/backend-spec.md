@@ -48,8 +48,6 @@ Header: Authorization: Bearer {TENANT_API_KEY}
 | `GET /actuator/info` | 서버 정보 조회 |
 | `GET /swagger-ui/**` | Swagger UI |
 | `GET /v3/api-docs/**` | OpenAPI Docs |
-| `POST /ses/feedback/**` | AWS SNS 콜백 (레거시) |
-| `POST /ses/callback/**` | SES 이벤트 콜백 (Callback Secret 검증만 적용) |
 
 ---
 
@@ -457,7 +455,31 @@ PATCH /tenant/{tenantId}/quota
 
 ---
 
-### 2.11 발신자 이메일 목록 조회
+### 2.11 테넌트 일시정지
+
+```
+POST /tenant/{tenantId}/pause
+```
+
+테넌트 이메일 발송 일시정지
+
+**Response** `200 OK`
+
+---
+
+### 2.12 테넌트 발송 재개
+
+```
+POST /tenant/{tenantId}/resume
+```
+
+일시정지된 테넌트 발송 재개
+
+**Response** `200 OK`
+
+---
+
+### 2.13 발신자 이메일 목록 조회
 
 ```
 GET /tenant/{tenantId}/senders
@@ -713,71 +735,10 @@ DELETE /scheduler/job/all
 
 ### 4.2 발송 결과 보정 폴링
 
-- **주기**: Settings에서 설정한 `pollingInterval` 값 (기본 300,000ms = 5분)
+- **주기**: Settings에서 설정한 `pollingInterval` 값 (기본 120,000ms = 2분, `/settings/polling-interval`로 1~10분 설정 가능)
 - **동작**: API Gateway `GET /results` → Lambda `ems-event-query` → DynamoDB `ems-send-results` 조회
 - **처리**: 멱등성 처리로 PostgreSQL 상태 업데이트 (이미 최종 상태면 무시)
 - **이벤트 유형**: Delivery (발송 완료), Bounce (반송), Complaint (수신 거부)
-
----
-
-## 5. SES Callback - 이벤트 콜백
-
-### 5.1 SES 이벤트 처리
-
-```
-POST /ses/callback/event
-```
-
-**보안**: `X-Callback-Secret` 헤더 검증 (SYSTEM_CONFIG의 `callback.secret`과 비교)
-- Secret 미설정 시 검증 없이 통과
-- 불일치 시 HTTP 401
-
-**Request Body**
-```json
-{
-  "tenantId": "uuid",
-  "messageId": "aws-ses-message-id",
-  "eventType": "DELIVERY",
-  "timestamp": "2024-01-01T00:00:00",
-  "recipients": ["user@example.com"],
-  "details": {}
-}
-```
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| tenantId | String | Y | 테넌트 ID |
-| messageId | String | Y | SES 메시지 ID |
-| eventType | String | Y | 이벤트 유형 (DELIVERY, BOUNCE, COMPLAINT) |
-| timestamp | LocalDateTime | N | 이벤트 발생 시간 |
-| recipients | List\<String\> | N | 수신자 이메일 목록 |
-| details | Map | N | 추가 상세 정보 |
-
-**Response** `200 OK`
-```json
-{
-  "result": true,
-  "processed": 1
-}
-```
-
-BOUNCE/COMPLAINT 이벤트 수신 시 해당 수신자를 자동으로 `SUPPRESSION_LIST`에 추가합니다.
-
----
-
-### 5.2 콜백 상태 확인
-
-```
-GET /ses/callback/health
-```
-
-**Response** `200 OK`
-```json
-{
-  "status": "UP",
-  "lastEventTime": "2024-01-01T00:00:00"
-}
-```
 
 ---
 
@@ -1096,23 +1057,13 @@ DELETE /suppression/tenant/{tenantId}/{email}
 
 ## 10. Settings - 시스템 설정
 
-### 아키텍처 개요
-
-```
-ESM 설정 저장 시:
-  ① ESM DB (SYSTEM_CONFIG) 저장 — 모든 설정
-  ② API Gateway PUT /config 호출 (ApiGatewayClient)
-     → Lambda ems-config-updater → SSM Parameter Store 동기화
-  → Lambda ems-event-processor가 SSM 캐시(30초) 만료 후 자동 반영
-```
-
 ### 설정 분류
 
 | 구분 | 항목 | 저장 위치 |
 |------|------|-----------|
 | API Gateway 연결 | Endpoint URL, 리전, 인증 방식, API Key | ESM DB (SYSTEM_CONFIG) |
-| API Gateway 경로 | /send-email, /results, /config, /tenant-setup | ESM DB (SYSTEM_CONFIG) |
-| SSM 동기화 대상 | Callback URL, Callback Secret, 수신 모드, 폴링 주기 | ESM DB + SSM |
+| API Gateway 경로 | /send-email, /results, /tenant-setup | ESM DB (SYSTEM_CONFIG) |
+| 폴링 설정 | 발송 결과 보정 폴링 주기 (기본 2분, 1~10분) | ESM DB (SYSTEM_CONFIG) |
 
 ---
 
@@ -1133,13 +1084,8 @@ GET /settings/aws
   "gatewaySecretKeyMasked": "",
   "gatewaySendPath": "/send-email",
   "gatewayResultsPath": "/results",
-  "gatewayConfigPath": "/config",
   "gatewayConfigured": true,
-  "callbackUrl": "https://esm-server/ses/callback/event",
-  "callbackSecretMasked": "abcd****",
-  "callbackConfigured": true,
-  "deliveryMode": "callback",
-  "pollingInterval": "300000",
+  "pollingInterval": "120000",
   "updatedAt": "2024-01-01T00:00:00"
 }
 ```
@@ -1152,7 +1098,7 @@ GET /settings/aws
 PUT /settings/aws
 ```
 
-저장 시 ESM DB 저장 + API Gateway `PUT /config` 호출로 SSM 동기화합니다.
+저장 시 ESM DB (SYSTEM_CONFIG)에 저장됩니다.
 
 **Request Body**
 ```json
@@ -1165,12 +1111,8 @@ PUT /settings/aws
   "gatewaySecretKey": "",
   "gatewaySendPath": "/send-email",
   "gatewayResultsPath": "/results",
-  "gatewayConfigPath": "/config",
   "gatewayTenantSetupPath": "/tenant-setup",
-  "callbackUrl": "https://esm-server/ses/callback/event",
-  "callbackSecret": "your-secret",
-  "deliveryMode": "callback",
-  "pollingInterval": "300000"
+  "pollingInterval": "120000"
 }
 ```
 
@@ -1182,12 +1124,8 @@ PUT /settings/aws
 | gatewayApiKey | String | N | API Gateway API Key |
 | gatewaySendPath | String | N | 발송 경로 (기본: `/send-email`) |
 | gatewayResultsPath | String | N | 결과 조회 경로 (기본: `/results`) |
-| gatewayConfigPath | String | N | 설정 경로 (기본: `/config`) |
 | gatewayTenantSetupPath | String | N | 온보딩/템플릿 경로 (기본: `/tenant-setup`) |
-| callbackUrl | String | N | Lambda → ESM 콜백 URL |
-| callbackSecret | String | N | 콜백 무결성 검증 시크릿 (X-Callback-Secret) |
-| deliveryMode | String | Y | `callback` 또는 `polling` |
-| pollingInterval | String | N | 보정 폴링 주기 (ms, 기본: 300000) |
+| pollingInterval | String | N | 보정 폴링 주기 (ms, 기본: 120000) |
 
 **Response** `200 OK`: 10.1 응답과 동일
 
@@ -1212,14 +1150,36 @@ POST /settings/aws/test
 
 ---
 
-### 10.4 발송 결과 수신 모드
+### 10.4 폴링 주기 조회
 
-| 모드 | Lambda 동작 | ESM 동작 | 사용 상황 |
-|------|------------|---------|-----------|
-| `callback` | DynamoDB 저장 + ESM 콜백 호출 | Callback 수신 + 보정 폴링 | 정상 운영 |
-| `polling` | DynamoDB 저장만 | 보정 폴링만 | ESM 장애, 콜백 포트 미개방 |
+```
+GET /settings/polling-interval
+```
 
-모드 전환 시 SSM Parameter Store에 자동 동기화되며 Lambda가 30초 캐시 만료 후 반영합니다.
+**Response** `200 OK`
+```json
+{ "intervalMinutes": 2, "intervalMs": 120000 }
+```
+
+---
+
+### 10.5 폴링 주기 변경
+
+```
+PUT /settings/polling-interval
+```
+
+폴링 주기를 1~10분 범위에서 변경합니다.
+
+**Request Body**
+```json
+{ "intervalMinutes": 2 }
+```
+
+**Response** `200 OK`
+```json
+{ "intervalMinutes": 2, "intervalMs": 120000 }
+```
 
 ---
 
@@ -1310,5 +1270,5 @@ POST /settings/aws/test
 | HTTP Status | Description |
 |-------------|-------------|
 | `400` | 잘못된 요청 (Validation 실패, 도메인 불일치, 중복 작업 등) |
-| `401` | 인증 실패 (API Key 누락/불일치, Callback Secret 불일치) |
+| `401` | 인증 실패 (API Key 누락/불일치) |
 | `500` | 서버 내부 오류 (API Gateway 연동 실패, DB 오류 등) |

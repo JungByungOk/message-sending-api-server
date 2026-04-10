@@ -1,0 +1,20 @@
+{
+  "name": "ems-cdk-v2",
+  "version": "2.0.0",
+  "bin": {
+    "ems-cdk-v2": "bin/ems-cdk-v2.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "cdk": "cdk"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.178.2",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "aws-cdk": "2.178.2",
+    "typescript": "~5.6.0"
+  }
+}

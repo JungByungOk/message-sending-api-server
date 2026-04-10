@@ -35,4 +35,25 @@ public class SettingsController {
     public ResponseEntity<AwsTestResultDTO> testConnection(@RequestBody AwsSettingsDTO settings) {
         return ResponseEntity.ok(settingsService.testConnection(settings));
     }
+
+    @Operation(summary = "폴링 주기 조회", description = "현재 보정 폴링 주기를 조회합니다.")
+    @GetMapping("/polling-interval")
+    public ResponseEntity<java.util.Map<String, Object>> getPollingInterval() {
+        long intervalMs = settingsService.getPollingInterval();
+        return ResponseEntity.ok(java.util.Map.of(
+                "intervalMinutes", intervalMs / 60000,
+                "intervalMs", intervalMs
+        ));
+    }
+
+    @Operation(summary = "폴링 주기 변경", description = "보정 폴링 주기를 변경합니다 (1~10분).")
+    @PutMapping("/polling-interval")
+    public ResponseEntity<java.util.Map<String, Object>> updatePollingInterval(@RequestBody java.util.Map<String, Integer> request) {
+        int minutes = request.getOrDefault("intervalMinutes", 2);
+        long intervalMs = settingsService.updatePollingInterval(minutes);
+        return ResponseEntity.ok(java.util.Map.of(
+                "intervalMinutes", minutes,
+                "intervalMs", intervalMs
+        ));
+    }
 }

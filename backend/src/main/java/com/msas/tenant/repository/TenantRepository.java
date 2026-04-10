@@ -48,6 +48,11 @@ public interface TenantRepository {
             @Param("apiKey") String apiKey
     );
 
+    void updateSesTenantName(
+            @Param("tenantId") String tenantId,
+            @Param("sesTenantName") String sesTenantName
+    );
+
     void deleteTenant(@Param("tenantId") String tenantId);
 
     List<TenantEntity> selectAllTenants();

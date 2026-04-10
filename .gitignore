@@ -37,3 +37,4 @@ out/
 .vscode/
 .omc/
 backend/.env
+aws/ems-cdk-v2/node_modules/

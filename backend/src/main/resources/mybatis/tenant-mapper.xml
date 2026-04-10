@@ -9,6 +9,7 @@
         <result property="domain"             column="domain"/>
         <result property="apiKey"             column="api_key"/>
         <result property="configSetName"      column="config_set_name"/>
+        <result property="sesTenantName"      column="ses_tenant_name"/>
         <result property="verificationStatus" column="verification_status"/>
         <result property="quotaDaily"         column="quota_daily"/>
         <result property="quotaMonthly"       column="quota_monthly"/>
@@ -25,6 +26,7 @@
             domain,
             api_key,
             config_set_name,
+            ses_tenant_name,
             verification_status,
             quota_daily,
             quota_monthly,
@@ -39,6 +41,7 @@
             #{domain},
             #{apiKey},
             #{configSetName},
+            #{sesTenantName},
             #{verificationStatus},
             #{quotaDaily},
             #{quotaMonthly},
@@ -173,6 +176,12 @@
             api_key    = #{apiKey},
             updated_at = NOW()
         WHERE tenant_id = #{tenantId}
+    </update>
+
+    <update id="updateSesTenantName">
+        UPDATE TENANT_REGISTRY
+        SET SES_TENANT_NAME = #{sesTenantName}, UPDATED_AT = CURRENT_TIMESTAMP
+        WHERE TENANT_ID = #{tenantId}
     </update>
 
     <select id="countEmailsSentToday" resultType="int">

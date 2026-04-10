@@ -61,7 +61,7 @@ public class SettingsService {
         dto.setCallbackConfigured(isNotBlank(configs.get("callback.url")) && isNotBlank(configs.get("callback.secret")));
         // Delivery
         dto.setDeliveryMode(configs.getOrDefault("delivery.mode", "callback"));
-        dto.setPollingInterval(configs.getOrDefault("delivery.polling-interval", "300000"));
+        dto.setPollingInterval(configs.getOrDefault("delivery.polling-interval", "120000"));
         // Meta
         dto.setUpdatedAt(getLatestUpdatedAt());
 
@@ -137,6 +137,19 @@ public class SettingsService {
     }
 
     /**
+     * 폴링 주기 변경 (1~10분).
+     */
+    public long updatePollingInterval(int intervalMinutes) {
+        if (intervalMinutes < 1 || intervalMinutes > 10) {
+            throw new IllegalArgumentException("폴링 주기는 1~10분 사이여야 합니다.");
+        }
+        long intervalMs = intervalMinutes * 60000L;
+        saveConfig("delivery.polling-interval", String.valueOf(intervalMs), "보정 폴링 주기 (ms)", false);
+        log.info("SettingsService - 폴링 주기 변경. ({}분, {}ms)", intervalMinutes, intervalMs);
+        return intervalMs;
+    }
+
+    /**
      * Callback Secret 값을 반환합니다 (검증용).
      */
     public String getCallbackSecret() {
@@ -159,9 +172,9 @@ public class SettingsService {
         SystemConfigEntity entity = systemConfigRepository.findByKey("delivery.polling-interval");
         try {
             return entity != null && isNotBlank(entity.getConfigValue())
-                    ? Long.parseLong(entity.getConfigValue()) : 300000L;
+                    ? Long.parseLong(entity.getConfigValue()) : 120000L;
         } catch (NumberFormatException e) {
-            return 300000L;
+            return 120000L;
         }
     }
 

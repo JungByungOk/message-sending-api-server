@@ -43,15 +43,7 @@ Backend와 Frontend에서 공통으로 적용되는 기능 명세입니다.
 - 이 경우 TenantContext는 `"default"`로 설정됨
 - `API_KEY` 미설정 시 인증 완전 비활성화 (개발/테스트용)
 
-### 1.3 Callback Secret 검증
-
-- **대상**: `POST /ses/callback/**` 엔드포인트
-- **Header**: `X-Callback-Secret: {secret}`
-- **동작**: `CallbackSecretFilter`가 SYSTEM_CONFIG의 `callback.secret` 값과 비교
-- **Secret 미설정 시**: 검증 없이 통과 (개발 환경)
-- **불일치 시**: HTTP 401 반환
-
-### 1.4 Public Endpoints (인증 불필요)
+### 1.3 Public Endpoints (인증 불필요)
 
 | Endpoint | Description |
 |----------|-------------|
@@ -61,8 +53,6 @@ Backend와 Frontend에서 공통으로 적용되는 기능 명세입니다.
 | `GET /actuator/info` | 서버 정보 조회 |
 | `GET /swagger-ui/**` | Swagger UI |
 | `GET /v3/api-docs/**` | OpenAPI Docs |
-| `POST /ses/feedback/**` | AWS SNS 콜백 수신 (레거시) |
-| `POST /ses/callback/**` | SES 이벤트 콜백 수신 (Callback Secret 검증만 적용) |
 
 ---
 
@@ -109,7 +99,7 @@ Backend와 Frontend에서 공통으로 적용되는 기능 명세입니다.
 | `201` | 생성 성공 | 테넌트 생성, 예약 작업 생성 |
 | `204` | 삭제 성공 | 테넌트 비활성화, 수신 거부 제거 |
 | `400` | 잘못된 요청 | Validation 실패, 도메인 불일치, 중복 작업 |
-| `401` | 인증 실패 | API Key 누락/불일치, Callback Secret 불일치 |
+| `401` | 인증 실패 | API Key 누락/불일치 |
 | `500` | 서버 오류 | API Gateway 연동 실패, DB 오류 |
 
 ---
@@ -216,21 +206,19 @@ Queued (발송 큐 진입)
 
 ## 8. 발송 결과 수신 모드
 
-| 모드 | Lambda 동작 | ESM 동작 | 사용 상황 |
-|------|------------|---------|-----------|
-| `callback` | DynamoDB 저장 + ESM `/ses/callback/event` 호출 | Callback 수신 + 보정 폴링 | 정상 운영 |
-| `polling` | DynamoDB 저장만 | 보정 폴링만 | ESM 장애, 콜백 포트 미개방 |
+Phase 2부터 Callback 모드가 제거되고 EventBridge → DynamoDB → Polling 단일 경로로 동작합니다.
 
-### 보정 폴링 설정
+- **Lambda**: SES 이벤트 → EventBridge → `ems-event-processor` → DynamoDB `ems-send-results` 저장
+- **ESM**: `ResultPollingService`가 주기적으로 DynamoDB를 폴링하여 로컬 DB 상태 보정
+
+### 폴링 설정
 
 | 항목 | 기본값 | 설명 |
 |------|--------|------|
 | 신규 이메일 폴링 주기 | 60,000ms (1분) | PostgreSQL 대기 이메일 조회 |
 | 신규 이메일 조회 건수 | 280건 | 1회 폴링당 최대 처리 건수 |
-| 발송 결과 보정 폴링 주기 | 설정값 (기본 300,000ms) | API Gateway → DynamoDB 조회 |
+| 발송 결과 보정 폴링 주기 | 120,000ms (2분) | API Gateway → DynamoDB 조회, `/settings/polling-interval`로 1~10분 설정 가능 |
 | 발송 결과 조회 건수 | 300건 | 1회 폴링당 최대 처리 건수 |
-
-모드 전환 시 SSM Parameter Store에 자동 동기화되며, Lambda가 30초 캐시 만료 후 반영합니다.
 
 ---
 
@@ -244,7 +232,7 @@ Queued (발송 큐 진입)
 ## 10. 수신 거부 관리 (Suppression)
 
 ### 자동 등록
-- Callback 수신 또는 보정 폴링에서 BOUNCE/COMPLAINT 이벤트 감지 시 자동으로 수신 거부 목록에 추가
+- 보정 폴링에서 BOUNCE/COMPLAINT 이벤트 감지 시 자동으로 수신 거부 목록에 추가
 - 이미 등록된 이메일은 중복 추가하지 않음 (`TENANT_ID + EMAIL` UNIQUE 제약)
 
 ### 수신 거부 사유
@@ -317,17 +305,18 @@ DNS 접근이 불가한 경우 이메일 주소 단위로 인증합니다.
 | 구분 | 항목 | 저장 위치 |
 |------|------|-----------|
 | API Gateway 연결 | Endpoint URL, 리전, 인증 방식, API Key | ESM DB (SYSTEM_CONFIG) |
-| 경로 설정 | /send-email, /results, /config, /tenant-setup | ESM DB (SYSTEM_CONFIG) |
-| SSM 동기화 대상 | Callback URL, Callback Secret, 수신 모드, 폴링 주기 | ESM DB + SSM (API Gateway 경유) |
+| 경로 설정 | /send-email, /results, /tenant-setup | ESM DB (SYSTEM_CONFIG) |
+| 폴링 설정 | 발송 결과 보정 폴링 주기 (기본 2분, 1~10분) | ESM DB (SYSTEM_CONFIG) |
 
 ### 설정 흐름
 
 ```
 PUT /settings/aws
   → ESM DB (SYSTEM_CONFIG) 저장
-  → API Gateway PUT /config 호출 (ApiGatewayClient)
-  → Lambda ems-config-updater → SSM Parameter Store 업데이트
-  → Lambda ems-event-processor가 SSM 캐시(30초) 만료 후 자동 반영
+
+PUT /settings/polling-interval
+  → ESM DB (SYSTEM_CONFIG) 저장
+  → ResultPollingService 즉시 반영
 ```
 
 ---

@@ -12,6 +12,7 @@ public class TenantEntity {
     private String domain;
     private String apiKey;
     private String configSetName;
+    private String sesTenantName;
     private String verificationStatus;
     private Integer quotaDaily;
     private Integer quotaMonthly;

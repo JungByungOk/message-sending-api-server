@@ -84,6 +84,20 @@ public class TenantController {
         return ResponseEntity.ok().build();
     }
 
+    @Operation(summary = "테넌트 일시정지", description = "테넌트의 이메일 발송을 일시정지합니다.")
+    @PostMapping("/{tenantId}/pause")
+    public ResponseEntity<Void> pauseTenant(@PathVariable String tenantId) {
+        tenantService.pauseTenant(tenantId);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "테넌트 발송 재개", description = "일시정지된 테넌트의 이메일 발송을 재개합니다.")
+    @PostMapping("/{tenantId}/resume")
+    public ResponseEntity<Void> resumeTenant(@PathVariable String tenantId) {
+        tenantService.resumeTenant(tenantId);
+        return ResponseEntity.ok().build();
+    }
+
     @Operation(summary = "API 키 재발급", description = "테넌트의 API 키를 새로 발급합니다.")
     @PostMapping("/{tenantId}/regenerate-key")
     public ResponseEntity<ResponseTenantDTO> regenerateApiKey(@PathVariable String tenantId) {
