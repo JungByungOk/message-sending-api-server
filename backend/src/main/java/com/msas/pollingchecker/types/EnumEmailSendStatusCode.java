@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum EnumEmailSendStatusCode {
 
+    SQ("스케줄러 큐 진입"),        // 레거시 상태 코드 (폴링 방식)
     Queued("발송 큐 진입"),       // Quartz 스케줄링 완료
     Sending("SES API 호출 완료"), // SES로 발송 요청 완료, 결과 대기 중
     Delayed("일시적 전달 지연"),   // DeliveryDelay 이벤트 수신

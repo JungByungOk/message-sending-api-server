@@ -49,4 +49,6 @@ public interface TenantRepository {
     );
 
     void deleteTenant(@Param("tenantId") String tenantId);
+
+    List<TenantEntity> selectAllTenants();
 }

@@ -5,6 +5,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,8 +27,8 @@ public class SESConfigSetController {
 
     @Operation(summary = "ConfigSet 생성", description = "API Gateway를 통해 테넌트용 SES ConfigSet을 생성합니다.")
     @PostMapping
-    public ResponseEntity<Map<String, String>> createConfigSet(@RequestBody Map<String, String> request) {
-        String tenantId = request.get("tenantId");
+    public ResponseEntity<Map<String, String>> createConfigSet(@Valid @RequestBody RequestConfigSetDTO request) {
+        String tenantId = request.getTenantId();
         try {
             String jsonBody = gson.toJson(Map.of("tenantId", tenantId, "action", "CREATE_CONFIGSET"));
             HttpResponse<String> response = apiGatewayClient.post("/tenant-setup", jsonBody);

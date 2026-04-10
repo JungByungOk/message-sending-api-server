@@ -29,6 +29,8 @@ public class SendTemplatedEmailWithPollingJob extends AbstractSendTemplatedEmail
 
     private EmailSendRepository emailSendRepository;
 
+    private final com.google.common.util.concurrent.RateLimiter sesRateLimiter = com.google.common.util.concurrent.RateLimiter.create(50.0);
+
     @Autowired
     public void setEmailSendRepository(EmailSendRepository emailSendRepository) {
         this.emailSendRepository = emailSendRepository;

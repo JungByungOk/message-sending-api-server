@@ -58,7 +58,7 @@ public class TenantController {
     @PatchMapping("/{tenantId}")
     public ResponseEntity<ResponseTenantDTO> updateTenant(
             @PathVariable String tenantId,
-            @RequestBody RequestUpdateTenantDTO request) {
+            @Valid @RequestBody RequestUpdateTenantDTO request) {
         ResponseTenantDTO response = tenantService.updateTenant(tenantId, request);
         return ResponseEntity.ok(response);
     }
@@ -102,7 +102,7 @@ public class TenantController {
     @PatchMapping("/{tenantId}/quota")
     public ResponseEntity<ResponseTenantDTO> updateQuota(
             @PathVariable String tenantId,
-            @RequestBody RequestUpdateTenantDTO request) {
+            @Valid @RequestBody RequestUpdateTenantDTO request) {
         ResponseTenantDTO response = tenantService.updateTenant(tenantId, request);
         return ResponseEntity.ok(response);
     }

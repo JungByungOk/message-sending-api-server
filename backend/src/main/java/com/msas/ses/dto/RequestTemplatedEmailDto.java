@@ -38,4 +38,6 @@ public class RequestTemplatedEmailDto {
 
     List<MessageTagDto> tags;
 
+    String subject;
+
 }

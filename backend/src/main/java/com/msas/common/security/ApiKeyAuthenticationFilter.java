@@ -33,17 +33,29 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // JWT 필터에서 이미 인증된 경우 건너뜀
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authHeader = request.getHeader(AUTHORIZATION_HEADER);
         String requestApiKey = null;
 
         if (authHeader != null && authHeader.startsWith(BEARER_PREFIX)) {
-            requestApiKey = authHeader.substring(BEARER_PREFIX.length()).trim();
+            String token = authHeader.substring(BEARER_PREFIX.length()).trim();
+            // JWT 형식(점 2개)이면 건너뜀
+            if (token.chars().filter(c -> c == '.').count() == 2) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+            requestApiKey = token;
         } else if (authHeader != null) {
             requestApiKey = authHeader.trim();
         }
 
         if (requestApiKey == null || requestApiKey.isBlank()) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "API 키가 필요합니다.");
+            filterChain.doFilter(request, response);
             return;
         }
 

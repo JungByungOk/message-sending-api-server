@@ -31,7 +31,8 @@
 │  └────────────────────────────────────────────────────────┘   │
 │                                                                │
 │  [Spring Security]                                             │
-│   - ApiKeyAuthenticationFilter (Tenant API Key / 레거시 Key)  │
+│   - JwtAuthenticationFilter (JWT Bearer 토큰 검증)              │
+│   - ApiKeyAuthenticationFilter (Tenant API Key / 레거시 Key)    │
 │   - CallbackSecretFilter (X-Callback-Secret 헤더 검증)         │
 │   - TenantContextFilter (ThreadLocal 정리)                     │
 └──────────────┬─────────────────────┬──────────────────────────┘
@@ -76,6 +77,9 @@
 | Suppression Module | 수신 거부(Bounce/Complaint) 목록 관리 | PostgreSQL |
 | SES Identity Module | SES 도메인 아이덴티티 등록 및 DKIM 관리 | AWS API Gateway |
 | SES ConfigSet Module | 테넌트별 SES 구성 세트 관리 | AWS API Gateway |
+| Auth Module | JWT 인증, 사용자 관리, 비밀번호 변경 | - |
+| Monitoring Module | 발송 통계, 트렌드, 테넌트 평판 모니터링 (MonitoringService) | PostgreSQL |
+| Cost Estimate Module | AWS 서비스별 월별 비용 추정 (CostEstimateService) | PostgreSQL |
 | Settings Module | API Gateway 연결 설정, Callback URL/Secret, 수신 모드 관리, 빈 값 SSM 전송 방지 | PostgreSQL, SSM (API Gateway 경유) |
 
 ### 기술 스택
@@ -86,11 +90,11 @@
 | Frontend | React 19.2, Vite 8, TypeScript 5.9, Ant Design 5.29 |
 | Database | PostgreSQL (esm/esm/esm) |
 | ORM | MyBatis 3.0.4 |
-| Scheduler | Quartz (PostgreSQL DB Store) |
+| Scheduler | Quartz 2.5.0 (PostgreSQL DB Store) |
 | AWS 연동 | API Gateway 경유 (Java HTTP Client) — AWS SDK 미사용 |
 | AWS 인프라 | CDK 자동 구축 (Lambda 5개, DynamoDB 3개, SQS, SNS, SSM) |
 | API Docs | SpringDoc OpenAPI 2.7.0 (Swagger UI) |
-| Security | Spring Security (API Key + Callback Secret 필터) |
+| Security | Spring Security (JWT + API Key + Callback Secret 필터) |
 | Build | Gradle, Docker (Multi-stage) |
 | Monitoring | Spring Actuator |
 
@@ -232,4 +236,5 @@ SES EmailTag → event-processor 추출 → correlationId DynamoDB/콜백에 포
 | `TENANT` | 테넌트 정보 및 API Key |
 | `TENANT_SENDER` | 테넌트별 허용 발신자 이메일 목록 |
 | `ADM_TEMPLATE_TENANT_MAP` | 테넌트별 템플릿 매핑 (SUBJECT 컬럼 포함 — 예약 발송 결과에 실제 제목 표시) |
+| `ADM_USER_MST` | 관리자 계정 (JWT 인증용, BCrypt 해시 비밀번호) |
 | `SYSTEM_CONFIG` | API Gateway 설정, Callback URL/Secret, 수신 모드 등 |

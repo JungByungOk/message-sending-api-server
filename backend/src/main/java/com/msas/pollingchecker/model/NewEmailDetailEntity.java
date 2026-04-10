@@ -22,6 +22,7 @@ public class NewEmailDetailEntity {
     private String email_cts;
     private String email_tmplet_id;
     private String ses_msg_id;
+    private String correlation_id;
 
     private LocalDateTime stm_fir_reg_dt;
     private String stm_fir_reg_user_id;

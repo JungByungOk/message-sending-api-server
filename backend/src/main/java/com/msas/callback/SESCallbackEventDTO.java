@@ -10,6 +10,7 @@ import java.util.Map;
 public class SESCallbackEventDTO {
     private String tenantId;
     private String messageId;
+    private String correlationId;
     private String eventType;   // DELIVERY, BOUNCE, COMPLAINT
     private LocalDateTime timestamp;
     private List<String> recipients;

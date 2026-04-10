@@ -1,6 +1,6 @@
 # Frontend Specification
 
-> 최종 업데이트: 2026-04-09
+> 최종 업데이트: 2026-04-10
 
 ---
 
@@ -29,6 +29,7 @@ frontend/src/
 ├── hooks/          # TanStack Query 커스텀 훅
 ├── layouts/        # 레이아웃 컴포넌트
 ├── pages/          # 페이지 컴포넌트 (feature 단위)
+│   ├── auth/
 │   ├── dashboard/
 │   ├── email/
 │   ├── onboarding/
@@ -48,6 +49,7 @@ frontend/src/
 
 | Path | Component | 설명 |
 |------|-----------|------|
+| `/login` | `LoginPage` | JWT 로그인 |
 | `/` | `DashboardPage` | 대시보드 |
 | `/tenant` | `TenantList` | 테넌트 목록 |
 | `/tenant/create` | `TenantCreate` | 테넌트 생성 |
@@ -59,13 +61,25 @@ frontend/src/
 | `/onboarding` | `OnboardingWizard` | 온보딩 마법사 |
 | `/onboarding/:tenantId` | `OnboardingStatus` | 온보딩 상태 확인 |
 | `/suppression` | `SuppressionList` | 수신 거부 목록 |
-| `/settings` | `SettingsPage` | 설정 (AWS 연동, 테마) |
+| `/settings` | `SettingsPage` | 설정 (비밀번호 변경, AWS 연동, 테마) |
 
 잘못된 경로는 `/`로 리다이렉트합니다.
 
 ---
 
 ## 타입 정의
+
+### src/types/auth.ts
+
+```typescript
+export interface LoginRequest { username: string; password: string; }
+export interface LoginResponse { accessToken: string; refreshToken: string; user: UserInfo; }
+export interface UserInfo { userId: number; username: string; displayName: string; role: string; }
+export interface TokenResponse { accessToken: string; }
+export interface ChangePasswordRequest { currentPassword: string; newPassword: string; }
+export interface CreateUserRequest { username: string; password: string; displayName: string; role: string; }
+export interface UpdateUserRequest { displayName?: string; role?: string; isActive?: boolean; }
+```
 
 ### src/types/emailResults.ts
 
@@ -212,6 +226,13 @@ interface StatusTagProps {
 
 **변경 이력 (2026-04-09)**: `Timeout` 상태 추가 — warning(주황) 스타일, "타임아웃" 라벨
 
+### AuthGuard (`src/components/AuthGuard.tsx`)
+
+JWT 인증 라우트 가드 컴포넌트.
+- 미인증 시 `/login`으로 리다이렉트
+- 30분 비활동 자동 로그아웃 (mousedown, keydown, scroll, touchstart 이벤트 감지)
+- 1분 주기 비활동 체크
+
 ---
 
 ## 대시보드 카드 (`src/pages/dashboard/`)
@@ -295,6 +316,20 @@ getEmailResultDetail(correlationId: string): Promise<EmailResultMaster>
 // GET /email/results/{correlationId}
 ```
 
+### auth.ts
+
+```typescript
+authApi.login(data: LoginRequest): Promise<LoginResponse>       // POST /auth/login
+authApi.refresh(refreshToken: string): Promise<TokenResponse>    // POST /auth/refresh
+authApi.logout(): Promise<void>                                  // POST /auth/logout
+authApi.changePassword(data: ChangePasswordRequest): Promise<void> // POST /auth/change-password
+authApi.getMe(): Promise<UserInfo>                               // GET /users/me
+authApi.getUsers(): Promise<UserInfo[]>                          // GET /users
+authApi.createUser(data: CreateUserRequest): Promise<UserInfo>   // POST /users
+authApi.updateUser(userId: number, data: UpdateUserRequest): Promise<UserInfo> // PUT /users/:id
+authApi.deleteUser(userId: number): Promise<void>                // DELETE /users/:id
+```
+
 ---
 
 ## 상태 관리
@@ -303,7 +338,7 @@ getEmailResultDetail(correlationId: string): Promise<EmailResultMaster>
 |------|------|------|
 | 서버 상태 | TanStack Query | API 데이터 캐싱, 로딩/에러 상태 |
 | UI 상태 | Zustand (`stores/ui.ts`) | 사이드바 collapsed 등 |
-| 인증 상태 | Zustand (`stores/auth.ts`) | API Key |
+| 인증 상태 | Zustand (`stores/auth.ts`) | JWT (accessToken, refreshToken, user, lastActivity) |
 | 테마 상태 | Zustand (`stores/theme.ts`) | 테마 선택 |
 
 TanStack Query 기본 설정:

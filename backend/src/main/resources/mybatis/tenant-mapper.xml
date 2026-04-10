@@ -198,4 +198,9 @@
         WHERE tenant_id = #{tenantId}
     </delete>
 
+    <select id="selectAllTenants" resultMap="TenantEntityResultMap">
+        SELECT * FROM TENANT_REGISTRY
+        ORDER BY tenant_id
+    </select>
+
 </mapper>

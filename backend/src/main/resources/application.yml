@@ -96,6 +96,14 @@ security:
   api-key: ${API_KEY:}
 
 #################################################
+# JWT
+#################################################
+jwt:
+  secret: ${JWT_SECRET:joins-ems-jwt-secret-key-must-be-at-least-256-bits-long}
+  access-token-expiration: 1800000
+  refresh-token-expiration: 604800000
+
+#################################################
 # springdoc (Swagger UI)
 #################################################
 springdoc:

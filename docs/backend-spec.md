@@ -13,7 +13,20 @@
 
 ## Authentication
 
-모든 API 요청은 API Key 인증이 필요합니다. (Public Endpoints 제외)
+### JWT 인증 (Admin Dashboard)
+
+Admin Dashboard는 JWT Bearer 토큰으로 인증합니다.
+
+```
+Header: Authorization: Bearer {JWT_ACCESS_TOKEN}
+```
+
+- **필터 체인**: `JwtAuthenticationFilter` → `ApiKeyAuthenticationFilter` → `TenantContextFilter`
+- **JWT 판별**: 토큰에 `.`이 2개 포함되면 JWT로 처리
+
+### Tenant API Key 인증
+
+테넌트 API 요청은 API Key 인증이 필요합니다. (Public Endpoints 제외)
 
 ```
 Header: Authorization: {TENANT_API_KEY}
@@ -29,12 +42,76 @@ Header: Authorization: Bearer {TENANT_API_KEY}
 
 | Endpoint | Description |
 |----------|-------------|
+| `POST /auth/login` | 로그인 |
+| `POST /auth/refresh` | 토큰 갱신 |
 | `GET /actuator/health` | 서버 상태 확인 |
 | `GET /actuator/info` | 서버 정보 조회 |
 | `GET /swagger-ui/**` | Swagger UI |
 | `GET /v3/api-docs/**` | OpenAPI Docs |
 | `POST /ses/feedback/**` | AWS SNS 콜백 (레거시) |
 | `POST /ses/callback/**` | SES 이벤트 콜백 (Callback Secret 검증만 적용) |
+
+---
+
+## Auth API
+
+### POST /auth/login
+로그인
+
+**Request:**
+```json
+{ "username": "admin", "password": "admin" }
+```
+
+**Response (200):**
+```json
+{
+  "accessToken": "eyJ...",
+  "refreshToken": "eyJ...",
+  "user": { "userId": 1, "username": "admin", "displayName": "관리자", "role": "ADMIN" }
+}
+```
+
+### POST /auth/refresh
+토큰 갱신
+
+**Request:**
+```json
+{ "refreshToken": "eyJ..." }
+```
+
+**Response (200):**
+```json
+{ "accessToken": "eyJ..." }
+```
+
+### POST /auth/change-password
+비밀번호 변경 (JWT 인증 필요)
+
+**Request:**
+```json
+{ "currentPassword": "oldpass", "newPassword": "newpass" }
+```
+
+### GET /users/me
+현재 로그인 사용자 정보 (JWT 인증 필요)
+
+### GET /users
+사용자 목록 조회 (JWT 인증 필요)
+
+### POST /users
+사용자 생성 (JWT 인증 필요)
+
+**Request:**
+```json
+{ "username": "newuser", "password": "pass1234", "displayName": "새 사용자", "role": "ADMIN" }
+```
+
+### PUT /users/{userId}
+사용자 수정
+
+### DELETE /users/{userId}
+사용자 삭제
 
 ---
 

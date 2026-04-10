@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ProLayout } from '@ant-design/pro-components';
-import { Avatar, Typography } from 'antd';
+import { Avatar, Dropdown, Space, Typography } from 'antd';
 import {
   BarChartOutlined,
   ClockCircleOutlined,
@@ -9,6 +9,7 @@ import {
   DollarOutlined,
   FileTextOutlined,
   FundOutlined,
+  LogoutOutlined,
   MailOutlined,
   SettingOutlined,
   StopOutlined,
@@ -17,6 +18,7 @@ import {
 } from '@ant-design/icons';
 
 import { useThemeStore } from '@/stores/theme';
+import { useAuthStore } from '@/stores/auth';
 
 const { Text } = Typography;
 
@@ -93,6 +95,7 @@ export default function MainLayout() {
   const { proLayout, antd: antdTheme } = useThemeStore((s) => s.current);
   const primaryColor = (antdTheme.token as Record<string, unknown>)?.colorPrimary as string ?? '#0065FF';
 
+  const { user, logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -135,17 +138,39 @@ export default function MainLayout() {
           sider: proLayout.sider,
         }}
         actionsRender={() => [
-          <Avatar
+          <Dropdown
             key="user"
-            size={32}
-            icon={<UserOutlined />}
-            style={{
-              cursor: 'pointer',
-              background: primaryColor,
-              flexShrink: 0,
+            menu={{
+              items: [
+                {
+                  key: 'user-info',
+                  label: user?.displayName ?? '관리자',
+                  disabled: true,
+                },
+                { type: 'divider' },
+                {
+                  key: 'logout',
+                  label: '로그아웃',
+                  icon: <LogoutOutlined />,
+                  danger: true,
+                  onClick: () => {
+                    logout();
+                    navigate('/login');
+                  },
+                },
+              ],
             }}
-            onClick={() => navigate('/settings')}
-          />,
+            placement="bottomRight"
+          >
+            <Space style={{ cursor: 'pointer' }}>
+              <Avatar
+                size={32}
+                icon={<UserOutlined />}
+                style={{ background: primaryColor, flexShrink: 0 }}
+              />
+              <span style={{ fontSize: 14 }}>{user?.displayName ?? '관리자'}</span>
+            </Space>
+          </Dropdown>,
         ]}
         footerRender={() => (
           <div

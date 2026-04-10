@@ -6,6 +6,29 @@ Backend와 Frontend에서 공통으로 적용되는 기능 명세입니다.
 
 ## 1. 인증 (Authentication)
 
+### 1.0 JWT 인증 (Admin Dashboard)
+
+- **방식**: JWT (JSON Web Token) 기반 인증
+- **로그인**: `POST /auth/login` → `{ accessToken, refreshToken, user }`
+- **토큰 갱신**: `POST /auth/refresh` → `{ accessToken }`
+- **Access Token 유효기간**: 30분
+- **Refresh Token 유효기간**: 7일
+- **비활동 자동 로그아웃**: 30분 (Frontend AuthGuard)
+- **필터 체인**: `JwtAuthenticationFilter` → `ApiKeyAuthenticationFilter` → `TenantContextFilter`
+- **JWT 형식 판별**: Authorization 헤더의 토큰에 `.`이 2개 포함되면 JWT로 판별
+- **초기 계정**: `admin` / `admin` (BCrypt 해시)
+
+### Public Endpoints (인증 불필요)
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /auth/login` | 로그인 |
+| `POST /auth/refresh` | 토큰 갱신 |
+| `GET /actuator/health` | 서버 상태 확인 |
+| `GET /actuator/info` | 서버 정보 조회 |
+| `GET /swagger-ui/**` | Swagger UI |
+| `GET /v3/api-docs/**` | OpenAPI Docs |
+
 ### 1.1 Tenant API Key 인증
 
 - **방식**: HTTP Header 기반 API Key 인증
@@ -32,6 +55,8 @@ Backend와 Frontend에서 공통으로 적용되는 기능 명세입니다.
 
 | Endpoint | Description |
 |----------|-------------|
+| `POST /auth/login` | 로그인 |
+| `POST /auth/refresh` | 토큰 갱신 |
 | `GET /actuator/health` | 서버 상태 확인 |
 | `GET /actuator/info` | 서버 정보 조회 |
 | `GET /swagger-ui/**` | Swagger UI |
@@ -43,15 +68,38 @@ Backend와 Frontend에서 공통으로 적용되는 기능 명세입니다.
 
 ## 2. 에러 처리 (Error Handling)
 
-### 공통 에러 응답 형식
+### 공통 응답 형식 (ApiResponse)
 
+**성공 응답:**
 ```json
 {
-  "status": 400,
-  "error": "Bad Request",
-  "message": "상세 에러 메시지"
+  "success": true,
+  "data": { ... }
 }
 ```
+
+**에러 응답:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "입력값 검증에 실패했습니다.",
+    "details": {
+      "fieldName": "에러 메시지"
+    }
+  }
+}
+```
+
+### 에러 코드
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `VALIDATION_ERROR` | 400 | Bean Validation 실패 (필드별 상세 에러 포함) |
+| `BAD_REQUEST` | 400 | 잘못된 요청 파라미터 |
+| `SCHEDULER_ERROR` | 500 | Quartz 스케줄러 오류 |
+| `INTERNAL_ERROR` | 500 | 서버 내부 오류 |
 
 ### HTTP Status Code
 
@@ -108,26 +156,34 @@ Backend와 Frontend에서 공통으로 적용되는 기능 명세입니다.
 ### 상태 흐름도
 
 ```
-SR (발송 대기)
- ├→ SS (스케줄러 등록)
- │   └→ SE (SES 발송 완료)
- │       ├→ SD (발송 성공 - Delivery)
- │       ├→ SB (반송 - Bounce)
- │       └→ SC (수신 거부 - Complaint)
- └→ SF (발송 실패)
+Queued (발송 큐 진입)
+ └→ Sending (SES API 호출 완료)
+     ├→ Delivered (수신 MTA 전달 확인)
+     ├→ Bounced (반송)
+     ├→ Complained (수신자 스팸 신고)
+     ├→ Rejected (SES 발송 거부)
+     ├→ Delayed (일시적 전달 지연)
+     │   └→ Delivered / Bounced / ...
+     ├→ Error (시스템 오류)
+     ├→ Blocked (내부 차단)
+     └→ Timeout (1시간 초과 자동 전환)
 ```
 
-### 상태 코드 정의
+### 상태 코드 정의 (EnumEmailSendStatusCode)
 
-| Code | Name | Description |
-|------|------|-------------|
-| `SR` | Send Ready | 발송 대기 상태 (외부 시스템에서 INSERT) |
-| `SS` | Scheduled | 스케줄러에 작업 등록 완료 |
-| `SE` | Sent to SES | AWS SES로 발송 요청 완료 |
-| `SD` | Delivered | 수신자에게 정상 전달 (Callback 또는 폴링으로 업데이트) |
-| `SB` | Bounced | 반송 (잘못된 주소 등) |
-| `SC` | Complained | 수신자가 스팸 신고 |
-| `SF` | Failed | 발송 실패 |
+| Code | Description | Terminal |
+|------|-------------|----------|
+| `SQ` | 스케줄러 큐 진입 (레거시) | - |
+| `Queued` | 발송 큐 진입 (Quartz 스케줄링 완료) | - |
+| `Sending` | SES API 호출 완료, 결과 대기 중 | - |
+| `Delayed` | 일시적 전달 지연 (DeliveryDelay 이벤트) | - |
+| `Delivered` | 수신 MTA 전달 확인 | Yes |
+| `Bounced` | 반송 (Bounce 이벤트) | Yes |
+| `Complained` | 수신자 스팸 신고 (Complaint 이벤트) | Yes |
+| `Rejected` | SES 발송 거부 (Reject 이벤트) | Yes |
+| `Error` | 시스템 오류 (RenderingFailure/SESFail/QuartzFail) | Yes |
+| `Blocked` | 내부 차단 (Blacklist/Suppression) | Yes |
+| `Timeout` | SES 이벤트 미도달 타임아웃 (1시간 초과 Sending → 자동 전환) | Yes |
 
 ---
 

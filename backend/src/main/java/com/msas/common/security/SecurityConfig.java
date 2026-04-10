@@ -1,6 +1,7 @@
 package com.msas.common.security;
 
-import com.msas.settings.service.SettingsService;
+import com.msas.auth.JwtAuthenticationFilter;
+import com.msas.auth.JwtProvider;
 import com.msas.tenant.repository.TenantRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -8,6 +9,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -24,42 +27,37 @@ public class SecurityConfig {
     private String apiKey;
 
     private final TenantRepository tenantRepository;
-    private final SettingsService settingsService;
+    private final JwtProvider jwtProvider;
 
-    public SecurityConfig(TenantRepository tenantRepository, SettingsService settingsService) {
+    public SecurityConfig(TenantRepository tenantRepository, JwtProvider jwtProvider) {
         this.tenantRepository = tenantRepository;
-        this.settingsService = settingsService;
+        this.jwtProvider = jwtProvider;
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        boolean useApiKey = apiKey != null && !apiKey.isBlank();
-
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> {
-                    auth.requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/ses/feedback/**").permitAll()
-                        .requestMatchers("/ses/callback/**").permitAll();
+                        .requestMatchers("/auth/login", "/auth/refresh").permitAll()
+                        .anyRequest().authenticated()
+                );
 
-                    if (useApiKey) {
-                        auth.anyRequest().authenticated();
-                    } else {
-                        auth.anyRequest().permitAll();
-                    }
-                });
+        JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtProvider);
+        ApiKeyAuthenticationFilter apiKeyFilter = new ApiKeyAuthenticationFilter(apiKey, tenantRepository);
 
-        // Callback Secret 검증 필터 (항상 등록, secret 미설정 시 검증 건너뜀)
-        http.addFilterBefore(new CallbackSecretFilter(settingsService), UsernamePasswordAuthenticationFilter.class);
-
-        if (useApiKey) {
-            ApiKeyAuthenticationFilter authFilter = new ApiKeyAuthenticationFilter(apiKey, tenantRepository);
-            http.addFilterBefore(authFilter, UsernamePasswordAuthenticationFilter.class);
-            http.addFilterAfter(new TenantContextFilter(), ApiKeyAuthenticationFilter.class);
-        }
+        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(apiKeyFilter, JwtAuthenticationFilter.class);
+        http.addFilterAfter(new TenantContextFilter(), ApiKeyAuthenticationFilter.class);
 
         return http.build();
     }
