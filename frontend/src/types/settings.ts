@@ -7,11 +7,7 @@ export interface AwsSettings {
   gatewayResultsPath: string;
   gatewayConfigPath: string;
   gatewayTenantSetupPath: string;
-  // Callback
-  callbackUrl: string;
-  callbackSecret: string;
   // Delivery
-  deliveryMode: 'callback' | 'polling';
   pollingInterval: string;
 }
 
@@ -25,12 +21,7 @@ export interface AwsSettingsResponse {
   gatewayConfigPath: string;
   gatewayTenantSetupPath: string;
   gatewayConfigured: boolean;
-  // Callback
-  callbackUrl: string;
-  callbackSecretMasked: string;
-  callbackConfigured: boolean;
   // Delivery
-  deliveryMode: string;
   pollingInterval: string;
   // Meta
   updatedAt: string | null;

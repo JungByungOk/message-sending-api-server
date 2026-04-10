@@ -7,10 +7,8 @@ import {
   Col,
   Form,
   Input,
-  Radio,
   Row,
   Select,
-  Space,
   Spin,
   Typography,
   message,
@@ -60,7 +58,6 @@ function TestResultCard({ result }: { result: AwsTestResult }) {
 
 export default function AwsSettingsPage() {
   const [form] = Form.useForm<AwsSettings>();
-  const deliveryMode = Form.useWatch('deliveryMode', form);
   const { data: settings, isLoading } = useAwsSettings();
   const saveMutation = useSaveAwsSettings();
   const testMutation = useTestAwsConnection();
@@ -76,9 +73,6 @@ export default function AwsSettingsPage() {
         gatewayResultsPath: settings.gatewayResultsPath || '/results',
         gatewayConfigPath: settings.gatewayConfigPath || '/config',
         gatewayTenantSetupPath: settings.gatewayTenantSetupPath || '/tenant-setup',
-        callbackUrl: settings.callbackUrl || '',
-        callbackSecret: '',
-        deliveryMode: (settings.deliveryMode as 'callback' | 'polling') || 'callback',
         pollingInterval: settings.pollingInterval || '300000',
       });
     }
@@ -129,7 +123,7 @@ export default function AwsSettingsPage() {
         />
       </div>
       <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
-        API Gateway 연결, 콜백 수신, 발송 결과 수신 방식을 설정합니다.
+        API Gateway 연결 및 발송 결과 수신 방식을 설정합니다.
       </Text>
 
       <Form form={form} layout="vertical" requiredMark="optional">
@@ -190,65 +184,12 @@ export default function AwsSettingsPage() {
             </Card>
         </div>
 
-          {/* === Callback + Delivery Mode === */}
+          {/* === Delivery === */}
         <div style={{ marginTop: 16 }}>
             <Card
               title={<><SyncOutlined style={{ marginRight: 8 }} />발송 결과 수신</>}
               size="small"
-              extra={
-                <Badge
-                  status={settings?.callbackConfigured ? 'success' : 'error'}
-                  text={settings?.callbackConfigured ? '설정됨' : '미설정'}
-                />
-              }
             >
-              <Form.Item label="수신 모드" name="deliveryMode">
-                <Radio.Group>
-                  <Radio.Button value="callback">Callback (실시간)</Radio.Button>
-                  <Radio.Button value="polling">Polling (폴링만)</Radio.Button>
-                </Radio.Group>
-              </Form.Item>
-
-              {deliveryMode === 'callback' && (
-                <Alert
-                  type="info"
-                  showIcon
-                  message="Callback 모드"
-                  description="Lambda가 실시간으로 이벤트를 전달하고, 보정 폴링도 함께 동작합니다."
-                  style={{ marginBottom: 16 }}
-                />
-              )}
-
-              {deliveryMode === 'polling' && (
-                <Alert
-                  type="warning"
-                  showIcon
-                  message="Polling 모드"
-                  description="콜백 없이 보정 폴링으로만 결과를 수신합니다. 내부 IDC 등 콜백 포트를 열 수 없는 환경에서 사용합니다."
-                  style={{ marginBottom: 16 }}
-                />
-              )}
-
-              {deliveryMode === 'callback' && (
-                <>
-                  <Form.Item
-                    label="Callback URL"
-                    name="callbackUrl"
-                    help="Lambda가 이벤트를 전송할 ESM 엔드포인트"
-                  >
-                    <Input placeholder="https://esm-server/ses/callback/event" />
-                  </Form.Item>
-
-                  <Form.Item
-                    label="Callback Secret"
-                    name="callbackSecret"
-                    help={settings?.callbackSecretMasked ? `현재: ${settings.callbackSecretMasked}` : '요청 무결성 검증용 시크릿'}
-                  >
-                    <Input.Password placeholder="비워두면 기존 값 유지" />
-                  </Form.Item>
-                </>
-              )}
-
               <Form.Item label="보정 폴링 주기" name="pollingInterval">
                 <Select options={POLLING_OPTIONS} />
               </Form.Item>

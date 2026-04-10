@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { monitoringApi } from '@/api/monitoring';
+import { monitoringApi, getTenantMetrics, getRealCost } from '@/api/monitoring';
 
 export function useMonitoringSummary() {
   return useQuery({
@@ -78,3 +78,20 @@ export function useSesQuota() {
     refetchInterval: 30_000,
   });
 }
+
+export const useTenantMetrics = (tenantId: string, period = 3600) => {
+  return useQuery({
+    queryKey: ['tenant-metrics', tenantId, period],
+    queryFn: () => getTenantMetrics(tenantId, period),
+    enabled: !!tenantId,
+    staleTime: 5 * 60 * 1000, // 5분 캐시
+  });
+};
+
+export const useRealCost = (startDate?: string, endDate?: string) => {
+  return useQuery({
+    queryKey: ['real-cost', startDate, endDate],
+    queryFn: () => getRealCost(startDate, endDate),
+    staleTime: 24 * 60 * 60 * 1000, // 1일 캐시
+  });
+};

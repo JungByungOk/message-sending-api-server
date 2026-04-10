@@ -8,8 +8,10 @@ import {
   getSenders,
   getTenant,
   getTenants,
+  pauseTenant,
   regenerateApiKey,
   removeSender,
+  resumeTenant,
   updateTenant,
 } from '@/api/tenant';
 import type { CreateTenantRequest, UpdateTenantRequest } from '@/types/tenant';
@@ -129,6 +131,28 @@ export const useRemoveSender = () => {
       removeSender(tenantId, email),
     onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['senders', variables.tenantId] });
+    },
+  });
+};
+
+// 테넌트 일시정지 뮤테이션 훅
+export const usePauseTenant = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => pauseTenant(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tenants'] });
+    },
+  });
+};
+
+// 테넌트 발송 재개 뮤테이션 훅
+export const useResumeTenant = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => resumeTenant(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['tenants'] });
     },
   });
 };

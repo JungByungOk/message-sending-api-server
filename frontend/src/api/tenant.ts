@@ -63,3 +63,13 @@ export const addSender = async (tenantId: string, sender: { email: string; displ
 export const removeSender = async (tenantId: string, email: string): Promise<void> => {
   await apiClient.delete(`/tenant/${tenantId}/senders/${encodeURIComponent(email)}`);
 };
+
+// 테넌트 일시정지
+export const pauseTenant = async (id: string): Promise<void> => {
+  await apiClient.post(`/tenant/${id}/pause`);
+};
+
+// 테넌트 발송 재개
+export const resumeTenant = async (id: string): Promise<void> => {
+  await apiClient.post(`/tenant/${id}/resume`);
+};

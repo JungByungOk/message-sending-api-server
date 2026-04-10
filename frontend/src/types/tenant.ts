@@ -4,10 +4,11 @@ export interface Tenant {
   domain: string;
   apiKey: string;
   configSetName: string | null;
+  sesTenantName: string | null;
   verificationStatus: 'PENDING' | 'VERIFIED' | 'FAILED';
   quotaDaily: number;
   quotaMonthly: number;
-  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PAUSED';
   createdAt: string;
   updatedAt: string;
 }

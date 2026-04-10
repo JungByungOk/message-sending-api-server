@@ -71,3 +71,15 @@ export const monitoringApi = {
     return data;
   },
 };
+
+// 테넌트별 CloudWatch 메트릭 조회
+export const getTenantMetrics = async (tenantId: string, period = 3600) => {
+  const { data } = await apiClient.get(`/monitoring/tenant-metrics/${tenantId}`, { params: { period } });
+  return data;
+};
+
+// Cost Explorer 실 비용 조회
+export const getRealCost = async (startDate?: string, endDate?: string) => {
+  const { data } = await apiClient.get('/monitoring/cost/real', { params: { startDate, endDate } });
+  return data;
+};

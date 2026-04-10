@@ -24,7 +24,7 @@ const palette = {
 type PaletteKey = keyof typeof palette;
 
 // ─── 테넌트 상태 ──────────────────────────────────────────────────────────────
-type TenantStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+type TenantStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PAUSED';
 type VerificationStatus = 'VERIFIED' | 'PENDING' | 'FAILED';
 type JobStatus = 'RUNNING' | 'SCHEDULED' | 'PAUSED' | 'COMPLETE';
 type SuppressionReason = 'BOUNCE' | 'COMPLAINT';
@@ -41,9 +41,10 @@ interface TagConfig {
 }
 
 const tenantConfig: Record<TenantStatus, TagConfig> = {
-  ACTIVE:    { palette: 'positive', label: '활성',  icon: <CheckCircleFilled /> },
-  INACTIVE:  { palette: 'neutral',  label: '비활성', icon: <MinusCircleFilled /> },
-  SUSPENDED: { palette: 'negative', label: '정지',  icon: <StopFilled /> },
+  ACTIVE:    { palette: 'positive', label: '활성',    icon: <CheckCircleFilled /> },
+  INACTIVE:  { palette: 'neutral',  label: '비활성',  icon: <MinusCircleFilled /> },
+  SUSPENDED: { palette: 'negative', label: '정지',    icon: <StopFilled /> },
+  PAUSED:    { palette: 'warning',  label: '일시정지', icon: <PauseCircleFilled /> },
 };
 
 const verificationConfig: Record<VerificationStatus, TagConfig> = {

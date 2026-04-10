@@ -6,6 +6,7 @@ import {
   Button,
   Card,
   Col,
+  Descriptions,
   Form,
   Input,
   InputNumber,
@@ -21,6 +22,7 @@ import {
   Typography,
   message,
 } from 'antd';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ApiOutlined,
   ArrowLeftOutlined,
@@ -43,7 +45,7 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useTenant, useUpdateTenant, useRegenerateApiKey, useSenders, useAddSender, useRemoveSender } from '@/hooks/useTenants';
+import { useTenant, useUpdateTenant, useRegenerateApiKey, useSenders, useAddSender, useRemoveSender, usePauseTenant, useResumeTenant } from '@/hooks/useTenants';
 import { useDkimRecords, useEmailVerificationStatus, useResendVerification, useVerifyEmail, useActivateTenant } from '@/hooks/useTenantSetup';
 import type { UpdateTenantRequest } from '@/types/tenant';
 import StatusTag from '@/components/StatusTag';
@@ -169,6 +171,33 @@ export default function TenantDetail() {
   const { mutate: resendVerification } = useResendVerification();
   const { data: dkimRecords } = useDkimRecords(id);
   const { mutate: activateTenant, isPending: isActivating } = useActivateTenant();
+  const queryClient = useQueryClient();
+  const pauseMutation = usePauseTenant();
+  const resumeMutation = useResumeTenant();
+  const pauseLoading = pauseMutation.isPending;
+  const resumeLoading = resumeMutation.isPending;
+
+  const handlePause = () => {
+    if (!id) return;
+    pauseMutation.mutate(id, {
+      onSuccess: () => {
+        void message.success('테넌트 발송이 일시정지되었습니다.');
+        void queryClient.invalidateQueries({ queryKey: ['tenant', id] });
+      },
+      onError: () => void message.error('일시정지 실패'),
+    });
+  };
+
+  const handleResume = () => {
+    if (!id) return;
+    resumeMutation.mutate(id, {
+      onSuccess: () => {
+        void message.success('테넌트 발송이 재개되었습니다.');
+        void queryClient.invalidateQueries({ queryKey: ['tenant', id] });
+      },
+      onError: () => void message.error('발송 재개 실패'),
+    });
+  };
 
   const handleEditOpen = () => {
     if (!tenant) return;
@@ -307,6 +336,30 @@ export default function TenantDetail() {
               <div style={{ color: '#111827', fontSize: 14 }}>{item.value}</div>
             </div>
           ))}
+
+          {/* SES 전송 상태 */}
+          <Card title="SES 전송 상태" style={{ marginTop: 24 }}>
+            <Descriptions column={2}>
+              <Descriptions.Item label="SES 테넌트명">
+                {tenant.sesTenantName || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="전송 상태">
+                <StatusTag type="tenant" status={tenant.status} />
+              </Descriptions.Item>
+            </Descriptions>
+            <Space style={{ marginTop: 16 }}>
+              {tenant.status === 'ACTIVE' && (
+                <Button danger onClick={() => handlePause()} loading={pauseLoading}>
+                  발송 일시정지
+                </Button>
+              )}
+              {tenant.status === 'PAUSED' && (
+                <Button type="primary" onClick={() => handleResume()} loading={resumeLoading}>
+                  발송 재개
+                </Button>
+              )}
+            </Space>
+          </Card>
         </div>
       ),
     },
