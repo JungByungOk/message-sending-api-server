@@ -1,10 +1,9 @@
 package com.msas.ses.controller;
 
-import com.google.common.util.concurrent.RateLimiter;
 import com.google.gson.Gson;
 import com.msas.common.tenant.TenantContext;
 import com.msas.ses.dto.*;
-import com.msas.ses.repository.EmailResultRepository;
+import com.msas.ses.service.EmailDispatchService;
 import com.msas.settings.service.ApiGatewayClient;
 import com.msas.tenant.entity.TenantEntity;
 import com.msas.tenant.repository.TenantRepository;
@@ -31,10 +30,9 @@ public class EmailController {
 
     private final ApiGatewayClient apiGatewayClient;
     private final SenderValidationService senderValidationService;
-    private final EmailResultRepository emailResultRepository;
+    private final EmailDispatchService emailDispatchService;
     private final TenantRepository tenantRepository;
     private final com.msas.ses.repository.TemplateTenantRepository templateTenantRepository;
-    private final RateLimiter sesRateLimiter;
     private final Gson gson = new Gson();
 
     /**
@@ -62,79 +60,21 @@ public class EmailController {
         senderValidationService.validateSender(requestBasicEmailDTO.getFrom());
         String tenantId = resolveTenantId(request);
 
-        // 1. DB에 발송 기록 생성 (MST + DTL per recipient)
-        EmailSendMasterInsertDTO master = new EmailSendMasterInsertDTO();
-        master.setEmailTypCd("TEXT");
-        master.setSendDivCd("H");
-        master.setTenantId(tenantId);
-        emailResultRepository.insertEmailSendMaster(master);
+        List<EmailDispatchService.Recipient> recipients = requestBasicEmailDTO.getTo().stream()
+                .map(email -> new EmailDispatchService.Recipient(email, null))
+                .toList();
 
-        String lastCorrelationId = null;
-        int successCount = 0;
-        int failCount = 0;
+        Map<String, Object> result = emailDispatchService.dispatch(new EmailDispatchService.DispatchRequest(
+                tenantId,
+                requestBasicEmailDTO.getFrom(),
+                null,
+                requestBasicEmailDTO.getSubject(),
+                requestBasicEmailDTO.getBody(),
+                recipients
+        ));
 
-        for (String recipient : requestBasicEmailDTO.getTo()) {
-            String correlationId = java.util.UUID.randomUUID().toString();
-
-            EmailSendDetailInsertDTO detail = new EmailSendDetailInsertDTO();
-            detail.setEmailSendSeq(master.getEmailSendSeq());
-            detail.setSendStsCd("Queued");
-            detail.setCorrelationId(correlationId);
-            detail.setRcvEmailAddr(recipient);
-            detail.setSendEmailAddr(requestBasicEmailDTO.getFrom());
-            detail.setEmailTitle(requestBasicEmailDTO.getSubject());
-            detail.setEmailCts(requestBasicEmailDTO.getBody());
-            detail.setTenantId(tenantId);
-            emailResultRepository.insertEmailSendDetail(detail);
-
-            try {
-                Map<String, Object> sendPayload = new java.util.LinkedHashMap<>();
-                sendPayload.put("tenantId", tenantId);
-                sendPayload.put("correlationId", correlationId);
-                sendPayload.put("from", requestBasicEmailDTO.getFrom());
-                sendPayload.put("to", List.of(recipient));
-                sendPayload.put("subject", requestBasicEmailDTO.getSubject());
-                sendPayload.put("body", requestBasicEmailDTO.getBody());
-                List<Map<String, String>> tags = new java.util.ArrayList<>();
-                tags.add(Map.of("name", "correlation_id", "value", correlationId));
-                if (requestBasicEmailDTO.getTags() != null) {
-                    requestBasicEmailDTO.getTags().forEach(t -> tags.add(Map.of("name", t.getName(), "value", t.getValue())));
-                }
-                sendPayload.put("tags", tags);
-                String jsonBody = gson.toJson(sendPayload);
-                HttpResponse<String> response = apiGatewayClient.post("/send-email", jsonBody);
-
-                if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                    Map<String, String> result = gson.fromJson(response.body(),
-                            new com.google.gson.reflect.TypeToken<Map<String, String>>() {}.getType());
-                    String messageId = result.getOrDefault("messageId", "");
-                    emailResultRepository.updateEmailSendDetailAfterSend(detail.getEmailSendDtlSeq(), "Sending", detail.getCorrelationId(), messageId);
-                    lastCorrelationId = correlationId;
-                    successCount++;
-
-                    log.info("[EmailController] 텍스트 이메일 발송 완료. (tenantId: {}, from: {}, to: {}, messageId: {})",
-                            tenantId, requestBasicEmailDTO.getFrom(), recipient, messageId);
-                } else {
-                    emailResultRepository.updateEmailSendDetailAfterSend(detail.getEmailSendDtlSeq(), "Error", detail.getCorrelationId(), null);
-                    failCount++;
-                    log.warn("[EmailController] 텍스트 이메일 발송 실패. (tenantId: {}, to: {}, HTTP {})",
-                            tenantId, recipient, response.statusCode());
-                }
-            } catch (Exception e) {
-                emailResultRepository.updateEmailSendDetailAfterSend(detail.getEmailSendDtlSeq(), "Error", detail.getCorrelationId(), null);
-                failCount++;
-                log.error("[EmailController] 텍스트 이메일 발송 실패. (tenantId: {}, to: {})",
-                        tenantId, recipient, e);
-            }
-        }
-
-        if (successCount == 0) {
-            throw new RuntimeException("모든 수신자에 대한 이메일 발송이 실패했습니다.");
-        }
-
-        log.info("[EmailController] 텍스트 이메일 발송 완료. (총: {}, 성공: {}, 실패: {})", requestBasicEmailDTO.getTo().size(), successCount, failCount);
         ResponseBasicEmailDTO dto = new ResponseBasicEmailDTO();
-        dto.setMessageId(lastCorrelationId);
+        dto.setMessageId(String.valueOf(result.get("emailSendSeq")));
         return ResponseEntity.ok(dto);
     }
 
@@ -145,91 +85,24 @@ public class EmailController {
         senderValidationService.validateSender(requestTemplatedEmailDto.getFrom());
         String tenantId = resolveTenantId(request);
 
-        // 1. DB에 발송 기록 생성
-        EmailSendMasterInsertDTO master = new EmailSendMasterInsertDTO();
-        master.setEmailTypCd("TEMPLATE");
-        master.setSendDivCd("P");
-        master.setTenantId(tenantId);
-        emailResultRepository.insertEmailSendMaster(master);
+        List<EmailDispatchService.Recipient> recipients = requestTemplatedEmailDto.getTo().stream()
+                .map(email -> new EmailDispatchService.Recipient(email,
+                        requestTemplatedEmailDto.getTemplateData() != null
+                                ? requestTemplatedEmailDto.getTemplateData()
+                                : Map.of()))
+                .toList();
 
-        String lastCorrelationId = null;
-        int successCount = 0;
-        int failCount = 0;
+        Map<String, Object> result = emailDispatchService.dispatch(new EmailDispatchService.DispatchRequest(
+                tenantId,
+                requestTemplatedEmailDto.getFrom(),
+                requestTemplatedEmailDto.getTemplateName(),
+                requestTemplatedEmailDto.getSubject(),
+                null,
+                recipients
+        ));
 
-        for (String recipient : requestTemplatedEmailDto.getTo()) {
-            sesRateLimiter.acquire();
-            String correlationId = java.util.UUID.randomUUID().toString();
-
-            EmailSendDetailInsertDTO detail = new EmailSendDetailInsertDTO();
-            detail.setEmailSendSeq(master.getEmailSendSeq());
-            detail.setSendStsCd("Queued");
-            detail.setCorrelationId(correlationId);
-            detail.setRcvEmailAddr(recipient);
-            detail.setSendEmailAddr(requestTemplatedEmailDto.getFrom());
-            detail.setEmailTitle(requestTemplatedEmailDto.getSubject() != null && !requestTemplatedEmailDto.getSubject().isEmpty()
-                    ? requestTemplatedEmailDto.getSubject()
-                    : requestTemplatedEmailDto.getTemplateName());
-            detail.setEmailTmpletId(requestTemplatedEmailDto.getTemplateName());
-            detail.setTenantId(tenantId);
-            emailResultRepository.insertEmailSendDetail(detail);
-
-            try {
-                // tenantId를 포함하여 발송
-                Map<String, Object> sendPayload = new java.util.LinkedHashMap<>();
-                sendPayload.put("tenantId", tenantId);
-                sendPayload.put("correlationId", correlationId);
-                sendPayload.put("from", requestTemplatedEmailDto.getFrom());
-                sendPayload.put("to", List.of(recipient));
-                sendPayload.put("templateName", requestTemplatedEmailDto.getTemplateName());
-                sendPayload.put("templateData", requestTemplatedEmailDto.getTemplateData());
-                if (requestTemplatedEmailDto.getCc() != null) {
-                    sendPayload.put("cc", requestTemplatedEmailDto.getCc());
-                }
-                if (requestTemplatedEmailDto.getBcc() != null) {
-                    sendPayload.put("bcc", requestTemplatedEmailDto.getBcc());
-                }
-                // correlation_id tag 추가 (SES EmailTag → event-processor에서 추출)
-                List<Map<String, String>> tags = new java.util.ArrayList<>();
-                tags.add(Map.of("name", "correlation_id", "value", correlationId));
-                if (requestTemplatedEmailDto.getTags() != null) {
-                    requestTemplatedEmailDto.getTags().forEach(t -> tags.add(Map.of("name", t.getName(), "value", t.getValue())));
-                }
-                sendPayload.put("tags", tags);
-                String jsonBody = gson.toJson(sendPayload);
-                HttpResponse<String> response = apiGatewayClient.post("/send-email", jsonBody);
-
-                if (response.statusCode() >= 200 && response.statusCode() < 300) {
-                    Map<String, String> result = gson.fromJson(response.body(),
-                            new com.google.gson.reflect.TypeToken<Map<String, String>>() {}.getType());
-                    String messageId = result.getOrDefault("messageId", "");
-                    emailResultRepository.updateEmailSendDetailAfterSend(detail.getEmailSendDtlSeq(), "Sending", detail.getCorrelationId(), messageId);
-                    lastCorrelationId = correlationId;
-                    successCount++;
-
-                    log.info("[EmailController] 템플릿 이메일 발송 완료. (tenantId: {}, from: {}, to: {}, template: {}, messageId: {})",
-                            tenantId, requestTemplatedEmailDto.getFrom(), recipient,
-                            requestTemplatedEmailDto.getTemplateName(), messageId);
-                } else {
-                    emailResultRepository.updateEmailSendDetailAfterSend(detail.getEmailSendDtlSeq(), "Error", detail.getCorrelationId(), null);
-                    failCount++;
-                    log.warn("[EmailController] 템플릿 이메일 발송 실패. (tenantId: {}, to: {}, template: {}, HTTP {})",
-                            tenantId, recipient, requestTemplatedEmailDto.getTemplateName(), response.statusCode());
-                }
-            } catch (Exception e) {
-                emailResultRepository.updateEmailSendDetailAfterSend(detail.getEmailSendDtlSeq(), "Error", detail.getCorrelationId(), null);
-                failCount++;
-                log.error("[EmailController] 템플릿 이메일 발송 실패. (tenantId: {}, to: {}, template: {})",
-                        tenantId, recipient, requestTemplatedEmailDto.getTemplateName(), e);
-            }
-        }
-
-        if (successCount == 0) {
-            throw new RuntimeException("모든 수신자에 대한 이메일 발송이 실패했습니다.");
-        }
-
-        log.info("[EmailController] 템플릿 이메일 발송 완료. (총: {}, 성공: {}, 실패: {})", requestTemplatedEmailDto.getTo().size(), successCount, failCount);
         ResponseTemplatedEmailDTO dto = new ResponseTemplatedEmailDTO();
-        dto.setMessageId(lastCorrelationId);
+        dto.setMessageId(String.valueOf(result.get("emailSendSeq")));
         return ResponseEntity.ok(dto);
     }
 

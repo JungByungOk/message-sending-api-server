@@ -6,7 +6,6 @@ import com.msas.scheduler.dto.RequestScheduleDTO;
 import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
 import com.msas.scheduler.dto.ResponseAllJobStatusDTO;
 import com.msas.scheduler.dto.ResponseScheduleDTO;
-import com.msas.scheduler.job.SendTemplatedEmailJob;
 import com.msas.scheduler.service.ScheduleService;
 import com.msas.common.tenant.TenantContext;
 import com.msas.tenant.entity.TenantEntity;
@@ -23,6 +22,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 
+
 @Tag(name = "Scheduler", description = "Quartz 기반 예약 발송 관리 API")
 @Slf4j
 @RestController
@@ -33,25 +33,13 @@ public class ScheduleController {
     private final ScheduleService scheduleService;
     private final TenantRepository tenantRepository;
 
-    @Operation(summary = "예약 작업 생성", description = "템플릿 이메일 예약 발송 작업을 등록합니다.")
+    @Operation(summary = "예약 작업 생성", description = "(Deprecated) 예약 발송은 EventBridge Scheduler로 이관되었습니다.")
     @PostMapping("/job")
     public ResponseEntity<?> addScheduleJob(@Valid @RequestBody RequestTemplatedEmailScheduleJobDTO requestTemplatedEmailScheduleJobDTO,
-                                               HttpServletRequest request) throws SchedulerException {
-
-        // 이미 등록된 작업인지 확인
-        if (scheduleService.isJobExists(new JobKey(requestTemplatedEmailScheduleJobDTO.getJobName(), requestTemplatedEmailScheduleJobDTO.getJobGroup()))) {
-            return new ResponseEntity<>(new ResponseScheduleDTO(false, "Job already exits"),
-                    HttpStatus.BAD_REQUEST);
-        }
-
-        // tenantId 설정: TenantContext 우선, 없으면 Authorization 헤더에서 조회
-        requestTemplatedEmailScheduleJobDTO.setTenantId(resolveTenantId(request));
-
-        // 스케쥴 등록
-        scheduleService.addJob(requestTemplatedEmailScheduleJobDTO, SendTemplatedEmailJob.class);
-
-        return new ResponseEntity<>(new ResponseScheduleDTO(true, "Job created successfully"), HttpStatus.CREATED);
-
+                                               HttpServletRequest request) {
+        return new ResponseEntity<>(new ResponseScheduleDTO(false,
+                "예약 발송 기능은 EventBridge Scheduler로 이관되었습니다. 해당 API는 더 이상 지원되지 않습니다."),
+                HttpStatus.GONE);
     }
 
     @Operation(summary = "작업 삭제", description = "지정한 예약 발송 작업을 삭제합니다. 실행 중인 작업은 삭제할 수 없습니다.")

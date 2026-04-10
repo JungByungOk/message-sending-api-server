@@ -224,8 +224,10 @@ Phase 2부터 Callback 모드가 제거되고 EventBridge → DynamoDB → Polli
 
 ## 9. Rate Limiting
 
-- Guava `RateLimiter` 적용
-- AWS SES 발송 제한 준수 (SES 계정별 초당 발송 한도)
+- Phase 3부터 Guava `RateLimiter`가 제거되었습니다.
+- Rate limiting은 SQS 동시성 제어 + SES 할당량 동적 조정으로 처리됩니다.
+  - **SQS 동시성**: Lambda `ems-email-sender`의 Reserved Concurrency로 초당 발송 속도 제어
+  - **SES 할당량**: `QuotaService.checkQuota(tenantId, count)`로 테넌트별 일별/월별 한도 검증 후 발송 큐 등록
 
 ---
 

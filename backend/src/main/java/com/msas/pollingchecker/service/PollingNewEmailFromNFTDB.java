@@ -1,22 +1,17 @@
 package com.msas.pollingchecker.service;
 
-import com.msas.ses.dto.MessageTagDto;
 import com.google.gson.Gson;
 import com.msas.pollingchecker.model.NewEmailEntity;
 import com.msas.pollingchecker.repository.SESMariaDBRepository;
 import com.msas.pollingchecker.types.EnumEmailSendStatusCode;
-import com.msas.scheduler.dto.RequestTemplatedEmailScheduleJobDTO;
-import com.msas.scheduler.job.SendTemplatedEmailWithPollingJob;
-import com.msas.scheduler.service.ScheduleServiceImpl;
+import com.msas.ses.service.EmailDispatchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.quartz.SchedulerException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -29,8 +24,7 @@ public class PollingNewEmailFromNFTDB {
     String serverName;
 
     private final SESMariaDBRepository sesMariaDBRepository;
-
-    private final ScheduleServiceImpl scheduleService;
+    private final EmailDispatchService emailDispatchService;
 
     @Transactional
     @Scheduled(fixedRateString = "${polling.schedule.send-email-check-time:10000}", initialDelay = 20000)
@@ -43,16 +37,12 @@ public class PollingNewEmailFromNFTDB {
         if (newEmailEntities.isEmpty())
             return;
 
-        // 발송 요청 건수 합계
-        //----------------
         AtomicInteger nSendingEmails = new AtomicInteger();
         newEmailEntities.forEach(newEmailEntity -> {
             nSendingEmails.addAndGet(newEmailEntity.getNewEmailDetailEntities().size());
         });
         log.info("@RDBMS Checking - New registered email [ {} ]", nSendingEmails);
 
-        // 이메일 발송 스케쥴러에 등록
-        //------------------------------------------
         newEmailEntities.forEach(newEmailEntity -> {
 
             if (newEmailEntity.getNewEmailDetailEntities() == null || newEmailEntity.getNewEmailDetailEntities().isEmpty()) {
@@ -60,95 +50,56 @@ public class PollingNewEmailFromNFTDB {
                 return;
             }
 
-            // 먼저 상태를 SQ로 변경하여 다음 폴링에서 재조회 방지
             UpdateSendEmailStatus(newEmailEntity);
 
-            RequestTemplatedEmailScheduleJobDTO dto = convertNewEmailEntity2RequestTemplatedEmailScheduleJobDTO(newEmailEntity);
-
             try {
-                scheduleService.addJob(dto, SendTemplatedEmailWithPollingJob.class);
-            } catch (SchedulerException e) {
-                throw new RuntimeException(e);
+                dispatchNewEmail(newEmailEntity);
+            } catch (Exception e) {
+                log.error("@RDBMS Checking - dispatch 실패. (email_send_seq: {})", newEmailEntity.getEmail_send_seq(), e);
             }
-
         });
-
     }
 
-    /*
-     * 처리 결과 업데이트
-     */
     private void UpdateSendEmailStatus(NewEmailEntity newEmailEntity) {
         newEmailEntity.getNewEmailDetailEntities().forEach(newEmailDetailEntity -> {
-
-            int result = sesMariaDBRepository.UpdateSendEmailStatus2Scheduler(
+            sesMariaDBRepository.UpdateSendEmailStatus2Scheduler(
                     newEmailDetailEntity.getEmail_send_dtl_seq(),
                     EnumEmailSendStatusCode.SQ.name(),
                     serverName
             );
             log.info("@RDBMS Checking - Email status update with [ SR->SQ ].");
-
         });
     }
 
-    /*
-     * 데이타베이스 이메일 등록 정보 -> 쿼츠에 전달할 DTO 변환
-     */
-    private RequestTemplatedEmailScheduleJobDTO convertNewEmailEntity2RequestTemplatedEmailScheduleJobDTO(NewEmailEntity newEmailEntity) {
-
-        String jobName = String.valueOf(newEmailEntity.getEmail_send_seq());
-
-        String jobGroup = "Default";
-
-        String description = newEmailEntity.getEmail_cls_cd();
-
-        LocalDateTime startDateAt = newEmailEntity.getRsv_send_dt(); // UTC , null 이면 즉시 실행, 시간이 있으면 예약
-        //LocalDateTime startDateAt = LocalDateTime.now().plusYears(1); // for Test
-
+    private void dispatchNewEmail(NewEmailEntity newEmailEntity) {
+        Gson gson = new Gson();
         String templateName = newEmailEntity.getNewEmailDetailEntities().get(0).getEmail_tmplet_id();
-
         String from = newEmailEntity.getNewEmailDetailEntities().get(0).getSend_email_addr();
 
-        // List<Tag>
-        List<MessageTagDto> tags = new ArrayList<>();
-        tags.add(new MessageTagDto("customTag", String.valueOf(newEmailEntity.getEmail_send_seq())));
-
-        // DTO
-        RequestTemplatedEmailScheduleJobDTO templatedEmailScheduleDto = new RequestTemplatedEmailScheduleJobDTO();
-
-        // for
-        // 개별 이메일 처리
-        List<RequestTemplatedEmailScheduleJobDTO.TemplatedEmailDto> templatedEmailList = new ArrayList<>();
-        newEmailEntity.getNewEmailDetailEntities().forEach(newEmailDetailEntity -> {
-
-            // TemplateData - 탬플릿 변수에 맵핑위한 데이터
-            Map<String, String> templateParameter =
-                    new Gson().fromJson(newEmailDetailEntity.getEmail_cts(), HashMap.class);
-
-            // TemplatedEmailList - 수신자 + 수신자별 탬플릿 데이터 리스트 (대량 발송 N개)
-            RequestTemplatedEmailScheduleJobDTO.TemplatedEmailDto templatedEmailDto = new RequestTemplatedEmailScheduleJobDTO.TemplatedEmailDto();
-            {
-                templatedEmailDto.setId(String.valueOf(newEmailDetailEntity.getEmail_send_dtl_seq()));
-                templatedEmailDto.setTo(Collections.singletonList(newEmailDetailEntity.getRcv_email_addr()));
-                templatedEmailDto.setTemplateParameters(templateParameter);
+        List<EmailDispatchService.Recipient> recipients = new ArrayList<>();
+        newEmailEntity.getNewEmailDetailEntities().forEach(detail -> {
+            Map<String, String> templateData = new HashMap<>();
+            String emailCts = detail.getEmail_cts();
+            if (emailCts != null && !emailCts.isBlank()) {
+                try {
+                    templateData = gson.fromJson(emailCts, HashMap.class);
+                } catch (Exception e) {
+                    log.warn("@RDBMS Checking - 템플릿 파라미터 파싱 실패. (dtlSeq: {})", detail.getEmail_send_dtl_seq());
+                }
             }
-            templatedEmailList.add(templatedEmailDto);
-
+            recipients.add(new EmailDispatchService.Recipient(detail.getRcv_email_addr(), templateData));
         });
 
-        // 쿼츠 전달용 대량 발송 DTO 설정
-        templatedEmailScheduleDto.setJobName(jobName);
-        templatedEmailScheduleDto.setJobGroup(jobGroup);
-        templatedEmailScheduleDto.setDescription(description);
-        templatedEmailScheduleDto.setStartDateAt(startDateAt);
-        templatedEmailScheduleDto.setTemplateName(templateName);
-        templatedEmailScheduleDto.setFrom(from);
-        {
-            templatedEmailScheduleDto.setTemplatedEmailList(templatedEmailList);
-        }
-        templatedEmailScheduleDto.setTags(tags);
+        emailDispatchService.dispatch(new EmailDispatchService.DispatchRequest(
+                null,
+                from,
+                templateName,
+                null,
+                null,
+                recipients
+        ));
 
-        return templatedEmailScheduleDto;
+        log.info("@RDBMS Checking - dispatch 완료. (email_send_seq: {}, 수신자: {}건)",
+                newEmailEntity.getEmail_send_seq(), recipients.size());
     }
-
 }

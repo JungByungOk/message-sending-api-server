@@ -74,7 +74,8 @@
 |--------|-------------|-----------|
 | SES Module | 이메일/템플릿 발송 요청, correlationId 생성 및 EmailTag 주입 | AWS API Gateway → SQS → Lambda → SES |
 | Tenant Module | 멀티테넌트 고객사 관리, API Key 발급, 할당량, 발신자 이메일 관리 | PostgreSQL |
-| Scheduler Module | Quartz 기반 예약 발송 관리, correlationId 생성 및 EmailTag 주입, tenantId Lambda 페이로드 포함, SesRateLimiterConfig 공유 Bean 적용, 배치 이메일 목록을 ADM_EMAIL_SEND_BATCH 테이블로 분리 관리 | PostgreSQL |
+| Scheduler Module | Quartz 기반 주기 작업 (폴링/타임아웃/동기화만 담당, 배치 발송은 SQS로 이관) | PostgreSQL |
+| EmailDispatch Module | 이메일 발송 큐 등록 (할당량 검증 → API GW /email-enqueue → SQS) | API Gateway |
 | ResultPollingService | DynamoDB 발송결과 주기 폴링(2분), correlationId 매칭, 이벤트 이력 기록 | AWS API Gateway → Lambda → DynamoDB |
 | Onboarding Module | 테넌트 온보딩 (생성→도메인/이메일 인증→활성화) | AWS API Gateway |
 | Suppression Module | 수신 거부(Bounce/Complaint) 목록 관리 | PostgreSQL |
@@ -106,9 +107,9 @@
 #### 이메일 발송 흐름
 
 ```
-1. [ESM] SenderValidationService → 발신자 이메일 검증 (TENANT_SENDER 테이블)
-2. [ESM] → API Gateway POST /send-email (ApiGatewayClient)
-3. [API Gateway] → SQS ems-send-queue (비동기 큐잉)
+1. [ESM] EmailDispatchService → 할당량 검증 (QuotaService) + DB 발송 이력 기록
+2. [ESM] EmailDispatchService → API Gateway POST /email-enqueue (ApiGatewayClient)
+3. [Lambda ems-enqueue] → SQS ems-send-queue 등록 (비동기 큐잉)
 4. [Lambda ems-email-sender] → SQS 트리거 → DynamoDB ems-idempotency 중복 확인
 5. [Lambda ems-email-sender] → DynamoDB ems-tenant-config (Config Set 조회)
 6. [Lambda ems-email-sender] → Amazon SES 이메일 발송

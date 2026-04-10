@@ -56,4 +56,35 @@ public class QuotaService {
                 tenantId, dailyUsed, dailyLimit, monthlyUsed, monthlyLimit);
         return withinQuota;
     }
+
+    /**
+     * 발송 건수를 포함한 할당량 검증. 초과 시 IllegalArgumentException을 발생시킵니다.
+     */
+    public void checkQuota(String tenantId, int count) {
+        if (tenantId == null) return;
+
+        TenantEntity entity = tenantRepository.selectTenantById(tenantId);
+        if (entity == null) {
+            throw new IllegalArgumentException("테넌트를 찾을 수 없습니다: " + tenantId);
+        }
+
+        int dailyUsed = tenantRepository.countEmailsSentToday(tenantId);
+        int monthlyUsed = tenantRepository.countEmailsSentThisMonth(tenantId);
+
+        int dailyLimit = entity.getQuotaDaily() != null ? entity.getQuotaDaily() : Integer.MAX_VALUE;
+        int monthlyLimit = entity.getQuotaMonthly() != null ? entity.getQuotaMonthly() : Integer.MAX_VALUE;
+
+        if (dailyUsed + count > dailyLimit) {
+            throw new IllegalArgumentException(
+                    String.format("일별 할당량 초과. (tenantId: %s, used: %d, request: %d, limit: %d)",
+                            tenantId, dailyUsed, count, dailyLimit));
+        }
+        if (monthlyUsed + count > monthlyLimit) {
+            throw new IllegalArgumentException(
+                    String.format("월별 할당량 초과. (tenantId: %s, used: %d, request: %d, limit: %d)",
+                            tenantId, monthlyUsed, count, monthlyLimit));
+        }
+        log.debug("QuotaService - 할당량 검증 통과. (tenantId: {}, daily: {}/{}, monthly: {}/{}, request: {})",
+                tenantId, dailyUsed, dailyLimit, monthlyUsed, monthlyLimit, count);
+    }
 }

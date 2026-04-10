@@ -553,62 +553,17 @@ DELETE /tenant/{tenantId}/senders/{email}
 
 ## 3. Scheduler - 예약 발송
 
-### 3.1 예약 작업 생성
+> **참고**: Phase 3부터 이메일 발송은 `EmailDispatchService` → API Gateway `/email-enqueue` → SQS 경로로 처리됩니다. Quartz 스케줄러는 폴링/타임아웃/동기화 주기 작업만 담당합니다.
+
+### 3.1 예약 작업 생성 (Deprecated)
 
 ```
 POST /scheduler/job
 ```
 
-**Request Body**
-```json
-{
-  "jobName": "welcome-email-job",
-  "jobGroup": "DEFAULT",
-  "description": "신규 가입자 환영 이메일 발송",
-  "startDateAt": "2024-12-31T14:30:00",
-  "templateName": "Welcome-Template",
-  "from": "no-reply@mycompany.com",
-  "templatedEmailList": [
-    {
-      "id": "email-001",
-      "to": ["user1@example.com"],
-      "cc": [],
-      "bcc": [],
-      "templateParameters": { "user_name": "홍길동" }
-    }
-  ],
-  "tags": [
-    { "name": "campaign", "value": "welcome-2024" }
-  ]
-}
-```
+> **Deprecated**: Phase 3에서 배치 발송 Job(`AbstractSendTemplatedEmailJob`, `SendTemplatedEmailJob`, `SendTemplatedEmailWithPollingJob`)이 삭제되었습니다. 예약 발송 Job 생성은 **HTTP 410 Gone**을 반환합니다. EventBridge Scheduler로 이관 예정입니다.
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| jobName | String | Y | 작업 이름 (고유값) |
-| jobGroup | String | N | 작업 그룹 (기본: DEFAULT) |
-| description | String | N | 작업 설명 |
-| startDateAt | LocalDateTime | N | 예약 시간 (미래만 허용, 미지정 시 즉시 실행) |
-| templateName | String | Y | SES 템플릿 이름 |
-| from | String | Y | 발신자 이메일 |
-| templatedEmailList | List\<TemplatedEmail\> | Y | 발송 대상 목록 |
-| tags | List\<MessageTag\> | N | 추적용 태그 |
-
-**Response** `201 Created`
-```json
-{
-  "result": true,
-  "message": "Job created successfully"
-}
-```
-
-**Error** `400 Bad Request`
-```json
-{
-  "result": false,
-  "message": "Job already exits"
-}
-```
+**Response** `410 Gone`
 
 ---
 

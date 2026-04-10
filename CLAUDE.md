@@ -143,3 +143,21 @@ message-sending-api-server/
 - [x] Frontend: TypeScript 에러 0건
 
 ### Phase 2 완료. 다음: Phase 3 (대용량 발송 파이프라인)
+
+---
+
+## Phase 3 완료: 대용량 발송 파이프라인 고도화
+
+### Backend
+- [x] `EmailDispatchService` 신규: 할당량 검증 → DB 기록 → API GW `/email-enqueue` → SQS 등록
+- [x] `EmailController` 리팩토링: RateLimiter 제거, EmailDispatchService 위임
+- [x] Quartz 배치 발송 Job 3개 삭제: AbstractSendTemplatedEmailJob, SendTemplatedEmailJob, SendTemplatedEmailWithPollingJob
+- [x] `ScheduleController`: 예약 발송 Job 생성 → HTTP 410 (EventBridge Scheduler로 이관 예정)
+- [x] `QueuedEmailPoller`, `PollingNewEmailFromNFTDB`: Quartz Job → EmailDispatchService 직접 호출로 전환
+- [x] `QuotaService.checkQuota(tenantId, count)` 오버로드 추가
+
+### 빌드 검증
+- [x] Backend: BUILD SUCCESSFUL
+- [x] Frontend: TypeScript 에러 0건
+
+### Phase 3 완료. 다음: Phase 4 (모니터링/비용/Suppression 고도화)
