@@ -61,7 +61,7 @@ frontend/src/
 | `/onboarding` | `OnboardingWizard` | 온보딩 마법사 |
 | `/onboarding/:tenantId` | `OnboardingStatus` | 온보딩 상태 확인 |
 | `/suppression` | `SuppressionList` | 수신 거부 목록 |
-| `/settings` | `SettingsPage` | 설정 (비밀번호 변경, AWS 연동, 폴링 주기, 테마) |
+| `/settings` | `SettingsPage` | 설정 (비밀번호 변경, VDM 토글, 폴링 주기, AWS 연동, 테마) |
 
 잘못된 경로는 `/`로 리다이렉트합니다.
 

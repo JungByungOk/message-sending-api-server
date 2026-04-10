@@ -166,6 +166,58 @@ public class SettingsService {
     }
 
     /**
+     * VDM 상태 조회.
+     */
+    public Map<String, Object> getVdmStatus() {
+        SystemConfigEntity entity = systemConfigRepository.findByKey("ses.vdm-enabled");
+        boolean localEnabled = entity != null && "true".equals(entity.getConfigValue());
+        return Map.of("enabled", localEnabled);
+    }
+
+    /**
+     * VDM ON/OFF (API Gateway → Lambda → SES PutAccountVdmAttributes).
+     */
+    public Map<String, Object> updateVdm(boolean enabled) {
+        Map<String, String> configs = getAllConfigValues();
+        String endpoint = configs.getOrDefault("gateway.endpoint", "");
+        String tenantSetupPath = configs.getOrDefault("gateway.tenant-setup-path", "/tenant-setup");
+        String apiKey = configs.getOrDefault("gateway.api-key", "");
+
+        if (isNotBlank(endpoint)) {
+            try {
+                String url = endpoint.replaceAll("/$", "") + tenantSetupPath;
+                String jsonBody = String.format("{\"action\":\"PUT_VDM\",\"enabled\":%s}", enabled);
+
+                HttpClient client = HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(10))
+                        .build();
+
+                HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .timeout(Duration.ofSeconds(10))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(jsonBody));
+
+                if (isNotBlank(apiKey)) {
+                    requestBuilder.header("x-api-key", apiKey);
+                }
+
+                HttpResponse<String> response = client.send(requestBuilder.build(),
+                        HttpResponse.BodyHandlers.ofString());
+                log.info("SettingsService - VDM AWS 동기화 완료. (HTTP {})", response.statusCode());
+            } catch (Exception e) {
+                log.warn("SettingsService - VDM AWS 동기화 실패.", e);
+            }
+        } else {
+            log.warn("SettingsService - Gateway Endpoint 미설정. VDM AWS 동기화 건너뜀.");
+        }
+
+        saveConfig("ses.vdm-enabled", String.valueOf(enabled), "VDM 활성화 여부", false);
+        log.info("SettingsService - VDM {}.", enabled ? "활성화" : "비활성화");
+        return Map.of("enabled", enabled);
+    }
+
+    /**
      * 보정 폴링 주기를 반환합니다 (ms).
      */
     public long getPollingInterval() {

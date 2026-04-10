@@ -228,6 +228,25 @@ public class MonitoringService {
         return result;
     }
 
+    /**
+     * CloudWatch 테넌트별 SES 메트릭 조회 (API Gateway 경유).
+     */
+    public Map<String, Object> getTenantMetrics(String tenantId, int period) throws Exception {
+        // Get tenant config set name
+        var tenant = monitoringRepository.selectTenantConfigSetName(tenantId);
+        String configSetName = tenant != null ? (String) tenant.get("configsetname") : "tenant-" + tenantId;
+
+        String jsonBody = gson.toJson(Map.of(
+            "action", "GET_TENANT_METRICS",
+            "tenantId", tenantId,
+            "configSetName", configSetName,
+            "period", period
+        ));
+        var response = apiGatewayClient.post("/tenant-setup", jsonBody);
+        return gson.fromJson(response.body(),
+            new com.google.gson.reflect.TypeToken<Map<String, Object>>() {}.getType());
+    }
+
     public Map<String, Object> getSesQuota() throws Exception {
         String jsonBody = gson.toJson(Map.of("action", "GET_ACCOUNT"));
         var response = apiGatewayClient.post("/tenant-setup", jsonBody);

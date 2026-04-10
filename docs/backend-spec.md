@@ -1138,9 +1138,91 @@ PUT /settings/polling-interval
 
 ---
 
-## 11. Database Schema
+### 10.6 VDM 상태 조회
 
-### 11.1 주요 테이블
+```
+GET /settings/vdm
+```
+
+**Response** `200 OK`
+```json
+{ "enabled": false }
+```
+
+---
+
+### 10.7 VDM ON/OFF
+
+```
+PUT /settings/vdm
+```
+
+**Request Body**
+```json
+{ "enabled": true }
+```
+
+**Response** `200 OK`
+```json
+{ "enabled": true }
+```
+
+---
+
+## 11. Monitoring - 모니터링
+
+### 11.1 테넌트별 SES 메트릭 조회
+
+```
+GET /monitoring/tenant-metrics/{tenantId}?period={period}
+```
+
+CloudWatch에서 테넌트별 SES 메트릭을 조회합니다.
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| period | int | N | 3600 | 조회 기간 (초) |
+
+**Response** `200 OK`
+```json
+{
+  "tenantId": "uuid",
+  "period": 3600,
+  "metrics": { ... }
+}
+```
+
+---
+
+### 11.2 Cost Explorer 실 비용 조회
+
+```
+GET /monitoring/cost/real?startDate={startDate}&endDate={endDate}
+```
+
+Cost Explorer에서 실제 AWS 비용을 조회합니다. 조회 실패 시 추정치로 폴백합니다.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| startDate | String | Y | 조회 시작일 (YYYY-MM-DD) |
+| endDate | String | Y | 조회 종료일 (YYYY-MM-DD) |
+
+**Response** `200 OK`
+```json
+{
+  "startDate": "2026-04-01",
+  "endDate": "2026-04-10",
+  "totalCost": 12.34,
+  "currency": "USD",
+  "isFallback": false
+}
+```
+
+---
+
+## 12. Database Schema
+
+### 12.1 주요 테이블
 
 | Table | Description |
 |-------|-------------|
@@ -1152,7 +1234,7 @@ PUT /settings/polling-interval
 | `SYSTEM_CONFIG` | 시스템 설정 (API Gateway 연결 정보 등) |
 | `QRTZ_*` | Quartz 스케줄러 테이블 (PostgreSQL DB Store) |
 
-### 11.2 이메일 상태 코드
+### 12.2 이메일 상태 코드
 
 | Code | Description |
 |------|-------------|
@@ -1164,7 +1246,7 @@ PUT /settings/polling-interval
 | `SC` | 수신 거부 (Complaint) |
 | `SF` | 발송 실패 (Fail) |
 
-### 11.3 발송 구분 코드
+### 12.3 발송 구분 코드
 
 | Code | Description |
 |------|-------------|
@@ -1173,9 +1255,9 @@ PUT /settings/polling-interval
 
 ---
 
-## 12. Configuration
+## 13. Configuration
 
-### 12.1 Environment Variables
+### 13.1 Environment Variables
 
 | Variable | Description | Dev Default |
 |----------|-------------|-------------|
@@ -1189,7 +1271,7 @@ PUT /settings/polling-interval
 
 > AWS Access Key / Secret Key는 사용하지 않습니다. 모든 AWS 연동은 API Gateway 경유입니다.
 
-### 12.2 Application Properties
+### 13.2 Application Properties
 
 | Property | Default | Description |
 |----------|---------|-------------|
@@ -1200,7 +1282,7 @@ PUT /settings/polling-interval
 | `spring.quartz.threadPool.threadCount` | `10` | Quartz 스레드 풀 크기 |
 | `security.api-key` | (환경변수) | 레거시 단일 API Key |
 
-### 12.3 Profiles
+### 13.3 Profiles
 
 | Profile | Description |
 |---------|-------------|
@@ -1210,7 +1292,7 @@ PUT /settings/polling-interval
 
 ---
 
-## 13. Error Response
+## 14. Error Response
 
 모든 에러는 공통 형식으로 반환됩니다.
 

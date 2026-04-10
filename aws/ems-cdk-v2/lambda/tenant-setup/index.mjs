@@ -17,9 +17,13 @@ import {
 } from '@aws-sdk/client-sesv2';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { PutCommand, GetCommand, DeleteCommand, ScanCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { CloudWatchClient, GetMetricStatisticsCommand } from '@aws-sdk/client-cloudwatch';
+import { CostExplorerClient, GetCostAndUsageCommand } from '@aws-sdk/client-cost-explorer';
 
 const ses = new SESv2Client({ region: process.env.SES_REGION });
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const cloudwatch = new CloudWatchClient({ region: process.env.SES_REGION });
+const costExplorer = new CostExplorerClient({ region: 'us-east-1' }); // Cost Explorer is global
 const CONFIG_TABLE = process.env.TENANT_CONFIG_TABLE;
 const RESULTS_TABLE = process.env.SEND_RESULTS_TABLE;
 const EVENT_BUS_NAME = process.env.EVENT_BUS_NAME;
@@ -75,6 +79,12 @@ export const handler = async (event) => {
         break;
       case 'CLEAR_EVENTS':
         result = await clearEvents(body);
+        break;
+      case 'GET_TENANT_METRICS':
+        result = await getTenantMetrics(body);
+        break;
+      case 'GET_COST':
+        result = await getCost(body);
         break;
       default:
         return respond(400, { error: `Unknown action: ${action}` });
@@ -226,6 +236,91 @@ async function clearEvents({ tenantId }) {
     deleted++;
   }
   return { deleted };
+}
+
+async function getTenantMetrics({ tenantId, configSetName, period, startTime, endTime }) {
+  const namespace = 'AWS/SES';
+  const dimensions = [];
+  if (configSetName) {
+    dimensions.push({ Name: 'ses:configuration-set', Value: configSetName });
+  }
+
+  const start = startTime ? new Date(startTime) : new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const end = endTime ? new Date(endTime) : new Date();
+  const periodSec = period || 3600; // 1 hour default
+
+  const metrics = ['Send', 'Delivery', 'Bounce', 'Complaint', 'Open', 'Click', 'Reject'];
+  const results = {};
+
+  for (const metricName of metrics) {
+    try {
+      const result = await cloudwatch.send(new GetMetricStatisticsCommand({
+        Namespace: namespace,
+        MetricName: metricName,
+        Dimensions: dimensions,
+        StartTime: start,
+        EndTime: end,
+        Period: periodSec,
+        Statistics: ['Sum'],
+      }));
+      results[metricName.toLowerCase()] = (result.Datapoints || [])
+        .reduce((sum, dp) => sum + (dp.Sum || 0), 0);
+    } catch (err) {
+      results[metricName.toLowerCase()] = 0;
+    }
+  }
+
+  // Calculate rates
+  const sent = results.send || 0;
+  const delivered = results.delivery || 0;
+  results.deliveryRate = sent > 0 ? Math.round(delivered / sent * 1000) / 10 : 0;
+  results.bounceRate = sent > 0 ? Math.round((results.bounce || 0) / sent * 1000) / 10 : 0;
+  results.complaintRate = sent > 0 ? Math.round((results.complaint || 0) / sent * 1000) / 10 : 0;
+  results.openRate = delivered > 0 ? Math.round((results.open || 0) / delivered * 1000) / 10 : 0;
+  results.clickRate = delivered > 0 ? Math.round((results.click || 0) / delivered * 1000) / 10 : 0;
+
+  return { tenantId, configSetName, period: periodSec, startTime: start.toISOString(), endTime: end.toISOString(), metrics: results };
+}
+
+async function getCost({ startDate, endDate }) {
+  const start = startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().slice(0, 10);
+  const end = endDate || new Date().toISOString().slice(0, 10);
+
+  try {
+    const result = await costExplorer.send(new GetCostAndUsageCommand({
+      TimePeriod: { Start: start, End: end },
+      Granularity: 'MONTHLY',
+      Metrics: ['UnblendedCost'],
+      Filter: {
+        Tags: {
+          Key: 'Project',
+          Values: ['ems'],
+        },
+      },
+      GroupBy: [{ Type: 'DIMENSION', Key: 'SERVICE' }],
+    }));
+
+    const monthly = (result.ResultsByTime || []).map(period => {
+      const services = {};
+      let total = 0;
+      for (const group of period.Groups || []) {
+        const serviceName = group.Keys[0];
+        const cost = parseFloat(group.Metrics.UnblendedCost.Amount || '0');
+        services[serviceName] = Math.round(cost * 100) / 100;
+        total += cost;
+      }
+      return {
+        period: period.TimePeriod,
+        services,
+        totalCost: Math.round(total * 100) / 100,
+      };
+    });
+
+    return { currency: 'USD', monthly, source: 'cost-explorer' };
+  } catch (err) {
+    console.error('Cost Explorer query failed:', err.message);
+    return { error: err.message, source: 'cost-explorer-error' };
+  }
 }
 
 function respond(statusCode, body) {

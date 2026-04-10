@@ -1,5 +1,7 @@
 package com.msas.monitoring;
 
+import com.google.gson.Gson;
+import com.msas.settings.service.ApiGatewayClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -10,6 +12,8 @@ import java.util.*;
 public class CostEstimateService {
 
     private final MonitoringRepository monitoringRepository;
+    private final ApiGatewayClient apiGatewayClient;
+    private final Gson gson = new Gson();
 
     private static final double SES_PRICE_PER_EMAIL = 0.0001;
     private static final double LAMBDA_PRICE_PER_INVOKE = 0.0000002;
@@ -94,6 +98,22 @@ public class CostEstimateService {
         result.put("currency", "USD");
         result.put("note", "사용량 기반 추정치입니다. 실제 비용은 AWS Cost Explorer에서 Project=ems 태그로 확인하세요.");
         return result;
+    }
+
+    /**
+     * Cost Explorer 실 비용 조회 (API Gateway 경유).
+     * 실패 시 예외를 던져 호출자가 폴백 처리.
+     */
+    public Map<String, Object> getRealCost(String startDate, String endDate) throws Exception {
+        Map<String, Object> payload = new java.util.HashMap<>();
+        payload.put("action", "GET_COST");
+        if (startDate != null) payload.put("startDate", startDate);
+        if (endDate != null) payload.put("endDate", endDate);
+
+        String jsonBody = gson.toJson(payload);
+        var response = apiGatewayClient.post("/tenant-setup", jsonBody);
+        return gson.fromJson(response.body(),
+            new com.google.gson.reflect.TypeToken<Map<String, Object>>() {}.getType());
     }
 
     private Map<String, Object> svcInfo(String name, String description, String pricing, double cost) {

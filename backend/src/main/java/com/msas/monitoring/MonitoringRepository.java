@@ -40,4 +40,6 @@ public interface MonitoringRepository {
     List<Map<String, Object>> selectMonthlyEventCounts(@Param("months") int months);
 
     List<Map<String, Object>> selectTenantDailySummary();
+
+    Map<String, Object> selectTenantConfigSetName(@Param("tenantId") String tenantId);
 }

@@ -36,6 +36,23 @@ public class SettingsController {
         return ResponseEntity.ok(settingsService.testConnection(settings));
     }
 
+    @Operation(summary = "VDM 상태 조회", description = "Virtual Deliverability Manager 활성화 상태를 조회합니다.")
+    @GetMapping("/vdm")
+    public ResponseEntity<java.util.Map<String, Object>> getVdmStatus() {
+        try {
+            return ResponseEntity.ok(settingsService.getVdmStatus());
+        } catch (Exception e) {
+            return ResponseEntity.ok(java.util.Map.of("enabled", false, "error", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "VDM ON/OFF", description = "Virtual Deliverability Manager를 활성화/비활성화합니다.")
+    @PutMapping("/vdm")
+    public ResponseEntity<java.util.Map<String, Object>> updateVdm(@RequestBody java.util.Map<String, Boolean> request) {
+        boolean enabled = request.getOrDefault("enabled", false);
+        return ResponseEntity.ok(settingsService.updateVdm(enabled));
+    }
+
     @Operation(summary = "폴링 주기 조회", description = "현재 보정 폴링 주기를 조회합니다.")
     @GetMapping("/polling-interval")
     public ResponseEntity<java.util.Map<String, Object>> getPollingInterval() {

@@ -84,7 +84,7 @@
 | Auth Module | JWT 인증, 사용자 관리, 비밀번호 변경 | - |
 | Monitoring Module | 발송 통계, 트렌드, 테넌트 평판 모니터링 (MonitoringService) | PostgreSQL |
 | Cost Estimate Module | AWS 서비스별 월별 비용 추정 (CostEstimateService) | PostgreSQL |
-| Settings Module | API Gateway 연결 설정, 폴링 주기 관리 (1~10분 설정 가능) | PostgreSQL |
+| Settings Module | API Gateway 연결 설정, 폴링 주기 관리 (1~10분 설정 가능), VDM ON/OFF | PostgreSQL |
 
 ### 기술 스택
 
@@ -224,6 +224,8 @@ SES EmailTag → event-processor 추출 → correlationId DynamoDB에 포함
 | Endpoint | 설명 |
 |----------|------|
 | `GET /monitoring/ses-quota` | SES 일간 발송 한도 조회 — Lambda `tenant-setup GET_ACCOUNT` 액션으로 MaxSendRate, Max24HourSend, SentLast24Hours 반환. Frontend 대시보드 "이메일 발송 일간 한도" 카드에 사용률 Progress bar + 잔여 건수 표시 |
+| `GET /monitoring/tenant-metrics/{tenantId}` | CloudWatch 테넌트별 SES 메트릭 조회 (period 파라미터, 기본 3600초) |
+| `GET /monitoring/cost/real` | Cost Explorer 실 비용 조회 (startDate, endDate 파라미터). 실패 시 추정치 폴백. |
 
 ### PostgreSQL 주요 테이블
 

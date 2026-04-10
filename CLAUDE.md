@@ -161,3 +161,36 @@ message-sending-api-server/
 - [x] Frontend: TypeScript 에러 0건
 
 ### Phase 3 완료. 다음: Phase 4 (모니터링/비용/Suppression 고도화)
+
+---
+
+## Phase 4 완료: 모니터링/비용/Suppression 고도화
+
+### CDK v2
+- [x] tenant-setup Lambda에 `GET_TENANT_METRICS` (CloudWatch) + `GET_COST` (Cost Explorer) 액션 추가
+- [x] IAM: `cloudwatch:GetMetricStatistics`, `cloudwatch:GetMetricData`, `ce:GetCostAndUsage` 권한 추가
+
+### Backend
+- [x] `GET /monitoring/tenant-metrics/{tenantId}`: CloudWatch 테넌트별 SES 메트릭 조회
+- [x] `GET /monitoring/cost/real`: Cost Explorer 실 비용 조회 (추정치 폴백)
+- [x] `GET/PUT /settings/vdm`: VDM ON/OFF 토글 API
+- [x] `MonitoringRepository.selectTenantConfigSetName` + mybatis 매핑
+
+### Frontend
+- [x] 설정 페이지: VDM 토글 (`Switch`) + 폴링 주기 설정 (`InputNumber`, 1~10분)
+
+### 빌드 검증
+- [x] Backend: BUILD SUCCESSFUL
+- [x] Frontend: TypeScript 에러 0건
+
+---
+
+## 전체 마이그레이션 완료
+
+Phase 1~4 모두 완료. `docs/v2/ses-native-migration.md` 기준 전체 구현 완료.
+
+커밋 이력:
+- Phase 1: JWT 인증, 서비스 분리, Validation 통일
+- Phase 2: Callback 제거, CDK v2 (EventBridge), SES Tenant 동기화
+- Phase 3: EmailDispatchService, Quartz 배치 Job 제거
+- Phase 4: CloudWatch/Cost Explorer 연동, VDM 토글, 설정 UI

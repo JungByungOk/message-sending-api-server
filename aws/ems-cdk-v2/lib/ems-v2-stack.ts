@@ -247,6 +247,8 @@ export class EmsV2Stack extends cdk.Stack {
         'ses:DeleteEmailTemplate', 'ses:ListEmailTemplates',
         'ses:GetAccount', 'ses:PutAccountVdmAttributes',
         'ses:TagResource',
+        'cloudwatch:GetMetricStatistics', 'cloudwatch:GetMetricData',
+        'ce:GetCostAndUsage',
       ],
       resources: ['*'],
     }));

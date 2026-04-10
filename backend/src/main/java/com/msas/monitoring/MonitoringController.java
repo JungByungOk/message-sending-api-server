@@ -90,4 +90,30 @@ public class MonitoringController {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @Operation(summary = "테넌트별 CloudWatch SES 메트릭 조회")
+    @GetMapping("/tenant-metrics/{tenantId}")
+    public ResponseEntity<Map<String, Object>> getTenantMetrics(
+            @PathVariable String tenantId,
+            @RequestParam(defaultValue = "3600") int period) {
+        try {
+            return ResponseEntity.ok(monitoringService.getTenantMetrics(tenantId, period));
+        } catch (Exception e) {
+            log.error("[MonitoringController] 테넌트 메트릭 조회 실패. (tenantId: {})", tenantId, e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "AWS 실 비용 조회 (Cost Explorer)")
+    @GetMapping("/cost/real")
+    public ResponseEntity<Map<String, Object>> getRealCost(
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        try {
+            return ResponseEntity.ok(costEstimateService.getRealCost(startDate, endDate));
+        } catch (Exception e) {
+            log.error("[MonitoringController] Cost Explorer 조회 실패.", e);
+            return ResponseEntity.ok(costEstimateService.getCostEstimate(6)); // fallback to estimate
+        }
+    }
 }
