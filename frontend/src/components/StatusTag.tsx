@@ -25,7 +25,7 @@ type PaletteKey = keyof typeof palette;
 
 // ─── 테넌트 상태 ──────────────────────────────────────────────────────────────
 type TenantStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PAUSED';
-type VerificationStatus = 'VERIFIED' | 'PENDING' | 'FAILED';
+type VerificationStatus = 'SUCCESS' | 'PENDING' | 'FAILED';
 type JobStatus = 'RUNNING' | 'SCHEDULED' | 'PAUSED' | 'COMPLETE';
 type SuppressionReason = 'BOUNCE' | 'COMPLAINT';
 interface StatusTagProps {
@@ -48,9 +48,9 @@ const tenantConfig: Record<TenantStatus, TagConfig> = {
 };
 
 const verificationConfig: Record<VerificationStatus, TagConfig> = {
-  VERIFIED: { palette: 'positive', label: '인증 완료', icon: <CheckCircleFilled /> },
-  PENDING:  { palette: 'info',     label: '대기 중',  icon: <ClockCircleFilled /> },
-  FAILED:   { palette: 'negative', label: '인증 실패', icon: <CloseCircleFilled /> },
+  SUCCESS: { palette: 'positive', label: '인증 완료', icon: <CheckCircleFilled /> },
+  PENDING: { palette: 'info',     label: '대기 중',  icon: <ClockCircleFilled /> },
+  FAILED:  { palette: 'negative', label: '인증 실패', icon: <CloseCircleFilled /> },
 };
 
 const jobConfig: Record<JobStatus, TagConfig> = {

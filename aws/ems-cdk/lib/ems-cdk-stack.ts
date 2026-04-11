@@ -1,3 +1,9 @@
+/**
+ * @deprecated This CDK v1 stack is superseded by aws/ems-cdk-v2/.
+ * Do NOT deploy this stack. It uses legacy routes (/send-email, /results, /config)
+ * that no longer match the backend (which now uses /email-enqueue, /event-query, /tenant-setup).
+ * Retained for reference only. Delete after CDK v2 is deployed to production.
+ */
 import * as cdk from 'aws-cdk-lib';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';

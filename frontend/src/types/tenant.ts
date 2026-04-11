@@ -5,7 +5,7 @@ export interface Tenant {
   apiKey: string;
   configSetName: string | null;
   sesTenantName: string | null;
-  verificationStatus: 'PENDING' | 'VERIFIED' | 'FAILED';
+  verificationStatus: 'PENDING' | 'SUCCESS' | 'FAILED';
   quotaDaily: number;
   quotaMonthly: number;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'PAUSED';

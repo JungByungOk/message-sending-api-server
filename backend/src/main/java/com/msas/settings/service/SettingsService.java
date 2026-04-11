@@ -50,9 +50,9 @@ public class SettingsService {
         dto.setGatewayEndpoint(configs.getOrDefault("gateway.endpoint", ""));
         dto.setGatewayRegion(configs.getOrDefault("gateway.region", "ap-northeast-2"));
         dto.setGatewayApiKeyMasked(maskSecret(configs.getOrDefault("gateway.api-key", "")));
-        dto.setGatewaySendPath(configs.getOrDefault("gateway.send-path", "/send-email"));
-        dto.setGatewayResultsPath(configs.getOrDefault("gateway.results-path", "/results"));
-        dto.setGatewayConfigPath(configs.getOrDefault("gateway.config-path", "/config"));
+        dto.setGatewaySendPath(configs.getOrDefault("gateway.send-path", "/email-enqueue"));
+        dto.setGatewayResultsPath(configs.getOrDefault("gateway.results-path", "/event-query"));
+        dto.setGatewayConfigPath(configs.getOrDefault("gateway.config-path", "/tenant-setup"));
         dto.setGatewayTenantSetupPath(configs.getOrDefault("gateway.tenant-setup-path", "/tenant-setup"));
         dto.setGatewayConfigured(isNotBlank(configs.get("gateway.endpoint")));
         // Callback

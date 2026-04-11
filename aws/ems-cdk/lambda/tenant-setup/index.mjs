@@ -357,12 +357,16 @@ async function clearEvents() {
       // DynamoDB BatchWriteItem은 25개씩
       for (let i = 0; i < items.length; i += 25) {
         const batch = items.slice(i, i + 25);
-        const keyName = tableName === IDEMPOTENCY_TABLE ? 'message_id' : 'message_id';
         await dynamo.send(new BatchWriteItemCommand({
           RequestItems: {
-            [tableName]: batch.map(item => ({
-              DeleteRequest: { Key: { message_id: item.message_id } },
-            })),
+            [tableName]: batch.map(item => {
+              // send-results table uses composite key (tenant_id PK + message_id SK)
+              // idempotency table uses single key (message_id PK)
+              const key = tableName === SEND_RESULTS_TABLE
+                ? { tenant_id: item.tenant_id, message_id: item.message_id }
+                : { message_id: item.message_id };
+              return { DeleteRequest: { Key: key } };
+            }),
           },
         }));
         totalDeleted += batch.length;
