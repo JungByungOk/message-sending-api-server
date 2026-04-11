@@ -167,7 +167,7 @@ export class EmsV2Stack extends cdk.Stack {
     });
 
     // --- suppression (EventBridge trigger - bounce/complaint) ---
-    const suppressionFn = new lambda.Function(this, 'EmsSuppression', {
+    const suppressionFn = new lambda.Function(this, 'EmsSuppressionFn', {
       functionName: 'ems-suppression',
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
