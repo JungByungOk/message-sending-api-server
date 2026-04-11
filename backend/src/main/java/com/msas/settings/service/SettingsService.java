@@ -9,12 +9,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import com.google.gson.Gson;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -255,12 +257,11 @@ public class SettingsService {
 
         try {
             // SSM에 동기화할 설정값
-            String jsonBody = String.format(
-                    "{\"mode\":\"%s\",\"callback_url\":\"%s\",\"callback_secret\":\"%s\"}",
-                    settings.getDeliveryMode() != null ? settings.getDeliveryMode() : "callback",
-                    settings.getCallbackUrl() != null ? settings.getCallbackUrl() : "",
-                    settings.getCallbackSecret() != null ? settings.getCallbackSecret() : ""
-            );
+            Map<String, String> payload = new HashMap<>();
+            payload.put("mode", settings.getDeliveryMode() != null ? settings.getDeliveryMode() : "callback");
+            if (settings.getCallbackUrl() != null) payload.put("callback_url", settings.getCallbackUrl());
+            if (settings.getCallbackSecret() != null) payload.put("callback_secret", settings.getCallbackSecret());
+            String jsonBody = new Gson().toJson(payload);
 
             HttpClient client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(10))

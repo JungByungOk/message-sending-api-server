@@ -691,7 +691,7 @@ DELETE /scheduler/job/all
 ### 4.2 발송 결과 보정 폴링
 
 - **주기**: Settings에서 설정한 `pollingInterval` 값 (기본 120,000ms = 2분, `/settings/polling-interval`로 1~10분 설정 가능)
-- **동작**: API Gateway `GET /results` → Lambda `ems-event-query` → DynamoDB `ems-send-results` 조회
+- **동작**: API Gateway `GET /event-query` → Lambda `ems-event-query` → DynamoDB `ems-send-results` 조회
 - **처리**: 멱등성 처리로 PostgreSQL 상태 업데이트 (이미 최종 상태면 무시)
 - **이벤트 유형**: Delivery (발송 완료), Bounce (반송), Complaint (수신 거부)
 
@@ -1017,7 +1017,7 @@ DELETE /suppression/tenant/{tenantId}/{email}
 | 구분 | 항목 | 저장 위치 |
 |------|------|-----------|
 | API Gateway 연결 | Endpoint URL, 리전, 인증 방식, API Key | ESM DB (SYSTEM_CONFIG) |
-| API Gateway 경로 | /send-email, /results, /tenant-setup | ESM DB (SYSTEM_CONFIG) |
+| API Gateway 경로 | /email-enqueue, /event-query, /tenant-setup | ESM DB (SYSTEM_CONFIG) |
 | 폴링 설정 | 발송 결과 보정 폴링 주기 (기본 2분, 1~10분) | ESM DB (SYSTEM_CONFIG) |
 
 ---
@@ -1037,8 +1037,8 @@ GET /settings/aws
   "gatewayApiKeyMasked": "abcd****",
   "gatewayAccessKey": "",
   "gatewaySecretKeyMasked": "",
-  "gatewaySendPath": "/send-email",
-  "gatewayResultsPath": "/results",
+  "gatewaySendPath": "/email-enqueue",
+  "gatewayResultsPath": "/event-query",
   "gatewayConfigured": true,
   "pollingInterval": "120000",
   "updatedAt": "2024-01-01T00:00:00"
@@ -1064,8 +1064,8 @@ PUT /settings/aws
   "gatewayApiKey": "your-api-key",
   "gatewayAccessKey": "",
   "gatewaySecretKey": "",
-  "gatewaySendPath": "/send-email",
-  "gatewayResultsPath": "/results",
+  "gatewaySendPath": "/email-enqueue",
+  "gatewayResultsPath": "/event-query",
   "gatewayTenantSetupPath": "/tenant-setup",
   "pollingInterval": "120000"
 }
@@ -1077,8 +1077,8 @@ PUT /settings/aws
 | gatewayRegion | String | Y | AWS 리전 |
 | gatewayAuthType | String | Y | 인증 방식: `API_KEY` 또는 `IAM` |
 | gatewayApiKey | String | N | API Gateway API Key |
-| gatewaySendPath | String | N | 발송 경로 (기본: `/send-email`) |
-| gatewayResultsPath | String | N | 결과 조회 경로 (기본: `/results`) |
+| gatewaySendPath | String | N | 발송 경로 (기본: `/email-enqueue`) |
+| gatewayResultsPath | String | N | 결과 조회 경로 (기본: `/event-query`) |
 | gatewayTenantSetupPath | String | N | 온보딩/템플릿 경로 (기본: `/tenant-setup`) |
 | pollingInterval | String | N | 보정 폴링 주기 (ms, 기본: 120000) |
 

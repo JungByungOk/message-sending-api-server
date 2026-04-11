@@ -21,6 +21,7 @@ message-sending-api-server/
 | Backend API Spec | `docs/backend-spec.md` | API 엔드포인트 추가/변경/삭제, Request/Response 변경 시 |
 | Frontend Spec | `docs/frontend-spec.md` | 프론트엔드 타입, 상태 관리, 라우팅 변경 시 |
 | Frontend Dev Plan | `docs/frontend-development-plan.md` | 프론트엔드 Phase별 개발 진행 시 |
+| Deployment Guide | `docs/deployment-guide.md` | 배포 절차, 인프라 구성, 운영 관리 변경 시 |
 | README | `README.md` | 프로젝트 구조, Getting Started, 배포 방식 변경 시 |
 
 ### 문서 업데이트 규칙
@@ -194,3 +195,18 @@ Phase 1~4 모두 완료. `docs/v2/ses-native-migration.md` 기준 전체 구현 
 - Phase 2: Callback 제거, CDK v2 (EventBridge), SES Tenant 동기화
 - Phase 3: EmailDispatchService, Quartz 배치 Job 제거
 - Phase 4: CloudWatch/Cost Explorer 연동, VDM 토글, 설정 UI
+
+---
+
+## 코드리뷰 수정 완료
+
+- [x] DB 스키마: TENANT_REGISTRY에 SES_TENANT_NAME 컬럼 추가
+- [x] CDK v1 삭제 (`aws/ems-cdk/` 제거, v2만 유지)
+- [x] SettingsService 기본 경로 v2로 갱신
+- [x] Frontend verificationStatus: VERIFIED→SUCCESS 정합성 수정
+- [x] Frontend settings 타입: callback 필드 optional 복원
+- [x] CDK v1 clearEvents DynamoDB 복합키 수정
+- [x] QueuedEmailPoller: tenantId null → NewEmailEntity에서 해소
+- [x] monitoring-mapper.xml: 14개 쿼리 추가 (패턴 통일)
+- [x] SettingsService.syncToSsm: String.format → Gson (JSON injection 방지)
+- [x] SESFeedbackNotificationController 삭제 (dead code)

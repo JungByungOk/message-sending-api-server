@@ -40,6 +40,7 @@
 
     <resultMap id="NewEmailEntityResultMap" type="com.msas.pollingchecker.model.NewEmailEntity">
         <id property="email_send_seq" column="email_send_seq"/>
+        <result property="tenant_id" column="tenant_id"/>
         <result property="email_typ_cd" column="email_typ_cd"/>
         <result property="email_cls_cd" column="email_cls_cd"/>
         <result property="send_div_cd" column="send_div_cd"/>

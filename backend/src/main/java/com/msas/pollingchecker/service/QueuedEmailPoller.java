@@ -78,7 +78,7 @@ public class QueuedEmailPoller {
         Gson gson = new Gson();
         String templateName = newEmailEntity.getNewEmailDetailEntities().get(0).getEmail_tmplet_id();
         String from = newEmailEntity.getNewEmailDetailEntities().get(0).getSend_email_addr();
-        String tenantId = null; // NewEmailEntity에는 tenant_id 필드 없음 — QuotaService에서 null 처리
+        String tenantId = newEmailEntity.getTenant_id();
 
         List<EmailDispatchService.Recipient> recipients = new ArrayList<>();
         newEmailEntity.getNewEmailDetailEntities().forEach(detail -> {

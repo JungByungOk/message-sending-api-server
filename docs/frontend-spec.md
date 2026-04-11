@@ -190,6 +190,42 @@ export interface PageParams {
 }
 ```
 
+### src/types/tenant.ts
+
+```typescript
+export type TenantStatus = 'PENDING' | 'ACTIVE' | 'INACTIVE' | 'PAUSED';
+
+export type VerificationStatus = 'PENDING' | 'SUCCESS' | 'FAILED';
+
+export interface Tenant {
+  tenantId: string;
+  tenantName: string;
+  domain: string;
+  apiKey: string;
+  configSetName: string | null;
+  sesTenantName: string | null;
+  verificationStatus: VerificationStatus;
+  quotaDaily: number;
+  quotaMonthly: number;
+  status: TenantStatus;
+  createdAt: string;
+}
+
+export interface TenantListResponse {
+  totalCount: number;
+  tenants: Tenant[];
+}
+```
+
+**테넌트 상태 표시 (`StatusTag` type=`"tenant"`)**
+
+| status | 표시 |
+|--------|------|
+| `PENDING` | 대기 |
+| `ACTIVE` | 활성 |
+| `INACTIVE` | 비활성 |
+| `PAUSED` | 일시정지 |
+
 ---
 
 ## 공통 컴포넌트

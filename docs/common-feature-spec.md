@@ -307,7 +307,7 @@ DNS 접근이 불가한 경우 이메일 주소 단위로 인증합니다.
 | 구분 | 항목 | 저장 위치 |
 |------|------|-----------|
 | API Gateway 연결 | Endpoint URL, 리전, 인증 방식, API Key | ESM DB (SYSTEM_CONFIG) |
-| 경로 설정 | /send-email, /results, /tenant-setup | ESM DB (SYSTEM_CONFIG) |
+| 경로 설정 | /email-enqueue, /event-query, /tenant-setup | ESM DB (SYSTEM_CONFIG) |
 | 폴링 설정 | 발송 결과 보정 폴링 주기 (기본 2분, 1~10분) | ESM DB (SYSTEM_CONFIG) |
 
 ### 설정 흐름

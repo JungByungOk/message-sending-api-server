@@ -12,6 +12,7 @@ public class NewEmailEntity {
 
     private int email_send_seq;
 
+    private String tenant_id;
     private String email_typ_cd;
     private String email_cls_cd;
     private String send_div_cd;

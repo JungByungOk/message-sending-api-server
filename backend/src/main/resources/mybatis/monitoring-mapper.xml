@@ -9,4 +9,221 @@
         WHERE TENANT_ID = #{tenantId}
     </select>
 
+    <select id="selectTodayEmailStats" resultType="map">
+        SELECT
+            COUNT(*) AS todaysentcount,
+            SUM(CASE WHEN send_rslt_typ_cd = 'Delivery' THEN 1 ELSE 0 END) AS todaydeliveredcount,
+            SUM(CASE WHEN send_rslt_typ_cd = 'Bounce'   THEN 1 ELSE 0 END) AS todaybouncecount,
+            SUM(CASE WHEN send_rslt_typ_cd = 'Complaint' THEN 1 ELSE 0 END) AS todaycomplaintcount
+        FROM ADM_EMAIL_SEND_DTL
+        WHERE DATE(stm_fir_reg_dt) = CURDATE()
+          AND send_sts_cd NOT IN ('SR', 'Queued')
+    </select>
+
+    <select id="selectBatchStats" resultType="map">
+        SELECT
+            SUM(CASE WHEN STATUS = 'RUNNING'  THEN 1 ELSE 0 END) AS runningbatchcount,
+            SUM(CASE WHEN STATUS = 'PENDING'  THEN 1 ELSE 0 END) AS pendingbatchcount
+        FROM ADM_EMAIL_SEND_BATCH
+        WHERE START_DATE_AT >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    </select>
+
+    <select id="selectHourlyStats" resultType="map">
+        SELECT
+            HOUR(stm_fir_reg_dt) AS hour,
+            COUNT(*) AS sentcount
+        FROM ADM_EMAIL_SEND_DTL
+        WHERE DATE(stm_fir_reg_dt) = #{targetDate}
+          AND send_sts_cd NOT IN ('SR', 'Queued')
+        GROUP BY HOUR(stm_fir_reg_dt)
+        ORDER BY hour
+    </select>
+
+    <select id="selectStatusSummary" resultType="map">
+        SELECT
+            send_sts_cd    AS status,
+            COUNT(*)       AS cnt
+        FROM ADM_EMAIL_SEND_DTL
+        WHERE stm_fir_reg_dt >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+        GROUP BY send_sts_cd
+        ORDER BY cnt DESC
+    </select>
+
+    <select id="selectBounceList" resultType="map">
+        SELECT
+            d.EMAIL_SEND_DTL_SEQ          AS id,
+            d.RCV_EMAIL_ADDR              AS email,
+            d.SEND_EMAIL_ADDR             AS fromemail,
+            d.EMAIL_TITLE                 AS subject,
+            d.SEND_STS_CD                 AS status,
+            d.STM_FIR_REG_DT              AS regdtm,
+            m.TENANT_ID                   AS tenantid
+        FROM ADM_EMAIL_SEND_DTL d
+        LEFT JOIN ADM_EMAIL_SEND_MST m ON d.EMAIL_SEND_SEQ = m.EMAIL_SEND_SEQ
+        WHERE d.SEND_RSLT_TYP_CD IN ('Bounce', 'Complaint')
+        ORDER BY d.STM_FIR_REG_DT DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countBounceList" resultType="long">
+        SELECT COUNT(*)
+        FROM ADM_EMAIL_SEND_DTL
+        WHERE SEND_RSLT_TYP_CD IN ('Bounce', 'Complaint')
+    </select>
+
+    <select id="selectBatchList" resultType="map">
+        SELECT
+            BATCH_ID        AS batchid,
+            TEMPLATE_NAME   AS templatename,
+            FROM_ADDR       AS fromaddr,
+            JOB_NAME        AS jobname,
+            STATUS          AS status,
+            TOTAL_COUNT     AS totalcount,
+            START_DATE_AT   AS startdateat
+        FROM ADM_EMAIL_SEND_BATCH
+        ORDER BY START_DATE_AT DESC
+        LIMIT 50
+    </select>
+
+    <select id="selectRecentBatch" resultType="map">
+        SELECT
+            BATCH_ID        AS batchid,
+            TEMPLATE_NAME   AS templatename,
+            FROM_ADDR       AS fromaddr,
+            JOB_NAME        AS jobname,
+            STATUS          AS status,
+            TOTAL_COUNT     AS totalcount,
+            START_DATE_AT   AS startdateat
+        FROM ADM_EMAIL_SEND_BATCH
+        ORDER BY START_DATE_AT DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectPrevBatch" resultType="map">
+        SELECT
+            BATCH_ID        AS batchid,
+            TEMPLATE_NAME   AS templatename,
+            STATUS          AS status,
+            TOTAL_COUNT     AS totalcount,
+            START_DATE_AT   AS startdateat
+        FROM ADM_EMAIL_SEND_BATCH
+        WHERE BATCH_ID &lt; #{batchId}
+        ORDER BY START_DATE_AT DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectBatchDeliveryStats" resultType="map">
+        SELECT
+            COUNT(*)                                                        AS totalsent,
+            SUM(CASE WHEN d.SEND_RSLT_TYP_CD = 'Delivery' THEN 1 ELSE 0 END) AS delivered
+        FROM ADM_EMAIL_SEND_BATCH_ITEM bi
+        JOIN ADM_EMAIL_SEND_DTL d ON bi.EMAIL_SEND_DTL_SEQ = d.EMAIL_SEND_DTL_SEQ
+        WHERE bi.BATCH_ID = #{batchId}
+    </select>
+
+    <select id="selectBatchEventStats" resultType="map">
+        SELECT
+            el.EVENT_TYPE   AS eventtype,
+            COUNT(*)        AS cnt
+        FROM ADM_EMAIL_SEND_BATCH_ITEM bi
+        JOIN ADM_EMAIL_EVENT_LOG el ON bi.CORRELATION_ID = el.CORRELATION_ID
+        WHERE bi.BATCH_ID = #{batchId}
+        GROUP BY el.EVENT_TYPE
+    </select>
+
+    <select id="selectWeeklyTrend" resultType="map">
+        SELECT
+            DATE_FORMAT(period_start, '%Y-W%v')   AS periodlabel,
+            period_start                           AS periodstart,
+            DATE_ADD(period_start, INTERVAL 6 DAY) AS periodend,
+            SUM(sent_count)      AS sentcount,
+            SUM(delivered_count) AS deliveredcount,
+            SUM(bounce_count)    AS bouncecount,
+            SUM(complaint_count) AS complaintcount,
+            SUM(open_count)      AS opencount,
+            SUM(click_count)     AS clickcount
+        FROM (
+            SELECT
+                DATE_SUB(DATE(stm_fir_reg_dt), INTERVAL WEEKDAY(stm_fir_reg_dt) DAY) AS period_start,
+                COUNT(*)                                                               AS sent_count,
+                SUM(CASE WHEN send_rslt_typ_cd = 'Delivery'  THEN 1 ELSE 0 END)       AS delivered_count,
+                SUM(CASE WHEN send_rslt_typ_cd = 'Bounce'    THEN 1 ELSE 0 END)       AS bounce_count,
+                SUM(CASE WHEN send_rslt_typ_cd = 'Complaint' THEN 1 ELSE 0 END)       AS complaint_count,
+                0 AS open_count,
+                0 AS click_count
+            FROM ADM_EMAIL_SEND_DTL
+            WHERE send_sts_cd NOT IN ('SR', 'Queued')
+            GROUP BY period_start
+        ) t
+        GROUP BY period_start
+        ORDER BY period_start DESC
+        LIMIT #{count}
+    </select>
+
+    <select id="selectMonthlyTrend" resultType="map">
+        SELECT
+            DATE_FORMAT(period_start, '%Y-%m')    AS periodlabel,
+            period_start                           AS periodstart,
+            LAST_DAY(period_start)                 AS periodend,
+            SUM(sent_count)      AS sentcount,
+            SUM(delivered_count) AS deliveredcount,
+            SUM(bounce_count)    AS bouncecount,
+            SUM(complaint_count) AS complaintcount,
+            SUM(open_count)      AS opencount,
+            SUM(click_count)     AS clickcount
+        FROM (
+            SELECT
+                DATE_FORMAT(stm_fir_reg_dt, '%Y-%m-01') AS period_start,
+                COUNT(*)                                                               AS sent_count,
+                SUM(CASE WHEN send_rslt_typ_cd = 'Delivery'  THEN 1 ELSE 0 END)       AS delivered_count,
+                SUM(CASE WHEN send_rslt_typ_cd = 'Bounce'    THEN 1 ELSE 0 END)       AS bounce_count,
+                SUM(CASE WHEN send_rslt_typ_cd = 'Complaint' THEN 1 ELSE 0 END)       AS complaint_count,
+                0 AS open_count,
+                0 AS click_count
+            FROM ADM_EMAIL_SEND_DTL
+            WHERE send_sts_cd NOT IN ('SR', 'Queued')
+            GROUP BY period_start
+        ) t
+        GROUP BY period_start
+        ORDER BY period_start DESC
+        LIMIT #{count}
+    </select>
+
+    <select id="selectMonthlySendCounts" resultType="map">
+        SELECT
+            DATE_FORMAT(stm_fir_reg_dt, '%Y-%m') AS month,
+            COUNT(*) AS sentcount
+        FROM ADM_EMAIL_SEND_DTL
+        WHERE send_sts_cd NOT IN ('SR', 'Queued')
+          AND stm_fir_reg_dt >= DATE_SUB(NOW(), INTERVAL #{months} MONTH)
+        GROUP BY DATE_FORMAT(stm_fir_reg_dt, '%Y-%m')
+        ORDER BY month DESC
+    </select>
+
+    <select id="selectMonthlyEventCounts" resultType="map">
+        SELECT
+            DATE_FORMAT(stm_fir_reg_dt, '%Y-%m') AS month,
+            send_rslt_typ_cd                      AS eventtype,
+            COUNT(*) AS cnt
+        FROM ADM_EMAIL_SEND_DTL
+        WHERE send_rslt_typ_cd IS NOT NULL
+          AND stm_fir_reg_dt >= DATE_SUB(NOW(), INTERVAL #{months} MONTH)
+        GROUP BY DATE_FORMAT(stm_fir_reg_dt, '%Y-%m'), send_rslt_typ_cd
+        ORDER BY month DESC
+    </select>
+
+    <select id="selectTenantDailySummary" resultType="map">
+        SELECT
+            m.TENANT_ID                                                          AS tenantid,
+            COUNT(*)                                                             AS totalsent,
+            SUM(CASE WHEN d.SEND_RSLT_TYP_CD = 'Delivery'  THEN 1 ELSE 0 END)  AS delivered,
+            SUM(CASE WHEN d.SEND_RSLT_TYP_CD = 'Bounce'    THEN 1 ELSE 0 END)  AS bounced,
+            SUM(CASE WHEN d.SEND_RSLT_TYP_CD = 'Complaint' THEN 1 ELSE 0 END)  AS complained
+        FROM ADM_EMAIL_SEND_DTL d
+        JOIN ADM_EMAIL_SEND_MST m ON d.EMAIL_SEND_SEQ = m.EMAIL_SEND_SEQ
+        WHERE DATE(d.STM_FIR_REG_DT) = CURDATE()
+          AND d.SEND_STS_CD NOT IN ('SR', 'Queued')
+        GROUP BY m.TENANT_ID
+    </select>
+
 </mapper>

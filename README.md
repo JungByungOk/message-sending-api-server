@@ -1,6 +1,6 @@
 # Joins EMS (Email Management System)
 
-멀티테넌트 이메일 발송 관리 플랫폼 - AWS SES 기반 이메일 발송, 테넌트 온보딩, 수신 거부 관리를 제공하는 Spring Boot + React 풀스택 SaaS 서버
+멀티테넌트 이메일 발송 관리 플랫폼 — AWS SES 네이티브 기능을 최대한 활용하는 이메일 발송, 테넌트 관리, 모니터링 시스템
 
 > **모든 AWS 연동은 API Gateway를 경유합니다.** AWS SDK 직접 연결 없이 `ApiGatewayClient`(Java HTTP Client)로 API Gateway를 호출합니다.
 
@@ -9,15 +9,11 @@
 ```
 message-sending-api-server/
 ├── backend/                # Spring Boot API 서버 (Java 17)
-│   ├── src/
-│   ├── build.gradle
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   └── start.bat
 ├── frontend/               # React 19 어드민 대시보드 (Vite + TypeScript)
 ├── aws/
-│   └── ems-cdk/            # AWS CDK 인프라 코드 (Lambda, DynamoDB, SQS, SNS, SSM)
+│   └── ems-cdk-v2/         # AWS CDK v2 인프라 코드 (EventBridge, Lambda, SQS, DynamoDB)
 ├── docs/                   # 프로젝트 문서
+├── docker-compose.yml      # 로컬 개발용 PostgreSQL
 └── README.md
 ```
 
@@ -26,11 +22,11 @@ message-sending-api-server/
 | Document | Description |
 |----------|-------------|
 | [Project Overview](docs/project-overview.md) | 프로젝트 개요, 시스템 구성, 데이터 흐름 |
-| [Common Feature Spec](docs/common-feature-spec.md) | 공통 기능 명세 (인증, 에러 처리, 상태 코드 등) |
+| [Common Feature Spec](docs/common-feature-spec.md) | 공통 기능 명세 (인증, 에러 처리, 상태 코드) |
 | [Backend API Spec](docs/backend-spec.md) | Backend REST API 상세 명세서 |
 | [Frontend Spec](docs/frontend-spec.md) | Frontend 기술 명세 (타입, 상태 관리, 라우팅) |
-| [Frontend Development Plan](docs/frontend-development-plan.md) | Frontend 개발 계획 (Phase별) |
-| [CDK Infrastructure](aws/ems-cdk/README.md) | AWS CDK 인프라 구축 가이드 |
+| [Deployment Guide](docs/deployment-guide.md) | 배포 절차 가이드 (CDK → Backend → Frontend) |
+| [Migration Design](docs/v2/ses-native-migration.md) | SES 네이티브 마이그레이션 설계 문서 |
 
 ## Tech Stack
 
@@ -40,14 +36,14 @@ message-sending-api-server/
 |----------|-----------|
 | Framework | Spring Boot 3.4.1 |
 | Language | Java 17 |
-| Database | PostgreSQL (esm/esm/esm) |
+| Database | PostgreSQL 16 |
 | ORM | MyBatis 3.0.4 |
-| Scheduler | Quartz (PostgreSQL DB Store) |
-| AWS 연동 | API Gateway 경유 (Java HTTP Client, `ApiGatewayClient`) |
-| Security | Spring Security (Tenant API Key + Callback Secret 검증) |
+| Scheduler | Quartz 2.5.0 (폴링/타임아웃/동기화만 담당) |
+| AWS 연동 | API Gateway 경유 (Java HTTP Client) |
+| Security | Spring Security (JWT + Tenant API Key) |
+| Auth | jjwt 0.12.6 (Access/Refresh Token) |
 | API Docs | SpringDoc OpenAPI 2.7.0 (Swagger UI) |
-| Build | Gradle, Docker (Multi-stage) |
-| Etc | Guava (RateLimiter), Gson 2.11, Lombok |
+| Build | Gradle 9.4, Docker (Multi-stage) |
 
 ### Frontend
 
@@ -55,327 +51,278 @@ message-sending-api-server/
 |----------|-----------|
 | Framework | React 19.2 |
 | Language | TypeScript 5.9 |
-| Build | Vite 8 |
-| UI Components | Ant Design 5.29, @ant-design/pro-components 2.8 |
-| Icons | @ant-design/icons 6.1 |
+| Build | Vite 7 |
+| UI | Ant Design 5.29, @ant-design/pro-components |
 | Server State | TanStack React Query 5 |
 | Client State | Zustand 5 |
 | Routing | React Router DOM 7 |
-| HTTP Client | Axios 1.14 |
-| Date | Day.js 1.11 |
-| Lint | ESLint 9 |
+| HTTP Client | Axios (JWT 자동 갱신 인터셉터) |
 
-### AWS Infrastructure (CDK)
+### AWS Infrastructure (CDK v2)
 
 | Resource | Name | Purpose |
 |----------|------|---------|
-| API Gateway | ems-api | ESM → AWS 단일 진입점 |
-| Lambda | ems-email-sender | SQS → SES 이메일 발송 |
-| Lambda | ems-event-processor | SNS → DynamoDB 저장 + ESM 콜백 |
+| API Gateway | ems-api-v2 | Backend ↔ AWS 단일 진입점 |
+| EventBridge | ems-ses-events | SES 이벤트 라우팅 (SNS 대체) |
+| Lambda | ems-email-sender | SQS 트리거 → SES 발송 (TenantName) |
+| Lambda | ems-enqueue | API GW → 수신자별 SQS 메시지 생성 |
+| Lambda | ems-event-processor | EventBridge → Delivery 이벤트 처리 |
+| Lambda | ems-suppression | EventBridge → Bounce/Complaint 처리 |
+| Lambda | ems-tenant-setup | SES Identity/ConfigSet/Template/VDM 관리 |
+| Lambda | ems-tenant-sync | EventBridge → 테넌트 상태 동기화 |
 | Lambda | ems-event-query | DynamoDB 발송결과 조회 |
-| Lambda | ems-tenant-setup | Identity/ConfigSet/템플릿 관리 |
-| Lambda | ems-config-updater | SSM Parameter Store 설정 업데이트 |
-| SQS | ems-send-queue (+DLQ) | 비동기 발송 큐 |
-| SNS | ems-ses-events | SES 이벤트 수신 |
+| SQS | ems-send-queue + DLQ | 비동기 발송 큐 (BatchSize 10) |
 | DynamoDB | ems-send-results | 발송결과 (TTL 7일) |
-| DynamoDB | ems-tenant-config | 테넌트 설정 캐시 (TTL 1시간) |
-| DynamoDB | ems-idempotency | 중복발송 방지 (TTL 24시간) |
-| SSM | /ems/mode, /ems/callback_url, /ems/callback_secret | 수신 모드 설정 |
+| DynamoDB | ems-tenant-config | 테넌트 설정 캐시 |
+| DynamoDB | ems-suppression | 수신거부 동기화 |
+| S3 | ems-batch-* | 대량 발송 수신자 목록 (>1,000건) |
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│           Frontend (React 19 + Vite + TypeScript)        │
-└────────────────────────┬────────────────────────────────┘
-                         │ REST API (Tenant API Key)
-┌────────────────────────▼────────────────────────────────┐
-│                  ESM Backend (Spring Boot :7092)          │
-│                                                          │
-│  SES | Tenant | Callback | Settings | Onboarding         │
-│  Suppression | Scheduler | SES Identity | SES ConfigSet  │
-│                                                          │
-│  [Spring Security]                                       │
-│   - Tenant API Key 인증 (Authorization 헤더)             │
-│   - Callback Secret 검증 (X-Callback-Secret 헤더)        │
-└──────────────┬─────────────────────┬────────────────────┘
-               │                     │
-    ┌──────────▼──────────┐ ┌────────▼───────────────────┐
-    │    PostgreSQL        │ │    AWS API Gateway          │
-    │  (esm/esm/esm)       │ │  (IP Whitelist / API Key)  │
-    └─────────────────────┘ └──┬─────────────────────────┘
-                               │
-            ┌──────────────────┼─────────────────────┐
-            │                  │                     │
-     ┌──────▼──────┐  ┌────────▼────────┐  ┌────────▼────────┐
-     │     SQS     │  │   SSM Parameter │  │ Lambda          │
-     │ ems-send-q  │  │   Store         │  │ ems-event-query │
-     └──────┬──────┘  └────────┬────────┘  └────────┬────────┘
-            │                  │ (30초 캐시)          │
-     ┌──────▼──────┐  ┌────────▼────────┐  ┌────────▼────────┐
-     │   Lambda    │  │ Lambda          │  │    DynamoDB     │
-     │email-sender │  │ event-processor │  │ ems-send-results│
-     └──────┬──────┘  └────────┬────────┘  └─────────────────┘
-            │                  │ callback 모드               ▲
-     ┌──────▼──────┐    ┌──────▼──────┐                     │
-     │  Amazon SES │───▶│ESM /ses/    │                     │
-     │  (발송)     │    │callback/    │                     │
-     └─────────────┘    │event        │─────────────────────┘
-          │ SNS          └─────────────┘  (보정 폴링: 5~10분)
-          └─────────────────────────────▶ Lambda event-processor
+┌─────────────────────────────────────────────────────────────┐
+│         Frontend (React 19 + Vite + TypeScript)              │
+│         JWT 인증 / 30분 비활동 자동 로그아웃                   │
+└──────────────────────────┬──────────────────────────────────┘
+                           │ REST API (JWT / Tenant API Key)
+┌──────────────────────────▼──────────────────────────────────┐
+│                 ESM Backend (Spring Boot :7092)               │
+│                                                              │
+│  Auth | Tenant | EmailDispatch | Settings | Monitoring       │
+│  Onboarding | Suppression | Scheduler | SES Identity/Config  │
+│                                                              │
+│  [Spring Security]                                           │
+│   - JwtAuthenticationFilter (JWT Bearer 토큰)                │
+│   - ApiKeyAuthenticationFilter (Tenant API Key)              │
+│   - TenantContextFilter (ThreadLocal 정리)                   │
+└──────────────┬──────────────────────┬───────────────────────┘
+               │                      │
+    ┌──────────▼──────────┐  ┌────────▼────────────────────────┐
+    │    PostgreSQL 16     │  │    AWS API Gateway (ems-api-v2) │
+    │  (ems / ems)         │  │    IP Whitelist + API Key 인증  │
+    └─────────────────────┘  └──┬──────────────────────────────┘
+                                │
+         ┌──────────────────────┼──────────────────────┐
+         │                      │                      │
+  ┌──────▼──────┐  ┌────────────▼────────┐  ┌─────────▼────────┐
+  │  Lambda     │  │  Lambda             │  │  Lambda           │
+  │  enqueue    │  │  tenant-setup       │  │  event-query      │
+  └──────┬──────┘  └─────────────────────┘  └─────────┬────────┘
+         │                                            │
+  ┌──────▼──────┐                              ┌──────▼────────┐
+  │  SQS Queue  │                              │   DynamoDB    │
+  │  (+DLQ)     │                              │   3 tables    │
+  └──────┬──────┘                              └───────────────┘
+         │                                            ▲
+  ┌──────▼──────┐                                     │
+  │  Lambda     │──────────▶ Amazon SES ──────▶ EventBridge
+  │email-sender │           (TenantName)        │
+  └─────────────┘                          ┌────┴────────────┐
+                                           │                 │
+                                    ┌──────▼─────┐  ┌───────▼───────┐
+                                    │ Lambda     │  │ Lambda        │
+                                    │ event-     │  │ suppression   │
+                                    │ processor  │  │ (Bounce/      │
+                                    │            │  │  Complaint)   │
+                                    └────────────┘  └───────────────┘
 ```
 
 ## API Endpoints
 
-### AWS SES - 이메일 발송 (API Gateway 경유)
+### Auth — 인증
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/ses/text-mail` | HTML 이메일 발송 |
-| `POST` | `/ses/templated-mail` | 템플릿 기반 이메일 발송 |
+| `POST` | `/auth/login` | 로그인 (JWT 발급) |
+| `POST` | `/auth/refresh` | 토큰 갱신 |
+| `POST` | `/auth/change-password` | 비밀번호 변경 |
+| `GET` | `/users/me` | 내 정보 조회 |
+| `GET` | `/users` | 사용자 목록 |
+| `POST` | `/users` | 사용자 생성 |
+
+### Email — 이메일 발송
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/ses/text-mail` | HTML 이메일 발송 (EmailDispatchService → SQS) |
+| `POST` | `/ses/templated-mail` | 템플릿 이메일 발송 (EmailDispatchService → SQS) |
 | `POST` | `/ses/template` | 이메일 템플릿 생성 |
 | `PATCH` | `/ses/template` | 이메일 템플릿 수정 |
 | `DELETE` | `/ses/template` | 이메일 템플릿 삭제 |
 | `GET` | `/ses/templates` | 템플릿 목록 조회 |
 
-### Tenant - 테넌트 관리
+### Tenant — 테넌트 관리
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/tenant` | 테넌트 등록 |
-| `GET` | `/tenant/{tenantId}` | 테넌트 조회 |
-| `GET` | `/tenant/list` | 테넌트 목록 조회 (페이징) |
-| `PATCH` | `/tenant/{tenantId}` | 테넌트 수정 |
-| `DELETE` | `/tenant/{tenantId}` | 테넌트 비활성화 |
-| `DELETE` | `/tenant/{tenantId}/permanent` | 테넌트 영구 삭제 |
-| `POST` | `/tenant/{tenantId}/activate` | 테넌트 활성화 |
-| `POST` | `/tenant/{tenantId}/regenerate-key` | API Key 재발급 |
-| `GET` | `/tenant/{tenantId}/quota` | 할당량 사용 현황 |
-| `PATCH` | `/tenant/{tenantId}/quota` | 할당량 수정 |
-| `GET` | `/tenant/{tenantId}/senders` | 발신자 이메일 목록 조회 |
-| `POST` | `/tenant/{tenantId}/senders` | 발신자 이메일 등록 |
-| `DELETE` | `/tenant/{tenantId}/senders/{email}` | 발신자 이메일 삭제 |
+| `POST` | `/tenant` | 테넌트 등록 (SES Identity + ConfigSet 자동 생성) |
+| `GET` | `/tenant/{id}` | 테넌트 조회 |
+| `GET` | `/tenant/list` | 테넌트 목록 (페이징) |
+| `PATCH` | `/tenant/{id}` | 테넌트 수정 |
+| `DELETE` | `/tenant/{id}` | 테넌트 비활성화 |
+| `DELETE` | `/tenant/{id}/permanent` | 테넌트 영구 삭제 (SES 리소스 정리) |
+| `POST` | `/tenant/{id}/activate` | 테넌트 활성화 |
+| `POST` | `/tenant/{id}/pause` | 발송 일시정지 |
+| `POST` | `/tenant/{id}/resume` | 발송 재개 |
+| `POST` | `/tenant/{id}/regenerate-key` | API Key 재발급 |
+| `GET` | `/tenant/{id}/quota` | 할당량 사용 현황 |
+| `PATCH` | `/tenant/{id}/quota` | 할당량 수정 |
+| `GET` | `/tenant/{id}/senders` | 발신자 이메일 목록 |
+| `POST` | `/tenant/{id}/senders` | 발신자 등록 |
+| `DELETE` | `/tenant/{id}/senders/{email}` | 발신자 삭제 |
 
-### Onboarding - 테넌트 온보딩
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/onboarding/start` | 온보딩 시작 (테넌트 생성 + SES Identity 등록) |
-| `GET` | `/onboarding/{tenantId}/status` | 온보딩 상태 조회 |
-| `GET` | `/onboarding/{tenantId}/dkim` | DKIM 레코드 조회 |
-| `POST` | `/onboarding/{tenantId}/activate` | 테넌트 수동 활성화 (ConfigSet 구성 포함) |
-| `POST` | `/onboarding/{tenantId}/verify-email` | 이메일 개별 인증 요청 |
-| `GET` | `/onboarding/{tenantId}/email-status/{email}` | 이메일 인증 상태 조회 |
-| `POST` | `/onboarding/{tenantId}/resend-verification/{email}` | 인증 이메일 재발송 |
-
-### SES Callback - 이벤트 콜백 (X-Callback-Secret 검증)
+### Monitoring — 모니터링
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `POST` | `/ses/callback/event` | SES 이벤트 처리 (DELIVERY/BOUNCE/COMPLAINT) |
-| `GET` | `/ses/callback/health` | 콜백 상태 확인 |
+| `GET` | `/monitoring/summary` | 대시보드 요약 통계 |
+| `GET` | `/monitoring/hourly` | 시간대별 발송량 |
+| `GET` | `/monitoring/status-summary` | 상태별 발송 건수 |
+| `GET` | `/monitoring/trend` | 주간/월간 트렌드 |
+| `GET` | `/monitoring/ses-quota` | SES 일간 발송 한도 |
+| `GET` | `/monitoring/tenant-metrics/{id}` | CloudWatch 테넌트 메트릭 |
+| `GET` | `/monitoring/cost` | 월별 추정 비용 |
+| `GET` | `/monitoring/cost/real` | Cost Explorer 실 비용 |
+| `GET` | `/monitoring/tenant-reputation` | 테넌트별 평판 |
 
-### SES Identity - 도메인 아이덴티티 (API Gateway 경유)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/ses/identity` | 도메인 아이덴티티 생성 (DKIM 등록) |
-| `GET` | `/ses/identity/{domain}` | 도메인 인증 상태 조회 |
-| `DELETE` | `/ses/identity/{domain}` | 도메인 아이덴티티 삭제 |
-
-### SES ConfigSet - 구성 세트 (API Gateway 경유)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/ses/config-set` | ConfigSet 생성 |
-| `GET` | `/ses/config-set/{tenantId}` | ConfigSet 조회 |
-| `DELETE` | `/ses/config-set/{tenantId}` | ConfigSet 삭제 |
-
-### Suppression - 수신 거부
+### Settings — 설정
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/suppression/tenant/{tenantId}` | 수신 거부 목록 조회 |
-| `DELETE` | `/suppression/tenant/{tenantId}/{email}` | 수신 거부 제거 |
-
-### Settings - 시스템 설정
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/settings/aws` | API Gateway 설정 조회 |
-| `PUT` | `/settings/aws` | API Gateway 설정 저장 (ESM DB + SSM 동기화) |
+| `GET` | `/settings/aws` | AWS 설정 조회 |
+| `PUT` | `/settings/aws` | AWS 설정 저장 |
 | `POST` | `/settings/aws/test` | API Gateway 연결 테스트 |
+| `GET` | `/settings/vdm` | VDM 상태 조회 |
+| `PUT` | `/settings/vdm` | VDM ON/OFF |
+| `GET` | `/settings/polling-interval` | 폴링 주기 조회 |
+| `PUT` | `/settings/polling-interval` | 폴링 주기 변경 (1~10분) |
 
-### Scheduler - 예약 발송
+### Onboarding / Suppression / SES Identity / ConfigSet / Scheduler
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/scheduler/job` | 예약 발송 작업 생성 |
-| `GET` | `/scheduler/jobs` | 작업 목록 조회 |
-| `PUT` | `/scheduler/job/pause` | 작업 일시정지 |
-| `PUT` | `/scheduler/job/resume` | 작업 재개 |
-| `PUT` | `/scheduler/job/stop` | 작업 중지 |
-| `DELETE` | `/scheduler/job` | 작업 삭제 |
-| `DELETE` | `/scheduler/job/all` | 전체 작업 삭제 |
-
-### Monitoring - 모니터링
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/monitoring/ses-quota` | SES 일간 발송 한도 조회 (MaxSendRate, Max24HourSend, SentLast24Hours) |
+> 상세 API는 [Backend API Spec](docs/backend-spec.md) 참조
 
 ## Key Features
 
-### 멀티테넌트 API Key 인증
-- 각 테넌트별 API Key 발급 (DB 조회 기반)
-- `Authorization` 헤더로 전달, `TenantContext`(ThreadLocal)에 테넌트 정보 설정
-- 레거시 단일 API Key(`security.api-key`) 병행 지원
+### 이중 인증 (JWT + API Key)
+- **관리자 대시보드**: JWT 인증 (Access 30분, Refresh 7일, 30분 비활동 자동 로그아웃)
+- **외부 테넌트**: API Key 인증 (발송 API만 접근 가능)
+- 초기 계정: `admin` / `admin`
 
-### SES 인증 2가지 방식
-- **도메인 인증 (DKIM)**: 온보딩 시 도메인 전체를 SES에 등록, DNS CNAME 레코드 추가로 인증
-- **이메일 개별 인증**: DNS 접근 불가 시 이메일 주소 단위로 SES 인증 (인증 메일 수신 방식)
+### SES 네이티브 발송 파이프라인
+- `EmailDispatchService` → API Gateway `/email-enqueue` → Lambda → SQS → Lambda → SES
+- 소량(≤1,000건): body에 수신자 포함 / 대량(>1,000건): S3 참조
+- SQS BatchSize 10, DLQ 자동 재처리
+- SES TenantName으로 테넌트별 평판 격리
 
-### 발신자 이메일 관리 (TENANT_SENDER 테이블)
-- 테넌트별 허용 발신자 이메일 목록 관리
-- 도메인 제한: 등록된 발신자 이메일은 테넌트 도메인과 일치해야 함
-- 이메일 발송 시 `SenderValidationService`가 발신자 검증
+### EventBridge 이벤트 라우팅
+- Rule 1: Bounce/Complaint → Lambda suppression (자동 수신거부 등록)
+- Rule 2: Delivery/Open/Click/... → Lambda event-processor (DynamoDB 저장)
+- Rule 3: 테넌트 상태 변화 → Lambda tenant-sync
+- Archive: 30일 보관, 장애 시 리플레이
 
-### 발송결과 수신 2-path
-- **실시간 Callback**: SES → SNS → Lambda → ESM `/ses/callback/event` 호출 (X-Callback-Secret 검증)
-- **보정 폴링**: ESM → API Gateway `GET /results` → DynamoDB 조회 (5~10분 주기, 멱등 처리)
+### 테넌트 SES 동기화
+- 테넌트 생성 시 SES Identity + ConfigSet 자동 생성
+- 테넌트 삭제 시 SES 리소스 자동 정리
+- 일시정지/재개 API
 
-### 이메일 발송 상태 관리
-- `Queued` → `Sending` → `Delivered` / `Bounced` / `Complained` / `Rejected` / `Error` / `Blocked` 상태 전이
-- **`Timeout` 상태**: 1시간 이상 `Sending` 유지 시 `SendingTimeoutChecker`(10분 주기)가 자동 전환
-- 즉시 발송 다중 수신자: 수신자별 개별 발송 루프 — correlationId + 발송 결과 레코드 개별 생성
+### 2계층 할당량 관리
+- AWS 계정 한도: SES `GetAccount` (실시간)
+- 테넌트별 한도: `QuotaService` (일별/월별, Backend 관리)
 
-### SES Rate Limiter 공유 Bean
-- `SesRateLimiterConfig.java` 공유 Bean: `application.yml`의 `ses.max-send-rate` 설정값 사용
-- Sandbox 기본 1 TPS, Production 전환 시 yml 값만 수정하면 전체 발송 경로 일괄 적용
-- 예약 발송(`SendTemplatedEmailJob`, `SendTemplatedEmailWithPollingJob`) + 즉시 발송(`EmailController`) 공통 적용
+### 모니터링
+- CloudWatch 테넌트별 SES 메트릭 (5분 캐시)
+- Cost Explorer 실 비용 조회 (1일 캐시, 추정치 폴백)
+- VDM ON/OFF 토글 (ISP별 전달률 인사이트)
 
-### 예약 발송 배치 테이블 분리 (`ADM_EMAIL_SEND_BATCH`)
-- Quartz JobDataMap의 전체 이메일 목록 JSON 직렬화 → `ADM_EMAIL_SEND_BATCH` / `ADM_EMAIL_SEND_BATCH_ITEM` 테이블로 분리
-- JobDataMap에는 `batchId`만 전달, `deserializeJobData()`에서 DB 조회로 복원
-- 대용량 발송(10,000건+)에서도 JobDataMap 크기 제한 없음
-
-### SES 일간 쿼터 모니터링
-- `GET /monitoring/ses-quota` API: Lambda `tenant-setup GET_ACCOUNT` 액션으로 SES 계정 정보 조회
-- Frontend 대시보드 "이메일 발송 일간 한도" 카드 — 사용률 Progress bar + 잔여 건수 표시
-
-### 설정 UI → SSM 동기화
-- `PUT /settings/aws` 저장 시 ESM DB + API Gateway `PUT /config` 경유로 SSM Parameter Store 자동 동기화
-- Lambda `event-processor`가 SSM을 30초 캐시로 읽어 모드/콜백 즉시 반영
-
-### AWS CDK 인프라 자동 구축
-- `aws/ems-cdk/`에서 `cdk deploy` 한 번으로 전체 AWS 인프라 구축
-- 배포 완료 후 출력되는 `ApiGatewayUrl`을 ESM 설정 화면에 입력
+### 통일된 응답 형식
+- `ApiResponse<T>` 래퍼: `{ success, data, error: { code, message, details } }`
+- Bean Validation + GlobalControllerAdvice
 
 ## Getting Started
 
 ### Prerequisites
-- Java 17 (JDK 17)
-- PostgreSQL 17+
-- Docker
-- Node.js 18+ (CDK 배포 시)
-- AWS CDK CLI (`npm install -g aws-cdk`)
+- Java 17, Docker, Node.js 20+
+- AWS CLI + CDK CLI (`npm install -g aws-cdk`)
 
-### 1. AWS 인프라 구축 (CDK)
+### 1. 로컬 DB 시작
 
 ```bash
-cd aws/ems-cdk
+docker compose up -d
+# 초기 스키마는 docker-entrypoint-initdb.d로 자동 실행
+```
+
+### 2. CDK v2 배포
+
+```bash
+cd aws/ems-cdk-v2
 npm install
 cdk bootstrap   # 최초 1회
-cdk deploy
-# 출력된 ApiGatewayUrl을 ESM 설정 화면에 입력
+cdk deploy --context esmServerIp="서버IP/32"
 ```
 
-### 2. PostgreSQL 준비
+### 3. Backend 실행
 
 ```bash
 cd backend
-
-# Docker로 PostgreSQL 실행
-docker-compose up -d postgres
-
-# 테이블 생성 (최초 1회)
-docker exec -i ems-postgres psql -U esm -d esm < src/main/resources/sql/V1__init_tables.sql
-docker exec -i ems-postgres psql -U esm -d esm < src/main/resources/sql/V2__suppression_table.sql
-docker exec -i ems-postgres psql -U esm -d esm < src/main/resources/sql/quartz_tables_postgres.sql
+# .env 파일 설정 (DB_URL, JWT_SECRET 등)
+./gradlew bootRun
 ```
 
-### 3. 백엔드 실행
-
-```bash
-cd backend
-
-# Windows
-start.bat dev
-
-# Linux/Mac
-./gradlew bootJar
-java -Dspring.profiles.active=dev -jar build/libs/ems.jar
-```
-
-### 4. 프론트엔드 실행
+### 4. Frontend 실행
 
 ```bash
 cd frontend
 npm install
-npm run dev     # http://localhost:3000
+npm run dev     # http://localhost:5173
 ```
+
+### 5. 초기 로그인
+
+`http://localhost:5173` → `admin` / `admin` → 비밀번호 변경 → AWS 설정 입력
+
+> 상세 배포 절차는 [Deployment Guide](docs/deployment-guide.md) 참조
 
 ### 주요 URL
 
 | URL | Description |
 |-----|-------------|
 | http://localhost:7092/swagger-ui.html | Swagger UI |
-| http://localhost:7092/v3/api-docs | OpenAPI Docs |
 | http://localhost:7092/actuator/health | Health Check |
-| http://localhost:3000 | Frontend Admin Dashboard |
+| http://localhost:5173 | Admin Dashboard |
 
-## Deployment
+## Environment Variables
 
-### Backend 배포
-
-1. `cd backend && ./gradlew bootJar` → `build/libs/ems.jar` 생성
-2. JAR + `start.bat`(또는 start.sh) 서버에 업로드
-3. `spring.profiles.active=prod`로 실행
-4. 운영 외부 설정: `/svc/ems/config/ems-config-prod.yml` (DB 접속 정보, API Key 등)
-
-### 환경변수
-
-| Variable | Description | Dev Default |
-|----------|-------------|-------------|
-| `DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/esm` |
-| `DB_USERNAME` | DB 사용자명 | `esm` |
-| `DB_PASSWORD` | DB 비밀번호 | `esm` |
-| `QUARTZ_DB_URL` | Quartz용 DB URL | `jdbc:postgresql://localhost:5432/esm` |
-| `QUARTZ_DB_USER` | Quartz용 사용자명 | `esm` |
-| `QUARTZ_DB_PASSWORD` | Quartz용 비밀번호 | `esm` |
-| `API_KEY` | 레거시 단일 API Key | (미설정 시 인증 비활성화) |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/ems` |
+| `DB_USERNAME` | DB 사용자명 | `ems` |
+| `DB_PASSWORD` | DB 비밀번호 | `ems1234` |
+| `JWT_SECRET` | JWT 서명 키 (256-bit 이상) | 내장 기본값 |
+| `QUARTZ_DB_URL` | Quartz DB URL | `jdbc:postgresql://localhost:5432/ems` |
+| `QUARTZ_DB_USER` | Quartz DB 사용자 | `ems` |
+| `QUARTZ_DB_PASSWORD` | Quartz DB 비밀번호 | `ems1234` |
 
 ## Backend Module Structure
 
 ```
 backend/src/main/java/com/msas/
+├── auth/                   # JWT 인증, 사용자 관리
 ├── common/
-│   ├── exceptionhandler/    # 글로벌 예외 처리 (GlobalControllerAdvice)
-│   ├── httplog/             # HTTP 요청/응답 로깅 인터셉터
-│   ├── security/            # ApiKeyAuthenticationFilter, CallbackSecretFilter,
-│   │                        # TenantContextFilter, SecurityConfig
-│   ├── swagger/             # OpenAPI 설정
-│   └── tenant/              # TenantContext (ThreadLocal)
-├── tenant/                  # 테넌트 CRUD, API Key, 할당량, 발신자 이메일 관리
+│   ├── dto/                # ApiResponse<T> 공통 응답 래퍼
+│   ├── exceptionhandler/   # GlobalControllerAdvice
+│   ├── httplog/            # HTTP 로깅 인터셉터
+│   ├── security/           # JWT + API Key 필터, SecurityConfig
+│   └── tenant/             # TenantContext (ThreadLocal)
+├── monitoring/             # MonitoringService, CostEstimateService
+├── onboarding/             # 테넌트 온보딩 (도메인/이메일 인증)
+├── pollingchecker/         # 보정 폴링 (DynamoDB 결과 조회, 2분 주기)
+├── scheduler/              # Quartz (폴링/타임아웃/동기화만 담당)
 ├── ses/
-│   ├── controller/          # EmailController (발송, 템플릿)
-│   ├── configset/           # SES ConfigSet 관리
-│   ├── configuration/       # AWSSESv2Configuration (미사용 - API Gateway 경유로 대체)
-│   └── identity/            # SES 도메인 아이덴티티 관리
-├── callback/                # SES 이벤트 콜백 수신 및 상태 업데이트
-├── onboarding/              # 테넌트 온보딩 워크플로우 (도메인/이메일 인증)
-├── suppression/             # 수신 거부 목록 관리 (BOUNCE/COMPLAINT)
-├── settings/                # API Gateway 설정 관리, SSM 동기화
-├── scheduler/               # Quartz 예약 발송 관리
-└── pollingchecker/          # 보정 폴링 (발송 결과 DynamoDB 조회)
+│   ├── controller/         # EmailController (발송, 템플릿)
+│   ├── service/            # EmailDispatchService (SQS 파이프라인)
+│   ├── configset/          # SES ConfigSet 관리
+│   └── identity/           # SES 도메인 아이덴티티
+├── settings/               # API Gateway 설정, VDM, 폴링 주기
+├── suppression/            # 수신 거부 관리
+└── tenant/                 # 테넌트 CRUD, SES 동기화, 할당량
 ```
