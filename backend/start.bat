@@ -4,6 +4,13 @@ setlocal
 set JAVA_HOME=%USERPROFILE%\.jdks\azul-17.0.7
 set PROFILE=%1
 
+REM .env 파일 로드
+if exist .env (
+    for /f "usebackq eol=# tokens=1,* delims==" %%A in (".env") do (
+        if not "%%A"=="" set "%%A=%%B"
+    )
+)
+
 if "%PROFILE%"=="" (
     echo Usage: start.bat [dev^|prod^|local]
     echo Example: start.bat dev
@@ -33,4 +40,4 @@ echo  Tenant     : http://localhost:7092/tenant
 echo ================================================
 echo.
 
-java -Dspring.profiles.active=%PROFILE% -jar build\libs\nte.jar
+java -Dspring.profiles.active=%PROFILE% -jar build\libs\ems.jar

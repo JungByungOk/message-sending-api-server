@@ -2,7 +2,7 @@ package com.msas.pollingchecker.service;
 
 import com.google.gson.Gson;
 import com.msas.pollingchecker.model.NewEmailEntity;
-import com.msas.pollingchecker.repository.SESMariaDBRepository;
+import com.msas.pollingchecker.repository.EmailSendRepository;
 import com.msas.pollingchecker.types.EnumEmailSendStatusCode;
 import com.msas.ses.service.EmailDispatchService;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +23,7 @@ public class PollingNewEmailFromNFTDB {
     @Value("${spring.application.name}")
     String serverName;
 
-    private final SESMariaDBRepository sesMariaDBRepository;
+    private final EmailSendRepository emailSendRepository;
     private final EmailDispatchService emailDispatchService;
 
     @Transactional
@@ -32,7 +32,7 @@ public class PollingNewEmailFromNFTDB {
 
         log.info("@RDBMS Checking - Are there new email items to send?");
 
-        List<NewEmailEntity> newEmailEntities = sesMariaDBRepository.findNewEmail();
+        List<NewEmailEntity> newEmailEntities = emailSendRepository.findNewEmail();
 
         if (newEmailEntities.isEmpty())
             return;
@@ -62,7 +62,7 @@ public class PollingNewEmailFromNFTDB {
 
     private void UpdateSendEmailStatus(NewEmailEntity newEmailEntity) {
         newEmailEntity.getNewEmailDetailEntities().forEach(newEmailDetailEntity -> {
-            sesMariaDBRepository.UpdateSendEmailStatus2Scheduler(
+            emailSendRepository.UpdateSendEmailStatus2Scheduler(
                     newEmailDetailEntity.getEmail_send_dtl_seq(),
                     EnumEmailSendStatusCode.SQ.name(),
                     serverName

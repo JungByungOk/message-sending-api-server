@@ -10,8 +10,6 @@ import TenantDetail from '@/pages/tenant/TenantDetail';
 import SendEmailPage from '@/pages/email/SendEmail';
 import TemplateListPage from '@/pages/template/TemplateList';
 import SchedulerPage from '@/pages/scheduler/SchedulerPage';
-import OnboardingWizard from '@/pages/onboarding/OnboardingWizard';
-import OnboardingStatus from '@/pages/onboarding/OnboardingStatus';
 import SuppressionList from '@/pages/suppression/SuppressionList';
 import SettingsPage from '@/pages/settings/index';
 
@@ -44,8 +42,6 @@ export default function App() {
             <Route path="/email/send" element={<SendEmailPage />} />
             <Route path="/template" element={<TemplateListPage />} />
             <Route path="/scheduler" element={<SchedulerPage />} />
-            <Route path="/onboarding" element={<OnboardingWizard />} />
-            <Route path="/onboarding/:tenantId" element={<OnboardingStatus />} />
             <Route path="/suppression" element={<SuppressionList />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
