@@ -6,15 +6,15 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_DB=esm
-      - POSTGRES_USER=esm
-      - POSTGRES_PASSWORD=esm
+      - POSTGRES_DB=ems
+      - POSTGRES_USER=ems
+      - POSTGRES_PASSWORD=ems
       - TZ=Asia/Seoul
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./backend/src/main/resources/sql:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U esm -d esm"]
+      test: ["CMD-SHELL", "pg_isready -U ems -d ems"]
       interval: 10s
       timeout: 5s
       retries: 5

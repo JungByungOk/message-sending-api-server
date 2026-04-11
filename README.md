@@ -99,7 +99,7 @@ message-sending-api-server/
                │                      │
     ┌──────────▼──────────┐  ┌────────▼────────────────────────┐
     │    PostgreSQL 16     │  │    AWS API Gateway (ems-api-v2) │
-    │  (esm / esm)         │  │    IP Whitelist + API Key 인증  │
+    │  (ems / ems)         │  │    IP Whitelist + API Key 인증  │
     └─────────────────────┘  └──┬──────────────────────────────┘
                                 │
          ┌──────────────────────┼──────────────────────┐
@@ -294,11 +294,11 @@ npm run dev     # http://localhost:5173
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/esm` |
+| `DB_URL` | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/ems` |
 | `DB_USERNAME` | DB 사용자명 | `ems` |
 | `DB_PASSWORD` | DB 비밀번호 | `ems1234` |
 | `JWT_SECRET` | JWT 서명 키 (256-bit 이상) | 내장 기본값 |
-| `QUARTZ_DB_URL` | Quartz DB URL | `jdbc:postgresql://localhost:5432/esm` |
+| `QUARTZ_DB_URL` | Quartz DB URL | `jdbc:postgresql://localhost:5432/ems` |
 | `QUARTZ_DB_USER` | Quartz DB 사용자 | `ems` |
 | `QUARTZ_DB_PASSWORD` | Quartz DB 비밀번호 | `ems1234` |
 
