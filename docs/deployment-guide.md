@@ -73,13 +73,13 @@ ESM_SERVER_IP="서버공인IP/32" cdk deploy
 cd backend
 
 # 환경변수 설정 (.env 또는 시스템 환경변수)
-export DB_URL=jdbc:postgresql://localhost:5432/ems
-export DB_USERNAME=ems
-export DB_PASSWORD=ems1234
+export DB_URL=jdbc:postgresql://localhost:5432/esm
+export DB_USERNAME=esm
+export DB_PASSWORD=esm
 export JWT_SECRET=your-256-bit-secret-key
-export QUARTZ_DB_URL=jdbc:postgresql://localhost:5432/ems
-export QUARTZ_DB_USER=ems
-export QUARTZ_DB_PASSWORD=ems1234
+export QUARTZ_DB_URL=jdbc:postgresql://localhost:5432/esm
+export QUARTZ_DB_USER=esm
+export QUARTZ_DB_PASSWORD=esm
 
 # 빌드
 ./gradlew build -x test
